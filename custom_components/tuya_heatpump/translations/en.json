@@ -10,7 +10,7 @@
                     "scan_interval": "Sensor Refresh Interval (minutes)"
                 },
                 "description": "Enter your Tuya IoT Platform credentials and select your region",
-                "title": "Tuya Scale Setup"
+                "title": "Tuya Heatpump Setup"
             }
         },
         "error": {
@@ -29,8 +29,9 @@
                     "scan_interval": "Sensor Refresh Interval (minutes)"
                 },
                 "description": "Configure sensor refresh interval",
-                "title": "Tuya Scale Configuration"
+                "title": "Tuya Heatpump Configuration"
             }
         }
     }
 }
+
