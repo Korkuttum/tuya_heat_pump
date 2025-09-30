@@ -26,7 +26,7 @@
     "options": {
         "step": {
             "init": {
-                "title": "Tuya Scale Configuration",
+                "title": "Tuya Heatpump Configuration",
                 "description": "Configure sensor refresh interval",
                 "data": {
                     "scan_interval": "Sensor Refresh Interval (minutes)"
@@ -35,3 +35,4 @@
         }
     }
 }
+
