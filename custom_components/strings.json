@@ -1,0 +1,37 @@
+{
+    "title": "Tuya Heatpump",
+    "config": {
+        "step": {
+            "user": {
+                "title": "Tuya Heatpump Setup",
+                "description": "Enter your Tuya IoT Platform credentials",
+                "data": {
+                    "access_id": "Access ID",
+                    "access_key": "Access Key",
+                    "device_id": "Device ID",
+                    "region": "Region",
+                    "scan_interval": "Sensor Refresh Interval (minutes)"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Failed to connect",
+            "invalid_auth": "Invalid authentication",
+            "unknown": "Unexpected error"
+        },
+        "abort": {
+            "already_configured": "Device is already configured"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Tuya Scale Configuration",
+                "description": "Configure sensor refresh interval",
+                "data": {
+                    "scan_interval": "Sensor Refresh Interval (minutes)"
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,36 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "data": {
+                    "access_id": "Access ID",
+                    "access_key": "Access Key",
+                    "device_id": "Device ID",
+                    "region": "Region",
+                    "scan_interval": "Sensor Refresh Interval (minutes)"
+                },
+                "description": "Enter your Tuya IoT Platform credentials and select your region",
+                "title": "Tuya Scale Setup"
+            }
+        },
+        "error": {
+            "cannot_connect": "Failed to connect",
+            "invalid_auth": "Invalid authentication",
+            "unknown": "Unexpected error"
+        },
+        "abort": {
+            "already_configured": "Device is already configured"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "data": {
+                    "scan_interval": "Sensor Refresh Interval (minutes)"
+                },
+                "description": "Configure sensor refresh interval",
+                "title": "Tuya Scale Configuration"
+            }
+        }
+    }
+}

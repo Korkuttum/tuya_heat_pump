@@ -1,0 +1,36 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "data": {
+                    "access_id": "Access ID",
+                    "access_key": "Access Key",
+                    "device_id": "Cihaz ID",
+                    "region": "Bölge",
+                    "scan_interval": "Sensör Yenileme Süresi (dakika)"
+                },
+                "description": "Tuya IoT Platform bilgilerinizi girin ve bölgenizi seçin",
+                "title": "Tuya Isı Pompası Kurulumu"
+            }
+        },
+        "error": {
+            "cannot_connect": "Bağlantı başarısız",
+            "invalid_auth": "Geçersiz kimlik doğrulama",
+            "unknown": "Beklenmeyen hata"
+        },
+        "abort": {
+            "already_configured": "Cihaz zaten yapılandırılmış"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "data": {
+                    "scan_interval": "Sensör Yenileme Süresi (dakika)"
+                },
+                "description": "Sensör yenileme süresini ayarlayın",
+                "title": "Tuya Isı Pompası Yapılandırması"
+            }
+        }
+    }
+}
