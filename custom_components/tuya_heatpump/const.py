@@ -113,15 +113,62 @@ SENSOR_TYPES = {
         "device_class": "temperature",
         "state_class": "temperature",   
     },
+    "comp_freq": {
+        "key": "comp_freq",
+        "name": "Compressor Frequency",
+        "unit": "Hz",
+        "icon": "mdi:cosine-wave",
+        "device_class": "Frequency",
+        "state_class": "measurement",   
+    },
+    "m_eev": {
+        "key": "m_eev",
+        "name": "Main EEV Position",
+        "unit": "step",
+        "icon": "mdi:pipe-valve",
+        "state_class": "measurement", 
+    },
+    "a_eev": {
+        "key": "a_eev",
+        "name": "Auxiliary EEV Position",
+        "unit": "step",
+        "icon": "mdi:pipe-valve",
+        "state_class": "measurement",  
+    },
+    "dc_fan1": {
+        "key": "dc_fan1",
+        "name": "DC Fan 1 Speed",
+        "unit": "RPM",
+        "icon": "mdi:fan-speed-1",
+        "state_class": "measurement", 
+    },
+    "dc_fan2": {
+        "key": "dc_fan2",
+        "name": "DC Fan 2 Speed",
+        "unit": "RPM",
+        "icon": "mdi:fan-speed-2",
+        "state_class": "measurement",
+    },
+    "ac_vol": {
+        "key": "ac_vol",
+        "name": "AC Voltage",
+        "unit": "V",
+        "icon": "mdi:lightning-bolt",
+        "device_class": "Voltage",
+        "state_class": "measurement", 
+    },
+    "ac_curr": {
+        "key": "ac_curr",
+        "name": "AC Current",
+        "unit": "A",
+        "icon": "mdi:current-ac",
+        "device_class": "Current",
+        "state_class": "measurement", 
+    },
 }
 
 # Binary Sensor Types
 BINARY_SENSOR_TYPES = {
-    "switch": {
-        "key": "switch",
-        "name": "Power Status",
-        "device_class": "power",
-    },
     "fault": {
         "key": "fault",
         "name": "Fault Status",
@@ -151,5 +198,10 @@ BINARY_SENSOR_TYPES = {
         "key": "valve",
         "name": "Valve Status",
         "device_class": "opening",
+    },
+    "fault_flag": {
+        "key": "fault_flag",
+        "name": "Fault Flag",
+        "device_class": "problem",
     },
 }
