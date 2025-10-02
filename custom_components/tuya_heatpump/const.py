@@ -9,10 +9,11 @@ DOMAIN = "tuya_heatpump"
 PLATFORMS = [
     Platform.SENSOR,
     Platform.BINARY_SENSOR,
+    Platform.SWITCH,
 ]
-# Eski SCAN_INTERVAL sabitini kaldırıp yerine aşağıdaki iki satırı ekliyoruz
-DEFAULT_SCAN_INTERVAL = 10  # Varsayılan değer (dakika cinsinden)
-CONF_SCAN_INTERVAL = "scan_interval"  # Yeni yapılandırma sabiti
+
+DEFAULT_SCAN_INTERVAL = 10
+CONF_SCAN_INTERVAL = "scan_interval"
 
 # Configuration
 CONF_ACCESS_ID = "access_id"
@@ -32,6 +33,7 @@ REGIONS = {
 # API Paths
 TOKEN_PATH = "/v1.0/token?grant_type=1"
 DEVICE_DATA_PATH = "/v2.0/cloud/thing/{device_id}/shadow/properties"
+DEVICE_COMMAND_PATH = "/v1.0/devices/{device_id}/commands"
 
 # Device Info
 DEFAULT_NAME = "Tuya Heatpump"
@@ -203,5 +205,27 @@ BINARY_SENSOR_TYPES = {
         "key": "fault_flag",
         "name": "Fault Flag",
         "device_class": "problem",
+    },
+}
+
+# Switch Types - Farklı değer formatlarını deneyeceğiz
+SWITCH_TYPES = {
+    "switch": {
+        "key": "switch",
+        "name": "Power",
+        "icon": "mdi:power",
+        "value_type": "bool"  # true/false
+    },
+    "mute": {
+        "key": "mute", 
+        "name": "Mute",
+        "icon": "mdi:volume-off",
+        "value_type": "bool"  # true/false
+    },
+    "holiday_sw": {
+        "key": "holiday_sw",
+        "name": "Holiday Mode", 
+        "icon": "mdi:beach",
+        "value_type": "bool"  # true/false
     },
 }
