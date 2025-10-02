@@ -76,11 +76,14 @@ class TuyaScaleSensor(CoordinatorEntity, SensorEntity):
         if value is None:
             return None
 
-        # Tüm sensör değerlerini 10'a böl
         try:
-            return float(value) / 10
+            # Eğer sıcaklık sensörü ise 10'a böl
+            if self.device_class == SensorDeviceClass.TEMPERATURE:
+                return float(value) / 10
+            return float(value)
         except (ValueError, TypeError):
             return value
+
 
     @property
     def extra_state_attributes(self):
