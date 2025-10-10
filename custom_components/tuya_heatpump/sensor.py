@@ -1,102 +1,95 @@
-"""Support for Tuya Scale sensors."""
+"""Sensor platform for Tuya Heatpump."""
+from __future__ import annotations
 import logging
-from homeassistant.components.sensor import (
-    SensorEntity,
-    SensorDeviceClass,
-    SensorStateClass,
-)
-from homeassistant.const import (
-    UnitOfMass,
-)
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from typing import Any
 
-from .const import (
-    DOMAIN,
-    SENSOR_TYPES,
-    DEFAULT_NAME,
-    DEFAULT_MANUFACTURER,
-    DEFAULT_MODEL,
-)
+from homeassistant.components.sensor import SensorEntity
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.config_entries import ConfigEntry
+
+from .const import DOMAIN, SENSOR_TYPES
+from .coordinator import TuyaScaleDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
-    """Set up the Tuya Scale sensors."""
-    coordinator = hass.data[DOMAIN][config_entry.entry_id]
-    sensors = []
+async def async_setup_entry(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up Tuya Heatpump sensors from a config entry."""
+    coordinator: TuyaScaleDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
     
-    for sensor_type, sensor_info in SENSOR_TYPES.items():
-        key = sensor_info["key"]
-        if coordinator.data is not None and key in coordinator.data:
-            sensors.append(TuyaScaleSensor(
-                coordinator,
-                key,
-                sensor_info["name"],
-                sensor_info.get("unit"),
-                sensor_info.get("icon"),
-                sensor_info.get("device_class"),
-                sensor_info.get("state_class")
-            ))
+    sensors = []
+    for sensor_type in SENSOR_TYPES:
+        if coordinator.data and sensor_type in coordinator.data:
+            sensors.append(TuyaHeatpumpSensor(coordinator, sensor_type))
+            _LOGGER.info("Adding sensor: %s", sensor_type)
+        else:
+            _LOGGER.warning("Sensor %s not found in device data, skipping", sensor_type)
     
     async_add_entities(sensors)
 
-class TuyaScaleSensor(CoordinatorEntity, SensorEntity):
-    """Representation of a Tuya Scale Sensor."""
+class TuyaHeatpumpSensor(SensorEntity):
+    """Representation of a Tuya Heatpump Sensor."""
 
-    def __init__(self, coordinator, key, name, unit=None, icon=None, device_class=None, state_class=None):
+    def __init__(
+        self,
+        coordinator: TuyaScaleDataUpdateCoordinator,
+        sensor_type: str
+    ) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator)
-        self._key = key
-        self._attr_name = f"{DEFAULT_NAME} {name}"
-        self._attr_native_unit_of_measurement = unit
-        self._attr_icon = icon
-        self._attr_device_class = device_class
-        self._attr_state_class = state_class
-        self._attr_unique_id = f"{coordinator.device_id}_{key}"
+        self.coordinator = coordinator
+        self._sensor_type = sensor_type
         
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, coordinator.device_id)},
-            "name": DEFAULT_NAME,
-            "manufacturer": DEFAULT_MANUFACTURER,
-            "model": DEFAULT_MODEL,
-        }
+        # Device name ile unique_id oluştur
+        device_name_slug = coordinator.device_name.lower().replace(" ", "_").replace("-", "_")
+        self._attr_unique_id = f"{device_name_slug}_{sensor_type}"
+        
+        self._attr_name = SENSOR_TYPES[sensor_type]['name']
+        self._attr_native_unit_of_measurement = SENSOR_TYPES[sensor_type]['unit']
+        self._attr_icon = SENSOR_TYPES[sensor_type].get('icon')
+        self._attr_device_class = SENSOR_TYPES[sensor_type].get('device_class')
+        self._attr_state_class = SENSOR_TYPES[sensor_type].get('state_class')
+        self._attr_has_entity_name = True
+        
+        # Device info
+        self._attr_device_info = coordinator.device_info
 
     @property
-    def native_value(self):
+    def device_info(self):
+        """Return device info."""
+        return self.coordinator.device_info
+
+    @property
+    def native_value(self) -> str | None:
         """Return the state of the sensor."""
-        if self.coordinator.data is None or self._key not in self.coordinator.data:
+        if not self.coordinator.data or self._sensor_type not in self.coordinator.data:
             return None
-
-        data = self.coordinator.data[self._key]
-        if isinstance(data, dict):
-            value = data.get('value')
-        else:
-            value = data
-
-        if value is None:
-            return None
-
-        try:
-            # Eğer sıcaklık sensörü ise 10'a böl
-            if self.device_class == SensorDeviceClass.TEMPERATURE:
-                return float(value) / 10
-            return float(value)
-        except (ValueError, TypeError):
-            return value
-
+            
+        value = self.coordinator.data[self._sensor_type]['value']
+        
+        # Temperature değerlerini 10'a böl
+        if self._sensor_type in ['in_water_temp', 'out_water_temp', 'tank_temp', 'amb_temp', 
+                                'disc_temp', 'back_temp', 'tidr']:
+            if isinstance(value, (int, float)):
+                return value / 10.0
+        
+        return value
 
     @property
-    def extra_state_attributes(self):
-        """Return the state attributes."""
-        if self.coordinator.data is None or self._key not in self.coordinator.data:
-            return None
+    def available(self) -> bool:
+        """Return if entity is available."""
+        return (
+            self.coordinator.last_update_success and 
+            self.coordinator.data is not None and
+            self._sensor_type in self.coordinator.data
+        )
 
-        data = self.coordinator.data[self._key]
-        if not isinstance(data, dict):
-            return None
-
-        return {
-            "last_update": data.get("last_update"),
-            "timestamp": data.get("timestamp"),
-            "raw_value": data.get("value")
-        }
+    async def async_added_to_hass(self) -> None:
+        """When entity is added to hass."""
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            self.coordinator.async_add_listener(self.async_write_ha_state)
+        )
