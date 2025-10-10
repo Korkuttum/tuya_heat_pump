@@ -44,7 +44,10 @@ class TuyaHeatpumpNumber(NumberEntity):
         self.coordinator = coordinator
         self._number_type = number_type
         
-        self._attr_unique_id = f"{coordinator.device_id}_{number_type}"
+        # Device name ile unique_id oluştur
+        device_name_slug = coordinator.device_name.lower().replace(" ", "_").replace("-", "_")
+        self._attr_unique_id = f"{device_name_slug}_{number_type}"
+        
         self._attr_name = NUMBER_TYPES[number_type]['name']
         self._attr_icon = NUMBER_TYPES[number_type].get('icon')
         self._attr_native_unit_of_measurement = NUMBER_TYPES[number_type]['unit']
