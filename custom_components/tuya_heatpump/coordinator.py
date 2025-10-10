@@ -79,14 +79,68 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         self.region = config_entry.data[CONF_REGION]
         self.api_endpoint = REGIONS[self.region]
         self.access_token = None
+        self.device_name = DEFAULT_NAME  # Başlangıç değeri
 
-        # Device info
+        # Device info - geçici olarak
         self.device_info = DeviceInfo(
             identifiers={(DOMAIN, self.device_id)},
-            name=DEFAULT_NAME,
+            name=self.device_name,
             manufacturer=DEFAULT_MANUFACTURER,
             model=DEFAULT_MODEL,
         )
+
+    async def get_device_info(self) -> dict:
+        """Get device information from Tuya API."""
+        try:
+            if not self.access_token:
+                await self._get_token()
+
+            t = str(int(time.time() * 1000))
+            path = f"/v1.0/devices/{self.device_id}"
+            sign = self._calculate_sign(t, path, self.access_token)
+            
+            headers = {
+                'client_id': self.access_id,
+                'access_token': self.access_token,
+                'sign': sign,
+                't': t,
+                'sign_method': 'HMAC-SHA256',
+            }
+            
+            url = f"{self.api_endpoint}{path}"
+            
+            _LOGGER.info("Getting device info from API...")
+            
+            response = await self.hass.async_add_executor_job(
+                make_api_request,
+                url,
+                headers
+            )
+            
+            result = response.json()
+            
+            if result.get('success', False):
+                device_data = result['result']
+                self.device_name = device_data.get('name', DEFAULT_NAME)
+                product_name = device_data.get('product_name', DEFAULT_MODEL)
+                
+                _LOGGER.info("Device name set to: %s", self.device_name)
+                
+                # Device info'yu güncelle
+                self.device_info = DeviceInfo(
+                    identifiers={(DOMAIN, self.device_id)},
+                    name=self.device_name,
+                    manufacturer=DEFAULT_MANUFACTURER,
+                    model=product_name,
+                )
+                return device_data
+            else:
+                _LOGGER.warning("Failed to get device info, using default name: %s", DEFAULT_NAME)
+                return {}
+                
+        except Exception as err:
+            _LOGGER.error("Error getting device info: %s", str(err))
+            return {}
 
     def _calculate_sign(self, t: str, path: str, access_token: str = None, method: str = "GET", body: str = "") -> str:
         """Calculate signature for API requests."""
