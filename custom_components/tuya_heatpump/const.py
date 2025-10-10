@@ -1,4 +1,4 @@
-"""Constants for the Tuya Scale integration."""
+"""Constants for the Tuya Heatpump integration."""
 from datetime import timedelta
 from homeassistant.const import (
     Platform,
@@ -10,6 +10,7 @@ PLATFORMS = [
     Platform.SENSOR,
     Platform.BINARY_SENSOR,
     Platform.SWITCH,
+    Platform.NUMBER,
 ]
 
 DEFAULT_SCAN_INTERVAL = 10
@@ -57,7 +58,7 @@ SENSOR_TYPES = {
         "unit": "°C",
         "icon": "mdi:thermometer",
         "device_class": "temperature",
-        "state_class": "temperature",
+        "state_class": "measurement",
     },
     "out_water_temp": {
         "key": "out_water_temp",
@@ -65,7 +66,7 @@ SENSOR_TYPES = {
         "unit": "°C",
         "icon": "mdi:thermometer",
         "device_class": "temperature",
-        "state_class": "temperature",
+        "state_class": "measurement",
     },
     "tank_temp": {
         "key": "tank_temp",
@@ -73,7 +74,7 @@ SENSOR_TYPES = {
         "unit": "°C",
         "icon": "mdi:thermometer",
         "device_class": "temperature",
-        "state_class": "temperature",
+        "state_class": "measurement",
     },
     "amb_temp": {
         "key": "amb_temp",
@@ -81,7 +82,7 @@ SENSOR_TYPES = {
         "unit": "°C",
         "icon": "mdi:thermometer",
         "device_class": "temperature",
-        "state_class": "temperature",
+        "state_class": "measurement",
     },
     "disc_temp": {
         "key": "disc_temp",
@@ -89,7 +90,7 @@ SENSOR_TYPES = {
         "unit": "°C",
         "icon": "mdi:thermometer",
         "device_class": "temperature",
-        "state_class": "temperature",
+        "state_class": "measurement",
     },
     "back_temp": {
         "key": "back_temp",
@@ -97,7 +98,7 @@ SENSOR_TYPES = {
         "unit": "°C",
         "icon": "mdi:thermometer",
         "device_class": "temperature",
-        "state_class": "temperature",
+        "state_class": "measurement",
     },
     "flow_rate": {
         "key": "flow_rate",
@@ -208,24 +209,61 @@ BINARY_SENSOR_TYPES = {
     },
 }
 
-# Switch Types - Farklı değer formatlarını deneyeceğiz
+# Switch Types
 SWITCH_TYPES = {
     "switch": {
         "key": "switch",
         "name": "Power",
         "icon": "mdi:power",
-        "value_type": "bool"  # true/false
     },
     "mute": {
         "key": "mute", 
         "name": "Mute",
         "icon": "mdi:volume-off",
-        "value_type": "bool"  # true/false
     },
     "holiday_sw": {
         "key": "holiday_sw",
         "name": "Holiday Mode", 
         "icon": "mdi:beach",
-        "value_type": "bool"  # true/false
+    },
+}
+
+# Number Types
+NUMBER_TYPES = {
+    "cool_temp_set": {
+        "key": "cool_temp_set",
+        "name": "Cool Temperature Set",
+        "icon": "mdi:thermometer",
+        "unit": "°C",
+        "min_value": 7.0,   # 70 / 10
+        "max_value": 25.0,  # 250 / 10
+        "step": 1.0,
+    },
+    "heat_temp_set": {
+        "key": "heat_temp_set", 
+        "name": "Heat Temperature Set",
+        "icon": "mdi:thermometer",
+        "unit": "°C",
+        "min_value": 25.0,  # 250 / 10
+        "max_value": 65.0,  # 650 / 10
+        "step": 1.0,
+    },
+    "hot_water_temp_set": {
+        "key": "hot_water_temp_set",
+        "name": "Hot Water Temperature Set", 
+        "icon": "mdi:water-thermometer",
+        "unit": "°C",
+        "min_value": 25.0,  # 250 / 10
+        "max_value": 60.0,  # 600 / 10
+        "step": 1.0,
+    },
+    "auto_temp_set": {
+        "key": "auto_temp_set",
+        "name": "Auto Temperature Set",
+        "icon": "mdi:thermometer-auto",
+        "unit": "°C", 
+        "min_value": 7.0,   # 70 / 10
+        "max_value": 60.0,  # 600 / 10
+        "step": 1.0,
     },
 }
