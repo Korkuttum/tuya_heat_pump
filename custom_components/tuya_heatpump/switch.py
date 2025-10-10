@@ -7,6 +7,7 @@ from homeassistant.components.switch import SwitchEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.exceptions import HomeAssistantError
 
 from .const import DOMAIN, SWITCH_TYPES
 from .coordinator import TuyaScaleDataUpdateCoordinator
@@ -79,17 +80,39 @@ class TuyaHeatpumpSwitch(SwitchEntity):
         """Turn the switch on."""
         _LOGGER.info("Turning ON %s", self._switch_type)
         success = await self.coordinator.send_command(self._switch_type, True)
-        if not success:
-            _LOGGER.error("Failed to turn on %s", self._switch_type)
-            self.async_write_ha_state()
+        
+        if success:
+            _LOGGER.info("✅ Successfully turned ON %s", self._switch_type)
+            # Başarılı ise state'i güncelle
+            await self.coordinator.async_request_refresh()
+        else:
+            _LOGGER.warning("❌ Failed to turn ON %s", self._switch_type)
+            
+            # Kullanıcıya Home Assistant bildirimi göster
+            raise HomeAssistantError(
+                f"{SWITCH_TYPES[self._switch_type]['name']} açılamıyor. "
+                f"Cihazınız bu özelliği değiştirmeye izin vermiyor. "
+                f"Lütfen ayarı cihaz üzerinden yapın."
+            )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the switch off."""
         _LOGGER.info("Turning OFF %s", self._switch_type)
         success = await self.coordinator.send_command(self._switch_type, False)
-        if not success:
-            _LOGGER.error("Failed to turn off %s", self._switch_type)
-            self.async_write_ha_state()
+        
+        if success:
+            _LOGGER.info("✅ Successfully turned OFF %s", self._switch_type)
+            # Başarılı ise state'i güncelle
+            await self.coordinator.async_request_refresh()
+        else:
+            _LOGGER.warning("❌ Failed to turn OFF %s", self._switch_type)
+            
+            # Kullanıcıya Home Assistant bildirimi göster
+            raise HomeAssistantError(
+                f"{SWITCH_TYPES[self._switch_type]['name']} kapatılamıyor. "
+                f"Cihazınız bu özelliği değiştirmeye izin vermiyor. "
+                f"Lütfen ayarı cihaz üzerinden yapın."
+            )
 
     @property
     def available(self) -> bool:
