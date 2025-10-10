@@ -45,7 +45,10 @@ class TuyaHeatpumpSwitch(SwitchEntity):
         self.coordinator = coordinator
         self._switch_type = switch_type
         
-        self._attr_unique_id = f"{coordinator.device_id}_{switch_type}"
+        # Device name ile unique_id oluştur
+        device_name_slug = coordinator.device_name.lower().replace(" ", "_").replace("-", "_")
+        self._attr_unique_id = f"{device_name_slug}_{switch_type}"
+        
         self._attr_name = SWITCH_TYPES[switch_type]['name']
         self._attr_icon = SWITCH_TYPES[switch_type].get('icon')
         self._attr_has_entity_name = True
