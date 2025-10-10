@@ -1,21 +1,23 @@
-"""The Tuya Scale integration."""
+"""The Tuya Heatpump integration."""
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.const import Platform
 
 from .const import DOMAIN, PLATFORMS
 from .coordinator import TuyaScaleDataUpdateCoordinator
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up Tuya Scale from a config entry."""
+    """Set up Tuya Heatpump from a config entry."""
     coordinator = TuyaScaleDataUpdateCoordinator(hass, entry)
+    
+    # Önce device info'yu al
+    await coordinator.get_device_info()
+    
     await coordinator.async_config_entry_first_refresh()
     
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
     
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     
-    # Yapılandırma güncellemelerini dinlemek için listener ekle
     entry.async_on_unload(entry.add_update_listener(async_update_options))
     
     return True
@@ -31,4 +33,3 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
-
