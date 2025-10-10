@@ -79,7 +79,6 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         self.region = config_entry.data[CONF_REGION]
         self.api_endpoint = REGIONS[self.region]
         self.access_token = None
-        self._power_format = None  # Power'ın çalıştığı format
 
         # Device info
         self.device_info = DeviceInfo(
@@ -150,7 +149,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER.error("Error getting token: %s", str(err))
             raise UpdateFailed(ERROR_CONN)
 
-    async def send_command(self, code: str, value: bool) -> bool:
+    async def send_command(self, code: str, value) -> bool:
         """Send command to device."""
         try:
             if not self.access_token:
@@ -159,83 +158,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             t = str(int(time.time() * 1000))
             path = DEVICE_COMMAND_PATH.format(device_id=self.device_id)
             
-            # POWER İÇİN ÇALIŞAN FORMATI BUL
-            if code == "switch" and self._power_format is None:
-                _LOGGER.info("🔍 Finding working format for power switch...")
-                found = await self._find_power_format(value)
-                if found:
-                    return True
-                else:
-                    _LOGGER.error("❌ No working format found for power!")
-                    return False
-            
-            # POWER FORMATI BİLİNİYORSA, AYNI FORMATI DİĞER SWITCH'LER İÇİN KULLAN
-            if self._power_format is not None:
-                command_value = self._convert_value(value, self._power_format)
-                success = await self._send_single_command(code, command_value)
-                if success:
-                    _LOGGER.info("✅ Command successful: %s = %s (using power format: %s)", code, command_value, self._power_format)
-                    await asyncio.sleep(2)
-                    await self.async_request_refresh()
-                    return True
-            
-            # EĞER POWER FORMATI ÇALIŞMAZSA, TÜM FORMATLARI DENE
-            _LOGGER.warning("Power format failed for %s, trying all formats", code)
-            return await self._try_all_formats(code, value)
-            
-        except Exception as err:
-            _LOGGER.error("Error sending command %s: %s", code, str(err))
-            return False
-
-    async def _find_power_format(self, value: bool) -> bool:
-        """Find working format for power switch."""
-        formats = [
-            ("bool", value),
-            ("int", 1 if value else 0),
-            ("str_bool", str(value).lower()),
-            ("str_int", "1" if value else "0"),
-        ]
-        
-        for fmt_name, fmt_value in formats:
-            success = await self._send_single_command("switch", fmt_value)
-            if success:
-                self._power_format = fmt_name
-                _LOGGER.info("🎯 POWER working format found: %s -> %s", fmt_name, fmt_value)
-                await asyncio.sleep(2)
-                await self.async_request_refresh()
-                return True
-            else:
-                _LOGGER.debug("Power format %s failed", fmt_name)
-        
-        return False
-
-    async def _try_all_formats(self, code: str, value: bool) -> bool:
-        """Try all formats for a switch."""
-        formats = [
-            ("bool", value),
-            ("int", 1 if value else 0),
-            ("str_bool", str(value).lower()),
-            ("str_int", "1" if value else "0"),
-            ("on_off", "on" if value else "off"),
-            ("enable_disable", "enable" if value else "disable"),
-        ]
-        
-        for fmt_name, fmt_value in formats:
-            success = await self._send_single_command(code, fmt_value)
-            if success:
-                _LOGGER.info("✅ Command successful: %s = %s (format: %s)", code, fmt_value, fmt_name)
-                await asyncio.sleep(2)
-                await self.async_request_refresh()
-                return True
-            else:
-                _LOGGER.debug("Format %s failed for %s", fmt_name, code)
-        
-        _LOGGER.error("🚫 ALL formats failed for %s", code)
-        return False
-
-    async def _send_single_command(self, code: str, value) -> bool:
-        """Send a single command to device."""
-        try:
+            # Tüm komutlar için deneyelim - hem switch hem number
             commands = {
                 "commands": [
                     {
@@ -246,8 +169,6 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             }
             
             body = json.dumps(commands)
-            t = str(int(time.time() * 1000))
-            path = DEVICE_COMMAND_PATH.format(device_id=self.device_id)
             sign = self._calculate_sign(t, path, self.access_token, "POST", body)
             
             headers = {
@@ -261,7 +182,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             
             url = f"{self.api_endpoint}{path}"
             
-            _LOGGER.debug("Sending: %s = %s (%s)", code, value, type(value).__name__)
+            _LOGGER.info("Sending command: %s = %s", code, value)
             
             response = await self.hass.async_add_executor_job(
                 make_api_request,
@@ -274,33 +195,18 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             result = response.json()
             
             if result.get('success', False):
-                _LOGGER.debug("✅ Command accepted: %s = %s", code, value)
+                _LOGGER.info("✅ Command successful: %s = %s", code, value)
+                await asyncio.sleep(2)
+                await self.async_request_refresh()
                 return True
             else:
                 error_msg = result.get('msg', 'Unknown error')
-                _LOGGER.debug("❌ Command failed: %s = %s -> %s", code, value, error_msg)
+                _LOGGER.error("❌ Command failed: %s = %s -> %s", code, value, error_msg)
                 return False
                 
         except Exception as err:
-            _LOGGER.error("Error in _send_single_command: %s", str(err))
+            _LOGGER.error("Error sending command %s: %s", code, str(err))
             return False
-
-    def _convert_value(self, value: bool, format_type: str):
-        """Convert boolean value to specified format."""
-        if format_type == "bool":
-            return value
-        elif format_type == "int":
-            return 1 if value else 0
-        elif format_type == "str_bool":
-            return str(value).lower()
-        elif format_type == "str_int":
-            return "1" if value else "0"
-        elif format_type == "on_off":
-            return "on" if value else "off"
-        elif format_type == "enable_disable":
-            return "enable" if value else "disable"
-        else:
-            return value
 
     async def _async_update_data(self):
         """Fetch data from Tuya API."""
@@ -347,12 +253,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             data = {}
             properties = result.get('result', {}).get('properties', [])
             
-            # Switch değerlerini logla
-            for prop in properties:
-                code = prop['code']
-                if code in ['switch', 'mute', 'holiday_sw']:
-                    _LOGGER.info("📊 Switch %s: %s (%s)", code, prop['value'], type(prop['value']).__name__)
-            
+            # Tüm property'leri işle
             for prop in properties:
                 code = prop['code']
                 value = prop['value']
