@@ -72,7 +72,7 @@ class TuyaHeatpumpSensor(SensorEntity):
         
         # Temperature değerlerini 10'a böl
         if self._sensor_type in ['in_water_temp', 'out_water_temp', 'tank_temp', 'amb_temp', 
-                                'disc_temp', 'back_temp', 'tidr']:
+                                'disc_temp', 'back_temp', 'tidr', 'ac_curr', 'flow_rate']:
             if isinstance(value, (int, float)):
                 return value / 10.0
         
