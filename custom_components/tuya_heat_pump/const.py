@@ -5,7 +5,7 @@ from homeassistant.const import (
     UnitOfMass,
 )
 
-DOMAIN = "tuya_heatpump"
+DOMAIN = "tuya_heat_pump"
 PLATFORMS = [
     Platform.SENSOR,
     Platform.BINARY_SENSOR,
@@ -102,7 +102,7 @@ SENSOR_TYPES = {
     },
     "flow_rate": {
         "key": "flow_rate",
-        "name": "Water Pressure",
+        "name": "Water Flow Rate",
         "unit": "m³/H",
         "icon": "mdi:gauge",
         "device_class": "pressure",
