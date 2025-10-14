@@ -168,6 +168,22 @@ SENSOR_TYPES = {
         "device_class": "Current",
         "state_class": "measurement", 
     },
+    "calculated_power": {
+        "key": "calculated_power",
+        "name": "AC Power",
+        "unit": "W",
+        "icon": "mdi:flash",
+        "device_class": "power",
+        "state_class": "measurement",
+    },
+    "total_energy": {
+        "key": "total_energy", 
+        "name": "AC Total Energy",
+        "unit": "kWh",
+        "icon": "mdi:chart-line",
+        "device_class": "energy",
+        "state_class": "total_increasing",
+    },
 }
 
 # Binary Sensor Types
