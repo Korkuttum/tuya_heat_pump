@@ -1,4 +1,4 @@
-"""Constants for the Tuya Heatpump integration."""
+"""Constants for the Tuya Heat Pump integration."""
 from datetime import timedelta
 from homeassistant.const import (
     Platform,
@@ -39,7 +39,7 @@ DEVICE_COMMAND_PATH = "/v1.0/devices/{device_id}/commands"
 # Device Info
 DEFAULT_NAME = "Tuya Heat Pump"
 DEFAULT_MANUFACTURER = "Tuya"
-DEFAULT_MODEL = "Heatpump"
+DEFAULT_MODEL = "Heat Pump"
 
 # Error Messages
 ERROR_AUTH = "Authentication failed"
