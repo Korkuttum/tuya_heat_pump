@@ -37,7 +37,7 @@ DEVICE_DATA_PATH = "/v2.0/cloud/thing/{device_id}/shadow/properties"
 DEVICE_COMMAND_PATH = "/v1.0/devices/{device_id}/commands"
 
 # Device Info
-DEFAULT_NAME = "Tuya Heatpump"
+DEFAULT_NAME = "Tuya Heat Pump"
 DEFAULT_MANUFACTURER = "Tuya"
 DEFAULT_MODEL = "Heatpump"
 
