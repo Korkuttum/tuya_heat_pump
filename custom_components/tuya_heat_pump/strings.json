@@ -1,9 +1,9 @@
 {
-    "title": "Tuya Heatpump",
+    "title": "Tuya Heat Pump",
     "config": {
         "step": {
             "user": {
-                "title": "Tuya Heatpump Setup",
+                "title": "Tuya Heat Pump Setup",
                 "description": "Enter your Tuya IoT Platform credentials",
                 "data": {
                     "access_id": "Access ID",
@@ -26,7 +26,7 @@
     "options": {
         "step": {
             "init": {
-                "title": "Tuya Heatpump Configuration",
+                "title": "Tuya Heat Pump Configuration",
                 "description": "Configure sensor refresh interval",
                 "data": {
                     "scan_interval": "Sensor Refresh Interval (minutes)"
@@ -35,4 +35,5 @@
         }
     }
 }
+
 
