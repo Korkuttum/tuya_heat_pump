@@ -1,13 +1,14 @@
 {
-  "domain": "tuya_heatpump",
+  "domain": "tuya_heat_pump",
   "name": "Tuya Heat Pump",
   "codeowners": ["@Korkuttum"],
   "config_flow": true,
-  "documentation": "https://github.com/Korkuttum/tuya_heatpump",
+  "documentation": "https://github.com/Korkuttum/tuya_heat_pump",
   "integration_type": "device",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/Korkuttum/tuya_heatpump/issues",
+  "issue_tracker": "https://github.com/Korkuttum/tuya_heat_pump/issues",
   "requirements": ["requests>=2.25.0"],
   "version": "1.0.0"
   
 }
+
