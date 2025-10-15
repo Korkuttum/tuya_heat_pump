@@ -71,7 +71,7 @@ async def validate_input(hass: HomeAssistant, data: dict) -> dict:
         _LOGGER.error("Validation error: %s", err)
         raise CannotConnect from err
 
-    return {"title": f"Tuya Scale ({data[CONF_DEVICE_ID]})"}
+    return {"title": f"Tuya Heat Pump ({data[CONF_DEVICE_ID]})"}
 
 class TuyaScaleOptionsFlow(config_entries.OptionsFlow):
     """Handle options."""
@@ -147,3 +147,4 @@ class CannotConnect(HomeAssistantError):
 
 class InvalidAuth(HomeAssistantError):
     """Error to indicate there is invalid auth."""
+
