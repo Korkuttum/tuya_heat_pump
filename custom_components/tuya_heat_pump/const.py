@@ -13,7 +13,7 @@ PLATFORMS = [
     Platform.NUMBER,
 ]
 
-DEFAULT_SCAN_INTERVAL = 10
+DEFAULT_SCAN_INTERVAL = 3
 CONF_SCAN_INTERVAL = "scan_interval"
 
 # Configuration
@@ -179,7 +179,7 @@ SENSOR_TYPES = {
     "total_energy": {
         "key": "total_energy", 
         "name": "AC Total Energy",
-        "unit": "kWh",
+        "unit": "Wh",
         "icon": "mdi:chart-line",
         "device_class": "energy",
         "state_class": "total_increasing",
