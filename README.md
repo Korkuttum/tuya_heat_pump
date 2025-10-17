@@ -73,8 +73,16 @@ After installation, restart Home Assistant and follow these steps:
 
 ---
 
-## Contribution and License
+## Support My Work
 
-You can open an issue or send a pull request on GitHub for bug reports or contributions.
+If you find this integration helpful, consider supporting the development:
 
-This project is released under the MIT license.
+[![Become a Patreon](https://img.shields.io/badge/Become_a-Patron-red.svg?style=for-the-badge&logo=patreon)](https://www.patreon.com/korkuttum)
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Disclaimer
+
+This integration is an independent project and is not affiliated with, endorsed by, or connected to Tuya Inc. in any way. This is a community project provided "as is" without warranty of any kind. Use at your own risk.
