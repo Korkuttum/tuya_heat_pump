@@ -2,6 +2,14 @@
 
 <img src="https://www.arcelik.com.tr/media/resize/8510551100_MDM2_LOW_2.png/2000Wx2000H/image.webp" alt="Heat Pump" width="200"/>
 
+ ⚠️ **Note:**  
+> This integration has only been tested with the heat pump brands listed below.  
+> If your heat pump is a different brand and the integration does not work, please run the script at the following link and share the generated file with me:  
+> [tuya_api_test.py](https://github.com/Korkuttum/tuya_heat_pump/blob/7d4303902f08a66663448902a00e3fc71efc0f4b/test/tuya_api_test.py)
+### Supported Brands
+- Arçelik
+---
+
 This project allows you to control and monitor your Tuya cloud-based heat pump device through Home Assistant.
 
 ---
