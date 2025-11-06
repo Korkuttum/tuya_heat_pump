@@ -80,6 +80,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         self.api_endpoint = REGIONS[self.region]
         self.access_token = None
         self.device_name = DEFAULT_NAME  # Başlangıç değeri
+        self.is_online = True  # Online durumu - başlangıçta online varsay
 
         # Device info - geçici olarak
         self.device_info = DeviceInfo(
@@ -304,10 +305,31 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     return await self._async_update_data()
                 raise UpdateFailed(f"API error: {msg}")
             
-            data = {}
+            # ONLINE/OFFLINE tespiti
+            current_time = int(time.time() * 1000)
             properties = result.get('result', {}).get('properties', [])
             
-            # Tüm property'leri işle
+            if properties:
+                # En yeni timestamp'i bul
+                latest_timestamp = max(prop.get('time', 0) for prop in properties)
+                time_diff = current_time - latest_timestamp
+                
+                # Scan interval + 1 dakika tolerans
+                scan_interval_ms = self.update_interval.total_seconds() * 1000
+                tolerance_ms = scan_interval_ms + (60 * 1000)  # +1 dakika
+                
+                if time_diff > tolerance_ms:
+                    self.is_online = False
+                    _LOGGER.info("Device OFFLINE - data %s seconds old", time_diff // 1000)
+                else:
+                    self.is_online = True
+                    _LOGGER.debug("Device ONLINE - fresh data (%s seconds old)", time_diff // 1000)
+            else:
+                self.is_online = False  # Boş properties
+                _LOGGER.info("Device OFFLINE - no properties")
+            
+            # Mevcut data işleme
+            data = {}
             for prop in properties:
                 code = prop['code']
                 value = prop['value']
@@ -324,6 +346,6 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             return data
             
         except Exception as err:
-            _LOGGER.error("Error updating data: %s", str(err))
-            self.access_token = None
+            self.is_online = False
+            _LOGGER.info("Device OFFLINE - exception: %s", err)
             raise UpdateFailed(f"Error: {str(err)}")
