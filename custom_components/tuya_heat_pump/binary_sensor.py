@@ -22,6 +22,12 @@ async def async_setup_entry(
     coordinator: TuyaScaleDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
     
     binary_sensors = []
+    
+    # Online status binary sensor - HER ZAMAN EKLE
+    binary_sensors.append(TuyaHeatpumpOnlineSensor(coordinator))
+    _LOGGER.info("Adding online status binary sensor")
+    
+    # Diğer binary sensörleri ekle
     for binary_sensor_type in BINARY_SENSOR_TYPES:
         if coordinator.data and binary_sensor_type in coordinator.data:
             binary_sensors.append(TuyaHeatpumpBinarySensor(coordinator, binary_sensor_type))
@@ -30,6 +36,57 @@ async def async_setup_entry(
             _LOGGER.warning("Binary sensor %s not found in device data, skipping", binary_sensor_type)
     
     async_add_entities(binary_sensors)
+
+
+class TuyaHeatpumpOnlineSensor(BinarySensorEntity):
+    """Representation of a Tuya Heatpump Online Status Binary Sensor."""
+
+    def __init__(
+        self,
+        coordinator: TuyaScaleDataUpdateCoordinator,
+    ) -> None:
+        """Initialize the online status binary sensor."""
+        self.coordinator = coordinator
+        
+        # Device name ile unique_id oluştur
+        device_name_slug = coordinator.device_name.lower().replace(" ", "_").replace("-", "_")
+        self._attr_unique_id = f"{device_name_slug}_online_status"
+        
+        self._attr_name = "Online Status"
+        self._attr_device_class = "connectivity"
+        self._attr_has_entity_name = True
+        
+        # Device info
+        self._attr_device_info = coordinator.device_info
+
+    @property
+    def device_info(self):
+        """Return device info."""
+        return self.coordinator.device_info
+
+    @property
+    def is_on(self) -> bool | None:
+        """Return true if the device is online."""
+        return self.coordinator.is_online
+
+    @property
+    def available(self) -> bool:
+        """Return if entity is available."""
+        # Online sensörü her zaman available olmalı
+        return True
+
+    @property
+    def icon(self) -> str:
+        """Return the icon to use in the frontend."""
+        return "mdi:lan-connect" if self.is_on else "mdi:lan-disconnect"
+
+    async def async_added_to_hass(self) -> None:
+        """When entity is added to hass."""
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            self.coordinator.async_add_listener(self.async_write_ha_state)
+        )
+
 
 class TuyaHeatpumpBinarySensor(BinarySensorEntity):
     """Representation of a Tuya Heatpump Binary Sensor."""
