@@ -7,7 +7,7 @@
 > If your heat pump is a different brand and the integration does not work, please run the script at the following link and share the generated file with me:  
 > [tuya_api_test.py](https://github.com/Korkuttum/tuya_heat_pump/blob/7d4303902f08a66663448902a00e3fc71efc0f4b/test/tuya_api_test.py)
 ### Supported Brands
-- Arçelik
+- Arçelik (Beko, Grundig) 
 ---
 
 This project allows you to control and monitor your Tuya cloud-based heat pump device through Home Assistant.
