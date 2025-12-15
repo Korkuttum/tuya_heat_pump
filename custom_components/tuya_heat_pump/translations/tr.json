@@ -32,5 +32,21 @@
                 "title": "Tuya Isı Pompası Yapılandırması"
             }
         }
+    },
+    "entity": {
+        "select": {
+            "work_mode": {
+                "name": "Çalışma Modu",
+                "options": {
+                    "cool": "Soğutma Modu",
+                    "heat": "Isıtma Modu",
+                    "auto": "Otomatik Mod",
+                    "hot_water": "DHW Modu",
+                    "cool_hot_water": "Soğutma + DHW",
+                    "heat_hot_water": "Isıtma + DHW",
+                    "auto_dhw": "Otomatik + DHW"
+                }
+            }
+        }
     }
 }
