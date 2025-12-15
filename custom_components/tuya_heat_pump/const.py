@@ -11,6 +11,7 @@ PLATFORMS = [
     Platform.BINARY_SENSOR,
     Platform.SWITCH,
     Platform.NUMBER,
+    Platform.SELECT,  # Yeni ekledik
 ]
 
 DEFAULT_SCAN_INTERVAL = 3
