@@ -37,7 +37,7 @@
         "select": {
             "work_mode": {
                 "name": "Çalışma Modu",
-                "options": {
+                "state": {
                     "cool": "Soğutma Modu",
                     "heat": "Isıtma Modu",
                     "auto": "Otomatik Mod",
