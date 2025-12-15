@@ -32,7 +32,21 @@
                 "title": "Tuya Heat Pump Configuration"
             }
         }
+    },
+    "entity": {
+        "select": {
+            "work_mode": {
+                "name": "Work Mode",
+                "options": {
+                    "cool": "Cooling Mode",
+                    "heat": "Heating Mode",
+                    "auto": "Auto Mode",
+                    "hot_water": "DHW Mode",
+                    "cool_hot_water": "Cooling + DHW",
+                    "heat_hot_water": "Heating + DHW",
+                    "auto_dhw": "Auto + DHW"
+                }
+            }
+        }
     }
 }
-
-
