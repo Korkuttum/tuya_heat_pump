@@ -284,3 +284,19 @@ NUMBER_TYPES = {
         "step": 1.0,
     },
 }
+# Yeni: Select Types
+SELECT_TYPES = {
+    "work_mode": {
+        "key": "work_mode",
+        "icon": "mdi:air-conditioner",
+        "options": {
+            "cool": "cool",
+            "heat": "heat", 
+            "auto": "auto",
+            "hot_water": "hot_water",
+            "cool_hot_water": "cool_hot_water",
+            "heat_hot_water": "heat_hot_water",
+            "auto_dhw": "auto_dhw"
+        }
+    }
+}
