@@ -37,7 +37,7 @@
         "select": {
             "work_mode": {
                 "name": "Work Mode",
-                "state": {
+                "options": {
                     "cool": "Cooling Mode",
                     "heat": "Heating Mode",
                     "auto": "Auto Mode",
@@ -50,4 +50,5 @@
         }
     }
 }
+
 
