@@ -78,7 +78,7 @@ class TuyaScaleOptionsFlow(config_entries.OptionsFlow):
 
     def __init__(self, config_entry):
         """Initialize options flow."""
-        self.config_entry = config_entry
+        self._config_entry = config_entry  # Private attribute kullan
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
@@ -91,7 +91,7 @@ class TuyaScaleOptionsFlow(config_entries.OptionsFlow):
                 {
                     vol.Optional(
                         CONF_SCAN_INTERVAL,
-                        default=self.config_entry.options.get(
+                        default=self._config_entry.options.get(
                             CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
                         )
                     ): selector.NumberSelector(
@@ -147,4 +147,3 @@ class CannotConnect(HomeAssistantError):
 
 class InvalidAuth(HomeAssistantError):
     """Error to indicate there is invalid auth."""
-
