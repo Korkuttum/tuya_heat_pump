@@ -27,16 +27,23 @@ async def async_setup_entry(
     binary_sensors.append(TuyaHeatpumpOnlineSensor(coordinator))
     _LOGGER.info("Adding online status binary sensor")
     
-    # Diğer binary sensörleri ekle
-    for binary_sensor_type in BINARY_SENSOR_TYPES:
-        if coordinator.data and binary_sensor_type in coordinator.data:
-            binary_sensors.append(TuyaHeatpumpBinarySensor(coordinator, binary_sensor_type))
-            _LOGGER.info("Adding binary sensor: %s", binary_sensor_type)
+    # Cihaz mapping'ini kontrol et
+    if not coordinator.device_mapping:
+        _LOGGER.error("Device mapping not found, cannot create binary sensors")
+        async_add_entities(binary_sensors)
+        return
+    
+    # Mapping'e göre binary sensörleri ekle
+    binary_mapping = coordinator.device_mapping.get("binary_sensors", {})
+    for binary_sensor_key in BINARY_SENSOR_TYPES:
+        if binary_sensor_key in binary_mapping:
+            binary_sensors.append(TuyaHeatpumpBinarySensor(coordinator, binary_sensor_key))
+            _LOGGER.info("Adding binary sensor: %s -> %s", 
+                        binary_sensor_key, binary_mapping[binary_sensor_key])
         else:
-            _LOGGER.warning("Binary sensor %s not found in device data, skipping", binary_sensor_type)
+            _LOGGER.debug("Binary sensor %s not in device mapping, skipping", binary_sensor_key)
     
     async_add_entities(binary_sensors)
-
 
 class TuyaHeatpumpOnlineSensor(BinarySensorEntity):
     """Representation of a Tuya Heatpump Online Status Binary Sensor."""
@@ -87,25 +94,25 @@ class TuyaHeatpumpOnlineSensor(BinarySensorEntity):
             self.coordinator.async_add_listener(self.async_write_ha_state)
         )
 
-
 class TuyaHeatpumpBinarySensor(BinarySensorEntity):
     """Representation of a Tuya Heatpump Binary Sensor."""
 
     def __init__(
         self,
         coordinator: TuyaScaleDataUpdateCoordinator,
-        binary_sensor_type: str
+        binary_sensor_key: str
     ) -> None:
         """Initialize the binary sensor."""
         self.coordinator = coordinator
-        self._binary_sensor_type = binary_sensor_type
+        self._binary_sensor_key = binary_sensor_key
+        self._sensor_config = BINARY_SENSOR_TYPES.get(binary_sensor_key, {})
         
         # Device name ile unique_id oluştur
         device_name_slug = coordinator.device_name.lower().replace(" ", "_").replace("-", "_")
-        self._attr_unique_id = f"{device_name_slug}_{binary_sensor_type}"
+        self._attr_unique_id = f"{device_name_slug}_{binary_sensor_key}"
         
-        self._attr_name = BINARY_SENSOR_TYPES[binary_sensor_type]['name']
-        self._attr_device_class = BINARY_SENSOR_TYPES[binary_sensor_type]['device_class']
+        self._attr_name = self._sensor_config.get('name', binary_sensor_key)
+        self._attr_device_class = self._sensor_config.get('device_class')
         self._attr_has_entity_name = True
         
         # Device info
@@ -119,10 +126,11 @@ class TuyaHeatpumpBinarySensor(BinarySensorEntity):
     @property
     def is_on(self) -> bool | None:
         """Return true if the binary sensor is on."""
-        if not self.coordinator.data or self._binary_sensor_type not in self.coordinator.data:
+        if not self.coordinator.data or self._binary_sensor_key not in self.coordinator.data:
             return None
             
-        value = self.coordinator.data[self._binary_sensor_type]['value']
+        value_data = self.coordinator.data[self._binary_sensor_key]
+        value = value_data.get('value')
         
         # Value'yu boolean'a çevir
         if isinstance(value, bool):
@@ -135,12 +143,28 @@ class TuyaHeatpumpBinarySensor(BinarySensorEntity):
         return False
 
     @property
+    def extra_state_attributes(self) -> dict:
+        """Return extra state attributes."""
+        if not self.coordinator.data or self._binary_sensor_key not in self.coordinator.data:
+            return {}
+            
+        attrs = {}
+        value_data = self.coordinator.data[self._binary_sensor_key]
+        
+        if 'last_update' in value_data:
+            attrs['last_update'] = value_data['last_update']
+        if 'original_dp' in value_data:
+            attrs['dp_code'] = value_data['original_dp']
+        
+        return attrs
+
+    @property
     def available(self) -> bool:
         """Return if entity is available."""
         return (
             self.coordinator.last_update_success and 
             self.coordinator.data is not None and
-            self._binary_sensor_type in self.coordinator.data
+            self._binary_sensor_key in self.coordinator.data
         )
 
     async def async_added_to_hass(self) -> None:
