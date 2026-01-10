@@ -9,7 +9,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Tuya Heatpump from a config entry."""
     coordinator = TuyaScaleDataUpdateCoordinator(hass, entry)
     
-    # Önce device info'yu al
+    # Önce device info'yu al (model ID'yi de alır)
     await coordinator.get_device_info()
     
     await coordinator.async_config_entry_first_refresh()
