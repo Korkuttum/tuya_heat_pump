@@ -1,6 +1,8 @@
 """Sensor platform for Tuya Heatpump."""
 from __future__ import annotations
 import logging
+from typing import Optional
+
 from homeassistant.core import HomeAssistant
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -8,7 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, SENSOR_TYPES
+from .const import DOMAIN, SENSOR_TYPES, DEVICE_MAPPINGS
 from .coordinator import TuyaScaleDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -23,20 +25,31 @@ async def async_setup_entry(
     
     sensors = []
     
-    # Normal sensörleri ekle
-    for sensor_type in SENSOR_TYPES:
-        if sensor_type == 'total_energy':
-            continue  # Bunu ayrı ekleyeceğiz
-        elif sensor_type in ['calculated_power']:
-            sensors.append(TuyaHeatpumpSensor(coordinator, sensor_type))
-            _LOGGER.info("Adding calculated sensor: %s", sensor_type)
-        elif coordinator.data and sensor_type in coordinator.data:
-            sensors.append(TuyaHeatpumpSensor(coordinator, sensor_type))
-            _LOGGER.info("Adding sensor: %s", sensor_type)
-        else:
-            _LOGGER.debug("Sensor %s not found in device data, skipping", sensor_type)
+    # Cihaz modelini kontrol et
+    if not coordinator.device_mapping:
+        _LOGGER.error("Device mapping not found, cannot create sensors")
+        return
     
-    # Total energy sensörünü ayrı ekle
+    # Ana sensörleri ekle
+    sensor_mapping = coordinator.device_mapping.get("sensors", {})
+    for sensor_key in SENSOR_TYPES:
+        if sensor_key in sensor_mapping:
+            sensors.append(TuyaHeatpumpSensor(coordinator, sensor_key))
+            _LOGGER.info("Adding sensor: %s -> %s", sensor_key, sensor_mapping[sensor_key])
+        else:
+            _LOGGER.debug("Sensor %s not in device mapping, skipping", sensor_key)
+    
+    # Ekstra sensörleri ekle (yeni cihaz için)
+    extra_sensors = coordinator.device_mapping.get("extra_sensors", {})
+    for sensor_key, dp_code in extra_sensors.items():
+        # Ekstra sensör tanımı var mı kontrol et
+        if sensor_key in SENSOR_TYPES:
+            sensors.append(TuyaHeatpumpSensor(coordinator, sensor_key))
+            _LOGGER.info("Adding extra sensor: %s -> %s", sensor_key, dp_code)
+        else:
+            _LOGGER.debug("Extra sensor %s not defined in SENSOR_TYPES", sensor_key)
+    
+    # Total energy sensörünü ayrı ekle (her iki modelde de)
     sensors.append(TuyaEnergySensor(coordinator))
     
     async_add_entities(sensors)
@@ -47,20 +60,21 @@ class TuyaHeatpumpSensor(SensorEntity):
     def __init__(
         self,
         coordinator: TuyaScaleDataUpdateCoordinator,
-        sensor_type: str
+        sensor_key: str
     ) -> None:
         """Initialize the sensor."""
         self.coordinator = coordinator
-        self._sensor_type = sensor_type
+        self._sensor_key = sensor_key
+        self._sensor_config = SENSOR_TYPES.get(sensor_key, {})
         
         device_name_slug = coordinator.device_name.lower().replace(" ", "_").replace("-", "_")
-        self._attr_unique_id = f"{device_name_slug}_{sensor_type}"
+        self._attr_unique_id = f"{device_name_slug}_{sensor_key}"
         
-        self._attr_name = SENSOR_TYPES[sensor_type]['name']
-        self._attr_native_unit_of_measurement = SENSOR_TYPES[sensor_type]['unit']
-        self._attr_icon = SENSOR_TYPES[sensor_type].get('icon')
-        self._attr_device_class = SENSOR_TYPES[sensor_type].get('device_class')
-        self._attr_state_class = SENSOR_TYPES[sensor_type].get('state_class')
+        self._attr_name = self._sensor_config.get('name', sensor_key)
+        self._attr_native_unit_of_measurement = self._sensor_config.get('unit')
+        self._attr_icon = self._sensor_config.get('icon')
+        self._attr_device_class = self._sensor_config.get('device_class')
+        self._attr_state_class = self._sensor_config.get('state_class')
         self._attr_has_entity_name = True
         self._attr_device_info = coordinator.device_info
 
@@ -70,57 +84,46 @@ class TuyaHeatpumpSensor(SensorEntity):
         return self.coordinator.device_info
 
     @property
-    def native_value(self) -> str | None:
+    def native_value(self) -> str | float | None:
         """Return the state of the sensor."""
-        if self._sensor_type == "calculated_power":
-            return self._calculate_power()
-            
-        if not self.coordinator.data or self._sensor_type not in self.coordinator.data:
+        if not self.coordinator.data or self._sensor_key not in self.coordinator.data:
             return None
             
-        value = self.coordinator.data[self._sensor_type]['value']
+        value_data = self.coordinator.data[self._sensor_key]
+        value = value_data.get('value')
         
-        if self._sensor_type in ['in_water_temp', 'out_water_temp', 'tank_temp', 'amb_temp', 
-                                'disc_temp', 'back_temp', 'tidr', 'ac_curr', 'flow_rate']:
-            if isinstance(value, (int, float)):
-                return value / 10.0
+        # Debug için
+        if 'original_value' in value_data:
+            _LOGGER.debug("Sensor %s: %.2f (original: %s, DP: %s)", 
+                         self._sensor_key, value, 
+                         value_data.get('original_value'),
+                         value_data.get('original_dp', 'unknown'))
         
         return value
 
-    def _calculate_power(self) -> float | None:
-        """Güç hesaplama: P = V × I"""
-        if not self.coordinator.data:
-            return None
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Return extra state attributes."""
+        if not self.coordinator.data or self._sensor_key not in self.coordinator.data:
+            return {}
             
-        voltage = None
-        current = None
+        attrs = {}
+        value_data = self.coordinator.data[self._sensor_key]
         
-        if 'ac_vol' in self.coordinator.data:
-            voltage = self.coordinator.data['ac_vol']['value']
-            if isinstance(voltage, (int, float)):
-                voltage = voltage
+        if 'last_update' in value_data:
+            attrs['last_update'] = value_data['last_update']
+        if 'original_dp' in value_data:
+            attrs['dp_code'] = value_data['original_dp']
         
-        if 'ac_curr' in self.coordinator.data:
-            current = self.coordinator.data['ac_curr']['value']
-            if isinstance(current, (int, float)):
-                current = current / 10.0
-        
-        if voltage is not None and current is not None:
-            power = voltage * current
-            return round(power, 2)
-            
-        return None
+        return attrs
 
     @property
     def available(self) -> bool:
         """Return if entity is available."""
-        if self._sensor_type in ['calculated_power']:
-            return self.coordinator.last_update_success
-            
         return (
             self.coordinator.last_update_success and 
             self.coordinator.data is not None and
-            self._sensor_type in self.coordinator.data
+            self._sensor_key in self.coordinator.data
         )
 
     async def async_added_to_hass(self) -> None:
@@ -130,12 +133,11 @@ class TuyaHeatpumpSensor(SensorEntity):
             self.coordinator.async_add_listener(self.async_write_ha_state)
         )
 
-
 class TuyaEnergySensor(SensorEntity, RestoreEntity):
     """Total Energy Sensor for Tuya Heatpump."""
     
     _attr_device_class = "energy"
-    _attr_native_unit_of_measurement = "Wh"
+    _attr_native_unit_of_measurement = "kWh"
     _attr_state_class = "total_increasing"
     _attr_icon = "mdi:lightning-bolt"
     _attr_has_entity_name = True
@@ -160,7 +162,7 @@ class TuyaEnergySensor(SensorEntity, RestoreEntity):
         if (last_state := await self.async_get_last_state()) is not None:
             try:
                 self._total_energy = float(last_state.state)
-                _LOGGER.info("Energy sensor state restored: %s Wh", self._total_energy)
+                _LOGGER.info("Energy sensor state restored: %s kWh", self._total_energy)
             except (ValueError, TypeError):
                 self._total_energy = 0.0
         
@@ -183,9 +185,10 @@ class TuyaEnergySensor(SensorEntity, RestoreEntity):
             time_diff = (current_time - self._last_update).total_seconds() / 3600.0  # hours
             
             if time_diff > 0 and self._last_power > 0:
-                energy_increment = self._last_power * time_diff  # Wh
+                energy_increment = (self._last_power * time_diff) / 1000.0  # kWh
                 self._total_energy += energy_increment
-                _LOGGER.debug("Energy added: %.6f Wh, Total: %.3f Wh", energy_increment, self._total_energy)
+                _LOGGER.debug("Energy added: %.6f kWh, Total: %.3f kWh", 
+                             energy_increment, self._total_energy)
         
         # Update values
         self._last_power = current_power
@@ -193,32 +196,28 @@ class TuyaEnergySensor(SensorEntity, RestoreEntity):
         
         self.async_write_ha_state()
 
-    def _get_current_power(self) -> float | None:
+    def _get_current_power(self) -> Optional[float]:
         """Get current power in watts."""
         if not self.coordinator.data:
             return None
             
-        voltage = None
-        current = None
+        # Önce calculated_power'ı kontrol et
+        if "calculated_power" in self.coordinator.data:
+            power_data = self.coordinator.data["calculated_power"]
+            if isinstance(power_data.get('value'), (int, float)):
+                return float(power_data['value'])
         
-        if 'ac_vol' in self.coordinator.data:
-            voltage = self.coordinator.data['ac_vol']['value']
-            if isinstance(voltage, (int, float)) and voltage > 0:
-                voltage = float(voltage)
-        
-        if 'ac_curr' in self.coordinator.data:
-            current = self.coordinator.data['ac_curr']['value']
-            if isinstance(current, (int, float)) and current > 0:
-                current = float(current) / 10.0
-        
-        if voltage is not None and current is not None:
-            return voltage * current
+        # Sonra cur_power'ı kontrol et (yeni cihaz için)
+        if "cur_power" in self.coordinator.data:
+            power_data = self.coordinator.data["cur_power"]
+            if isinstance(power_data.get('value'), (int, float)):
+                return float(power_data['value'])
         
         return None
 
     @property
     def native_value(self) -> float:
-        """Return the total energy in Wh."""
+        """Return the total energy in kWh."""
         return round(self._total_energy, 3)
 
     @property
