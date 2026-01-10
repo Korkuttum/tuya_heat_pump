@@ -23,12 +23,21 @@ async def async_setup_entry(
     coordinator: TuyaScaleDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
     
     numbers = []
-    for number_type in NUMBER_TYPES:
-        if coordinator.data and number_type in coordinator.data:
-            numbers.append(TuyaHeatpumpNumber(coordinator, number_type))
-            _LOGGER.info("Adding number: %s", number_type)
+    
+    # Cihaz mapping'ini kontrol et
+    if not coordinator.device_mapping:
+        _LOGGER.error("Device mapping not found, cannot create numbers")
+        async_add_entities(numbers)
+        return
+    
+    # Mapping'e göre number'ları ekle
+    number_mapping = coordinator.device_mapping.get("numbers", {})
+    for number_key in NUMBER_TYPES:
+        if number_key in number_mapping:
+            numbers.append(TuyaHeatpumpNumber(coordinator, number_key))
+            _LOGGER.info("Adding number: %s -> %s", number_key, number_mapping[number_key])
         else:
-            _LOGGER.warning("Number %s not found in device data, skipping", number_type)
+            _LOGGER.debug("Number %s not in device mapping, skipping", number_key)
     
     async_add_entities(numbers)
 
@@ -38,24 +47,25 @@ class TuyaHeatpumpNumber(NumberEntity):
     def __init__(
         self,
         coordinator: TuyaScaleDataUpdateCoordinator,
-        number_type: str
+        number_key: str
     ) -> None:
         """Initialize the number."""
         self.coordinator = coordinator
-        self._number_type = number_type
+        self._number_key = number_key
+        self._number_config = NUMBER_TYPES.get(number_key, {})
         
         # Device name ile unique_id oluştur
         device_name_slug = coordinator.device_name.lower().replace(" ", "_").replace("-", "_")
-        self._attr_unique_id = f"{device_name_slug}_{number_type}"
+        self._attr_unique_id = f"{device_name_slug}_{number_key}"
         
-        self._attr_name = NUMBER_TYPES[number_type]['name']
-        self._attr_icon = NUMBER_TYPES[number_type].get('icon')
-        self._attr_native_unit_of_measurement = NUMBER_TYPES[number_type]['unit']
-        self._attr_native_min_value = NUMBER_TYPES[number_type]['min_value']
-        self._attr_native_max_value = NUMBER_TYPES[number_type]['max_value']
-        self._attr_native_step = NUMBER_TYPES[number_type]['step']
+        self._attr_name = self._number_config.get('name', number_key)
+        self._attr_icon = self._number_config.get('icon')
+        self._attr_native_unit_of_measurement = self._number_config.get('unit')
+        self._attr_native_min_value = self._number_config.get('min_value', 0)
+        self._attr_native_max_value = self._number_config.get('max_value', 100)
+        self._attr_native_step = self._number_config.get('step', 1.0)
         self._attr_has_entity_name = True
-        self._attr_mode = NumberMode.BOX  # Slider yerine box modu
+        self._attr_mode = NumberMode.BOX
         
         # Device info
         self._attr_device_info = coordinator.device_info
@@ -68,38 +78,49 @@ class TuyaHeatpumpNumber(NumberEntity):
     @property
     def native_value(self) -> float | None:
         """Return the current value."""
-        if not self.coordinator.data or self._number_type not in self.coordinator.data:
+        if not self.coordinator.data or self._number_key not in self.coordinator.data:
             return None
             
-        value = self.coordinator.data[self._number_type]['value']
+        value_data = self.coordinator.data[self._number_key]
+        value = value_data.get('value')
         
-        # API'den gelen değeri °C'ye çevir (10'a böl)
         if isinstance(value, (int, float)):
-            return value / 10.0
+            # Yeni cihaz için değer zaten °C formatında
+            # Mevcut cihaz için 10'a bölme coordinator'da yapılıyor
+            return float(value)
         
-        _LOGGER.warning("Unexpected value type for %s: %s", self._number_type, type(value))
+        _LOGGER.warning("Unexpected value type for %s: %s", self._number_key, type(value))
         return None
 
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Return extra state attributes."""
+        if not self.coordinator.data or self._number_key not in self.coordinator.data:
+            return {}
+            
+        attrs = {}
+        value_data = self.coordinator.data[self._number_key]
+        
+        if 'last_update' in value_data:
+            attrs['last_update'] = value_data['last_update']
+        if 'original_dp' in value_data:
+            attrs['dp_code'] = value_data['original_dp']
+        
+        return attrs
+
     async def async_set_native_value(self, value: float) -> None:
-        """Set new value - try to write, show error if fails."""
-        # Değeri API formatına çevir (10 ile çarp ve integer'a çevir)
-        api_value = int(value * 10)
+        """Set new value."""
+        _LOGGER.info("Attempting to set %s to %s°C", self._number_key, value)
         
-        _LOGGER.info("Attempting to set %s to %s°C (API value: %s)", 
-                    self._number_type, value, api_value)
-        
-        success = await self.coordinator.send_command(self._number_type, api_value)
+        success = await self.coordinator.send_command("numbers", self._number_key, value)
         
         if success:
-            _LOGGER.info("✅ Successfully set %s to %s°C", self._number_type, value)
-            # Başarılı ise state'i güncelle
+            _LOGGER.info("✅ Successfully set %s to %s°C", self._number_key, value)
             await self.coordinator.async_request_refresh()
         else:
-            _LOGGER.warning("❌ Failed to set %s to %s°C", self._number_type, value)
-            
-            # Kullanıcıya Home Assistant bildirimi göster
+            _LOGGER.warning("❌ Failed to set %s to %s°C", self._number_key, value)
             raise HomeAssistantError(
-                f"{NUMBER_TYPES[self._number_type]['name']} değeri değiştirilemiyor. "
+                f"{self._number_config.get('name', self._number_key)} değeri değiştirilemiyor. "
                 f"Cihazınız bu ayarı değiştirmeye izin vermiyor. "
                 f"Lütfen ayarı cihaz üzerinden yapın."
             )
@@ -110,7 +131,7 @@ class TuyaHeatpumpNumber(NumberEntity):
         return (
             self.coordinator.last_update_success and 
             self.coordinator.data is not None and
-            self._number_type in self.coordinator.data
+            self._number_key in self.coordinator.data
         )
 
     async def async_added_to_hass(self) -> None:
