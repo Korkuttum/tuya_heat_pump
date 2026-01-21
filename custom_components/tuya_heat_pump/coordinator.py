@@ -63,12 +63,13 @@ def make_api_request(url: str, headers: dict, method: str = "GET", data: dict = 
         raise
 
 class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
-    """Class to manage fetching Tuya Heatpump data."""
+    """Class to manage fetching Tuya Heatpump data with Instant Updates."""
 
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
         """Initialize the coordinator."""
         self.connection_type = config_entry.data.get(CONF_CONNECTION_TYPE, "cloud")
-
+        
+        # Cloud için poll devam eder, Local için anlık dinleme yapacağımızdan interval'i kapatıyoruz
         if self.connection_type == "cloud":
             scan_interval = timedelta(
                 minutes=config_entry.options.get(
@@ -77,7 +78,8 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 )
             )
         else:
-            scan_interval = timedelta(seconds=30)
+            # Local modda anlık güncelleme (push) kullanacağımız için periyodik sorgulamayı (poll) kapatıyoruz
+            scan_interval = None 
 
         super().__init__(
             hass,
@@ -93,6 +95,8 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         self.model_id = None
         self.model_mapping = None
         self.dp_mapping = {}
+        self._listener_task = None
+        self._heartbeat_task = None
 
         self.device_info = DeviceInfo(
             identifiers={(DOMAIN, self.device_id)},
@@ -112,21 +116,94 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             self.local_key = config_entry.data[CONF_LOCAL_KEY]
             self.protocol = float(config_entry.data.get(CONF_PROTOCOL, "3.4"))
             try:
+                # Persistent bağlantı aktif edildi
                 self.local_device = tinytuya.Device(
                     dev_id=self.device_id,
                     address=self.ip,
                     local_key=self.local_key,
                     version=self.protocol,
-                    persist=False
+                    persist=True 
                 )
-                _LOGGER.info("Local Tuya device initialized: %s (protocol %.1f)", self.device_id, self.protocol)
+                _LOGGER.info("Local Tuya device initialized (Persistent Mode): %s", self.device_id)
+                
+                # Dinleyici döngüsünü başlat
+                self.hass.loop.create_task(self._async_start_listener())
+                
             except Exception as err:
                 _LOGGER.error("Failed to initialize TinyTuya device: %s", err)
                 self.local_device = None
 
+    async def _async_start_listener(self):
+        """Start the background listener for instant updates."""
+        _LOGGER.info("Starting TinyTuya listener loop for %s", self.device_id)
+        
+        # İlk veriyi bir kez çekelim
+        await self.async_refresh()
+        
+        # Dinleme ve Heartbeat döngülerini başlat
+        self._listener_task = self.hass.loop.create_task(self._listen_loop())
+        self._heartbeat_task = self.hass.loop.create_task(self._heartbeat_loop())
+
+    async def _listen_loop(self):
+        """Loop to receive instant data from the device."""
+        while True:
+            try:
+                # TinyTuya'nın receive() fonksiyonu bloklayıcıdır, executor ile çalıştırıyoruz
+                data = await self.hass.async_add_executor_job(self.local_device.receive)
+                
+                if data and 'dps' in data:
+                    _LOGGER.debug("Instant update received: %s", data['dps'])
+                    new_data = self._process_local_dps(data['dps'])
+                    if new_data:
+                        # Coordinator içindeki veriyi güncelle ve entity'lere haber ver
+                        self.async_set_updated_data(new_data)
+                
+                await asyncio.sleep(0.1) # CPU'yu yormamak için minik ara
+            except Exception as err:
+                _LOGGER.error("Error in listener loop: %s. Retrying in 5s...", err)
+                await asyncio.sleep(5)
+
+    async def _heartbeat_loop(self):
+        """Loop to keep the connection alive."""
+        while True:
+            try:
+                if self.local_device:
+                    await self.hass.async_add_executor_job(self.local_device.heartbeat)
+                await asyncio.sleep(15) # 15 saniyede bir heartbeat idealdir
+            except Exception as err:
+                _LOGGER.debug("Heartbeat error: %s", err)
+                await asyncio.sleep(10)
+
+    def _process_local_dps(self, dps: dict) -> dict:
+        """Helper to convert raw DPS to our data format."""
+        data = {}
+        current_ms = int(time.time() * 1000)
+        current_str = datetime.fromtimestamp(current_ms / 1000).strftime('%Y-%m-%d %H:%M:%S')
+        
+        for dp_str, value in dps.items():
+            try:
+                dp_id = int(dp_str)
+                code = self.dp_mapping.get(dp_id)
+                if code:
+                    data[code] = {
+                        'value': value,
+                        'timestamp': current_ms,
+                        'type': str(type(value).__name__),
+                        'last_update': current_str
+                    }
+            except ValueError:
+                continue
+        
+        # Eğer kısmi veri geldiyse, mevcut verilerle birleştir (coordinator.data)
+        if self.data and isinstance(self.data, dict):
+            updated_data = dict(self.data)
+            updated_data.update(data)
+            return updated_data
+            
+        return data
+
     def _calculate_sign(self, t: str, path: str, access_token: str = None, method: str = "GET", body: str = "") -> str:
         """Calculate signature for API requests."""
-        # String to sign
         str_to_sign = []
         str_to_sign.append(method)
         str_to_sign.append(hashlib.sha256(body.encode('utf8') if body else ''.encode('utf8')).hexdigest())
@@ -134,13 +211,11 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         str_to_sign.append(path)
         str_to_sign = '\n'.join(str_to_sign)
         
-        # Message
         message = self.access_id
         if access_token:
             message += access_token
         message += t + str_to_sign
         
-        # Calculate signature
         signature = hmac.new(
             self.access_key.encode('utf-8'),
             message.encode('utf-8'),
@@ -208,7 +283,6 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 }
                 
                 url = f"{self.api_endpoint}{path}"
-                
                 _LOGGER.info("Getting device info from API...")
                 
                 response = await self.hass.async_add_executor_job(
@@ -241,7 +315,6 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 _LOGGER.error("Error getting device info: %s", str(err))
                 return {}
         else:
-            # Local mode
             self.device_name = f"Tuya Heat Pump (Local) {self.device_id[-6:]}"
             self.device_info = DeviceInfo(
                 identifiers={(DOMAIN, self.device_id)},
@@ -271,7 +344,6 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 }
                 
                 url = f"{self.api_endpoint}{path}"
-                
                 _LOGGER.info("Getting device model from API...")
                 
                 response = await self.hass.async_add_executor_job(
@@ -288,10 +360,8 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     
                     _LOGGER.info("Device model ID: %s", self.model_id)
                     
-                    # Model mapping yükle
                     self.model_mapping = await async_load_model_mapping(self.hass, self.model_id)
                     
-                    # dp_mapping oluştur
                     self.dp_mapping = {}
                     for entity_type in ['sensors', 'binary_sensors', 'switches', 'numbers', 'selects']:
                         for code, config in self.model_mapping.get(entity_type, {}).items():
@@ -311,11 +381,9 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 self.model_mapping = load_model_mapping("default")
                 return {}
         else:
-            # Local mode - default mapping kullan
             self.model_id = "default"
             self.model_mapping = await async_load_model_mapping(self.hass, self.model_id)
             
-            # dp_mapping oluştur
             self.dp_mapping = {}
             for entity_type in ['sensors', 'binary_sensors', 'switches', 'numbers', 'selects']:
                 for code, config in self.model_mapping.get(entity_type, {}).items():
@@ -336,7 +404,6 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 t = str(int(time.time() * 1000))
                 path = DEVICE_COMMAND_PATH.format(device_id=self.device_id)
                 
-                # API conversion varsa uygula
                 if self.model_mapping:
                     for entity_type in ['switches', 'numbers', 'selects']:
                         if code in self.model_mapping.get(entity_type, {}):
@@ -369,7 +436,6 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 }
                 
                 url = f"{self.api_endpoint}{path}"
-                
                 _LOGGER.info("Sending command: %s = %s", code, value)
                 
                 response = await self.hass.async_add_executor_job(
@@ -384,6 +450,8 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 
                 if result.get('success', False):
                     _LOGGER.info("✅ Command successful: %s = %s", code, value)
+                    # Instant update geleceği için burada refresh'e gerek olmayabilir 
+                    # ama cloud'da gerekebilir.
                     await asyncio.sleep(2)
                     await self.async_request_refresh()
                     return True
@@ -393,12 +461,10 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     return False
                     
             else:
-                # Local mode
                 if not self.local_device:
                     _LOGGER.error("Local device not initialized")
                     return False
                     
-                # code → dp_id dönüşümü
                 dp_id = next((k for k, v in self.dp_mapping.items() if v == code), None)
                 if dp_id is None:
                     _LOGGER.error("No dp_id mapping found for code: %s", code)
@@ -412,8 +478,8 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 
                 if result:
                     _LOGGER.info("✅ Local command successful: dp %s = %s", dp_id, value)
-                    await asyncio.sleep(1)
-                    await self.async_request_refresh()
+                    # Cihaz set_value'dan sonra status mesajı push edecektir, 
+                    # bu yüzden manuel refresh'e gerek yok.
                     return True
                 else:
                     _LOGGER.warning("❌ Local command failed for dp %s", dp_id)
@@ -424,7 +490,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             return False
 
     async def _async_update_data(self):
-        """Fetch data from Tuya API or local device."""
+        """Fetch data from Tuya API or local device (Manual Poll)."""
         if self.connection_type == "cloud":
             try:
                 if not self.access_token:
@@ -451,7 +517,6 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 )
                 
                 if response.status_code == 401:
-                    _LOGGER.debug("Token expired, refreshing...")
                     self.access_token = None
                     return await self._async_update_data()
                 
@@ -466,54 +531,29 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                         return await self._async_update_data()
                     raise UpdateFailed(f"API error: {msg}")
                 
-                # ONLINE/OFFLINE tespiti
-                current_time = int(time.time() * 1000)
                 properties = result.get('result', {}).get('properties', [])
-                
-                if properties:
-                    latest_timestamp = max(prop.get('time', 0) for prop in properties)
-                    time_diff = current_time - latest_timestamp
-                    
-                    scan_interval_ms = self.update_interval.total_seconds() * 1000
-                    tolerance_ms = scan_interval_ms + (60 * 1000)
-                    
-                    if time_diff > tolerance_ms:
-                        self.is_online = False
-                        _LOGGER.info("Device OFFLINE - data %s seconds old", time_diff // 1000)
-                    else:
-                        self.is_online = True
-                        _LOGGER.debug("Device ONLINE - fresh data (%s seconds old)", time_diff // 1000)
-                else:
-                    self.is_online = False
-                    _LOGGER.info("Device OFFLINE - no properties")
-                
                 data = {}
                 for prop in properties:
                     code = prop['code']
-                    value = prop['value']
-                    timestamp = prop.get('time', 0)
-                    value_type = prop.get('type', '')
-                    
                     data[code] = {
-                        'value': value,
-                        'timestamp': timestamp,
-                        'type': value_type,
-                        'last_update': datetime.fromtimestamp(timestamp / 1000).strftime('%Y-%m-%d %H:%M:%S')
+                        'value': prop['value'],
+                        'timestamp': prop.get('time', 0),
+                        'type': prop.get('type', ''),
+                        'last_update': datetime.fromtimestamp(prop.get('time', 0) / 1000).strftime('%Y-%m-%d %H:%M:%S')
                     }
-                
                 return data
                 
             except Exception as err:
                 self.is_online = False
-                _LOGGER.info("Device OFFLINE - exception: %s", err)
                 raise UpdateFailed(f"Error: {str(err)}")
         
         else:
-            # Local mode
+            # Local mode initial status fetch
             if not self.local_device:
                 raise UpdateFailed("Local device not initialized")
             
             try:
+                # Durumu zorla sorgula (sadece başlangıçta veya hata anında)
                 status = await self.hass.async_add_executor_job(self.local_device.status)
                 
                 if not status or 'dps' not in status:
@@ -521,31 +561,8 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     raise UpdateFailed("No 'dps' in local status response")
                 
                 self.is_online = True
-                data = {}
-                current_ms = int(time.time() * 1000)
-                current_str = datetime.fromtimestamp(current_ms / 1000).strftime('%Y-%m-%d %H:%M:%S')
-                
-                for dp_str, value in status['dps'].items():
-                    try:
-                        dp_id = int(dp_str)
-                        code = self.dp_mapping.get(dp_id)
-                        if code:
-                            data[code] = {
-                                'value': value,
-                                'timestamp': current_ms,
-                                'type': str(type(value).__name__),
-                                'last_update': current_str
-                            }
-                    except ValueError:
-                        _LOGGER.debug("Invalid dp_id in local response: %s", dp_str)
-                
-                if not data:
-                    _LOGGER.warning("No known codes found in local DPS response")
-                    self.is_online = False
-                
-                return data
+                return self._process_local_dps(status['dps'])
             
             except Exception as err:
                 self.is_online = False
-                _LOGGER.info("Local device OFFLINE - exception: %s", err)
                 raise UpdateFailed(f"Local error: {str(err)}")
