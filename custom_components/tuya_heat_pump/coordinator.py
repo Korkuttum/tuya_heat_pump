@@ -8,6 +8,7 @@ import requests
 import json
 import asyncio
 from datetime import datetime, timedelta
+from typing import Any
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import (
@@ -123,44 +124,81 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 _LOGGER.error("Failed to initialize TinyTuya device: %s", err)
                 self.local_device = None
 
-    def _calculate_sign(self, t: str, path: str, access_token: str = "") -> str:
-        sign_str = self.access_id + access_token + t + path
-        return hmac.new(
+    def _calculate_sign(self, t: str, path: str, access_token: str = None, method: str = "GET", body: str = "") -> str:
+        """Calculate signature for API requests."""
+        # String to sign
+        str_to_sign = []
+        str_to_sign.append(method)
+        str_to_sign.append(hashlib.sha256(body.encode('utf8') if body else ''.encode('utf8')).hexdigest())
+        str_to_sign.append("")
+        str_to_sign.append(path)
+        str_to_sign = '\n'.join(str_to_sign)
+        
+        # Message
+        message = self.access_id
+        if access_token:
+            message += access_token
+        message += t + str_to_sign
+        
+        # Calculate signature
+        signature = hmac.new(
             self.access_key.encode('utf-8'),
-            sign_str.encode('utf-8'),
+            message.encode('utf-8'),
             hashlib.sha256
         ).hexdigest().upper()
+        
+        return signature
 
-    async def _get_token(self) -> None:
+    async def _get_token(self) -> bool:
+        """Get access token from Tuya API."""
         if self.connection_type != "cloud":
-            return
-        t = str(int(time.time() * 1000))
-        path = TOKEN_PATH
-        sign = self._calculate_sign(t, path)
-        headers = {
-            'client_id': self.access_id,
-            'sign': sign,
-            't': t,
-            'sign_method': 'HMAC-SHA256',
-        }
-        url = f"{self.api_endpoint}{path}"
-        response = await self.hass.async_add_executor_job(make_api_request, url, headers)
-        if response.status_code != 200:
-            raise ConfigEntryAuthFailed(ERROR_CONN)
-        result = response.json()
-        if not result.get('success'):
-            raise ConfigEntryAuthFailed(ERROR_AUTH)
-        self.access_token = result['result']['access_token']
-        _LOGGER.debug("Access token refreshed")
+            return True
+            
+        try:
+            t = str(int(time.time() * 1000))
+            sign = self._calculate_sign(t, TOKEN_PATH)
+            
+            headers = {
+                'client_id': self.access_id,
+                'sign': sign,
+                't': t,
+                'sign_method': 'HMAC-SHA256'
+            }
+            
+            url = f"{self.api_endpoint}{TOKEN_PATH}"
+            
+            response = await self.hass.async_add_executor_job(
+                make_api_request,
+                url,
+                headers
+            )
+            
+            if response.status_code != 200:
+                raise ConfigEntryAuthFailed(ERROR_AUTH)
+            
+            result = response.json()
+            if not result.get('success', False):
+                raise ConfigEntryAuthFailed(ERROR_AUTH)
+            
+            self.access_token = result['result']['access_token']
+            _LOGGER.debug("Successfully got access token")
+            return True
+            
+        except Exception as err:
+            _LOGGER.error("Error getting token: %s", str(err))
+            raise UpdateFailed(ERROR_CONN)
 
     async def get_device_info(self) -> dict:
+        """Get device information."""
         if self.connection_type == "cloud":
             try:
                 if not self.access_token:
                     await self._get_token()
+                    
                 t = str(int(time.time() * 1000))
                 path = f"/v1.0/devices/{self.device_id}"
                 sign = self._calculate_sign(t, path, self.access_token)
+                
                 headers = {
                     'client_id': self.access_id,
                     'access_token': self.access_token,
@@ -168,99 +206,222 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     't': t,
                     'sign_method': 'HMAC-SHA256',
                 }
+                
                 url = f"{self.api_endpoint}{path}"
-                response = await self.hass.async_add_executor_job(make_api_request, url, headers)
-                if response.status_code == 200:
-                    result = response.json()
-                    if result.get('success'):
-                        dev = result['result']
-                        self.device_name = dev.get('name', DEFAULT_NAME)
-                        self.model_id = dev.get('model', DEFAULT_MODEL)
-                        self.device_info = DeviceInfo(
-                            identifiers={(DOMAIN, self.device_id)},
-                            name=self.device_name,
-                            manufacturer=dev.get('manufacturer_name', DEFAULT_MANUFACTURER),
-                            model=self.model_id,
-                            sw_version=dev.get('software_version'),
-                        )
-                        return dev
+                
+                _LOGGER.info("Getting device info from API...")
+                
+                response = await self.hass.async_add_executor_job(
+                    make_api_request,
+                    url,
+                    headers
+                )
+                
+                result = response.json()
+                
+                if result.get('success', False):
+                    device_data = result['result']
+                    self.device_name = device_data.get('name', DEFAULT_NAME)
+                    product_name = device_data.get('product_name', DEFAULT_MODEL)
+                    
+                    _LOGGER.info("Device name set to: %s", self.device_name)
+                    
+                    self.device_info = DeviceInfo(
+                        identifiers={(DOMAIN, self.device_id)},
+                        name=self.device_name,
+                        manufacturer=DEFAULT_MANUFACTURER,
+                        model=product_name,
+                    )
+                    return device_data
+                else:
+                    _LOGGER.warning("Failed to get device info, using default name: %s", DEFAULT_NAME)
+                    return {}
+                    
             except Exception as err:
-                _LOGGER.warning("Could not fetch device info from cloud: %s", err)
+                _LOGGER.error("Error getting device info: %s", str(err))
+                return {}
+        else:
+            # Local mode
+            self.device_name = f"Tuya Heat Pump (Local) {self.device_id[-6:]}"
+            self.device_info = DeviceInfo(
+                identifiers={(DOMAIN, self.device_id)},
+                name=self.device_name,
+                manufacturer=DEFAULT_MANUFACTURER,
+                model="Local Device",
+            )
+            return {}
 
-        self.model_id = "default"
-        self.device_name = "Tuya Heat Pump (Local)"
-        self.device_info = DeviceInfo(
-            identifiers={(DOMAIN, self.device_id)},
-            name=self.device_name,
-            manufacturer=DEFAULT_MANUFACTURER,
-            model=self.model_id,
-        )
-        return {}
+    async def get_device_model(self) -> dict:
+        """Get device model information."""
+        if self.connection_type == "cloud":
+            try:
+                if not self.access_token:
+                    await self._get_token()
 
-    async def get_device_model(self) -> None:
-        self.model_mapping = await async_load_model_mapping(self.hass, self.model_id)
-        self.dp_mapping.clear()
-        for category in ["sensors", "binary_sensors", "switches", "numbers", "selects"]:
-            configs = self.model_mapping.get(category, {})
-            for code, conf in configs.items():
-                dp_id = conf.get("dp_id")
-                if dp_id is not None:
-                    self.dp_mapping[dp_id] = code
-                    _LOGGER.debug("Mapped dp_id %s → code %s", dp_id, code)
+                t = str(int(time.time() * 1000))
+                path = f"/v2.0/cloud/thing/{self.device_id}/model"
+                sign = self._calculate_sign(t, path, self.access_token)
+                
+                headers = {
+                    'client_id': self.access_id,
+                    'access_token': self.access_token,
+                    'sign': sign,
+                    't': t,
+                    'sign_method': 'HMAC-SHA256',
+                }
+                
+                url = f"{self.api_endpoint}{path}"
+                
+                _LOGGER.info("Getting device model from API...")
+                
+                response = await self.hass.async_add_executor_job(
+                    make_api_request,
+                    url,
+                    headers
+                )
+                
+                result = response.json()
+                
+                if result.get('success', False):
+                    model_info = json.loads(result['result']['model'])
+                    self.model_id = model_info.get('modelId')
+                    
+                    _LOGGER.info("Device model ID: %s", self.model_id)
+                    
+                    # Model mapping yükle
+                    self.model_mapping = await async_load_model_mapping(self.hass, self.model_id)
+                    
+                    # dp_mapping oluştur
+                    self.dp_mapping = {}
+                    for entity_type in ['sensors', 'binary_sensors', 'switches', 'numbers', 'selects']:
+                        for code, config in self.model_mapping.get(entity_type, {}).items():
+                            if 'dp_id' in config:
+                                dp_id = config['dp_id']
+                                self.dp_mapping[dp_id] = code
+                    
+                    _LOGGER.info("Loaded model mapping with %d entities", len(self.dp_mapping))
+                    return model_info
+                else:
+                    _LOGGER.warning("Failed to get device model, using default mapping")
+                    self.model_mapping = load_model_mapping("default")
+                    return {}
+                    
+            except Exception as err:
+                _LOGGER.error("Error getting device model: %s", str(err))
+                self.model_mapping = load_model_mapping("default")
+                return {}
+        else:
+            # Local mode - default mapping kullan
+            self.model_id = "default"
+            self.model_mapping = await async_load_model_mapping(self.hass, self.model_id)
+            
+            # dp_mapping oluştur
+            self.dp_mapping = {}
+            for entity_type in ['sensors', 'binary_sensors', 'switches', 'numbers', 'selects']:
+                for code, config in self.model_mapping.get(entity_type, {}).items():
+                    if 'dp_id' in config:
+                        dp_id = config['dp_id']
+                        self.dp_mapping[dp_id] = code
+            
+            _LOGGER.info("Loaded default model mapping for local device with %d entities", len(self.dp_mapping))
+            return {}
 
     async def send_command(self, code: str, value: Any) -> bool:
-        if self.connection_type == "cloud":
-            if not self.access_token:
-                await self._get_token()
-            t = str(int(time.time() * 1000))
-            path = DEVICE_COMMAND_PATH.format(device_id=self.device_id)
-            sign = self._calculate_sign(t, path, self.access_token)
-            headers = {
-                'client_id': self.access_id,
-                'access_token': self.access_token,
-                'sign': sign,
-                't': t,
-                'sign_method': 'HMAC-SHA256',
-                'Content-Type': 'application/json'
-            }
-            payload = {"commands": [{"code": code, "value": value}]}
-            url = f"{self.api_endpoint}{path}"
-            try:
+        """Send command to device."""
+        try:
+            if self.connection_type == "cloud":
+                if not self.access_token:
+                    await self._get_token()
+
+                t = str(int(time.time() * 1000))
+                path = DEVICE_COMMAND_PATH.format(device_id=self.device_id)
+                
+                # API conversion varsa uygula
+                if self.model_mapping:
+                    for entity_type in ['switches', 'numbers', 'selects']:
+                        if code in self.model_mapping.get(entity_type, {}):
+                            config = self.model_mapping[entity_type][code]
+                            if 'api_conversion' in config:
+                                api_value = eval(config['api_conversion'], {"value": value})
+                                _LOGGER.debug("Converted %s → %s for API", value, api_value)
+                                value = api_value
+                            break
+                
+                commands = {
+                    "commands": [
+                        {
+                            "code": code,
+                            "value": value
+                        }
+                    ]
+                }
+                
+                body = json.dumps(commands)
+                sign = self._calculate_sign(t, path, self.access_token, "POST", body)
+                
+                headers = {
+                    'client_id': self.access_id,
+                    'access_token': self.access_token,
+                    'sign': sign,
+                    't': t,
+                    'sign_method': 'HMAC-SHA256',
+                    'Content-Type': 'application/json'
+                }
+                
+                url = f"{self.api_endpoint}{path}"
+                
+                _LOGGER.info("Sending command: %s = %s", code, value)
+                
                 response = await self.hass.async_add_executor_job(
-                    make_api_request, url, headers, "POST", payload
+                    make_api_request,
+                    url,
+                    headers,
+                    "POST",
+                    commands
                 )
-                if response.status_code == 200:
-                    result = response.json()
-                    success = result.get('success', False)
-                    if success:
-                        _LOGGER.info("Cloud command sent: %s = %s", code, value)
-                    else:
-                        _LOGGER.warning("Cloud command failed: %s", result.get('msg'))
-                    return success
-                return False
-            except Exception as err:
-                _LOGGER.error("Error sending command %s: %s", code, str(err))
-                return False
-        else:
-            if not self.local_device:
-                _LOGGER.error("Local device not initialized")
-                return False
-            dp_id = next((k for k, v in self.dp_mapping.items() if v == code), None)
-            if dp_id is None:
-                _LOGGER.error("No dp_id mapping found for code: %s", code)
-                return False
-            try:
-                success = await self.hass.async_add_executor_job(
+                
+                result = response.json()
+                
+                if result.get('success', False):
+                    _LOGGER.info("✅ Command successful: %s = %s", code, value)
+                    await asyncio.sleep(2)
+                    await self.async_request_refresh()
+                    return True
+                else:
+                    error_msg = result.get('msg', 'Unknown error')
+                    _LOGGER.error("❌ Command failed: %s = %s -> %s", code, value, error_msg)
+                    return False
+                    
+            else:
+                # Local mode
+                if not self.local_device:
+                    _LOGGER.error("Local device not initialized")
+                    return False
+                    
+                # code → dp_id dönüşümü
+                dp_id = next((k for k, v in self.dp_mapping.items() if v == code), None)
+                if dp_id is None:
+                    _LOGGER.error("No dp_id mapping found for code: %s", code)
+                    return False
+                
+                _LOGGER.info("Sending local command: dp %s (%s) = %s", dp_id, code, value)
+                
+                result = await self.hass.async_add_executor_job(
                     self.local_device.set_value, dp_id, value
                 )
-                if success:
-                    _LOGGER.info("Local command sent: dp %s (%s) = %s", dp_id, code, value)
+                
+                if result:
+                    _LOGGER.info("✅ Local command successful: dp %s = %s", dp_id, value)
+                    await asyncio.sleep(1)
+                    await self.async_request_refresh()
+                    return True
                 else:
-                    _LOGGER.warning("Local command failed for dp %s", dp_id)
-                return bool(success)
-            except Exception as err:
-                _LOGGER.error("Error sending local command dp %s: %s", dp_id, err)
-                return False
+                    _LOGGER.warning("❌ Local command failed for dp %s", dp_id)
+                    return False
+                    
+        except Exception as err:
+            _LOGGER.error("Error sending command %s: %s", code, str(err))
+            return False
 
     async def _async_update_data(self):
         """Fetch data from Tuya API or local device."""
@@ -348,11 +509,13 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 raise UpdateFailed(f"Error: {str(err)}")
         
         else:
+            # Local mode
             if not self.local_device:
                 raise UpdateFailed("Local device not initialized")
             
             try:
                 status = await self.hass.async_add_executor_job(self.local_device.status)
+                
                 if not status or 'dps' not in status:
                     self.is_online = False
                     raise UpdateFailed("No 'dps' in local status response")
