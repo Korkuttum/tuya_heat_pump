@@ -23,6 +23,13 @@ CONF_ACCESS_KEY = "access_key"
 CONF_DEVICE_ID = "device_id"
 CONF_REGION = "region"
 
+# Yeni
+CONF_CONNECTION_TYPE = "connection_type"
+CONF_IP = "ip"
+CONF_LOCAL_KEY = "local_key"
+CONF_PROTOCOL = "protocol"
+PROTOCOL_OPTIONS = ["3.1", "3.3", "3.4", "3.5"]
+
 # API Region
 DEFAULT_REGION = "EU"
 REGIONS = {
