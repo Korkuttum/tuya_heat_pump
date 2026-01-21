@@ -4,12 +4,28 @@
         "step": {
             "user": {
                 "title": "Tuya Heat Pump Setup",
-                "description": "Enter your Tuya IoT Platform credentials",
+                "description": "Enter your Tuya IoT Platform credentials and connection type",
                 "data": {
                     "access_id": "Access ID",
                     "access_key": "Access Key",
                     "device_id": "Device ID",
                     "region": "Region",
+                    "connection_type": "Connection Type (Cloud or Local)"
+                }
+            },
+            "local": {
+                "title": "Local Device Setup",
+                "description": "Enter local device details",
+                "data": {
+                    "ip": "Device IP Address",
+                    "local_key": "Local Key",
+                    "protocol": "Protocol Version"
+                }
+            },
+            "cloud_options": {
+                "title": "Cloud Configuration",
+                "description": "Configure sensor refresh interval",
+                "data": {
                     "scan_interval": "Sensor Refresh Interval (minutes)"
                 }
             }
@@ -35,5 +51,3 @@
         }
     }
 }
-
-
