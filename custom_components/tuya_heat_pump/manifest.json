@@ -7,7 +7,6 @@
   "integration_type": "device",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/Korkuttum/tuya_heat_pump/issues",
-  "requirements": ["requests>=2.25.0"],
-  "version": "2.0.1-beta2"
+  "requirements": ["requests>=2.25.0", "tinytuya>=1.15.0"],
+  "version": "2.0.2-beta-local"
 }
-
