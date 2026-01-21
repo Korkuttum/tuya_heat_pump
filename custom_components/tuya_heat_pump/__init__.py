@@ -3,16 +3,16 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN, PLATFORMS
-from .coordinator import TuyaScaleDataUpdateCoordinator  # ← İSİM DÜZELTİLDİ
+from .coordinator import TuyaScaleDataUpdateCoordinator
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Tuya Heatpump from a config entry."""
-    coordinator = TuyaScaleDataUpdateCoordinator(hass, entry)  # ← Burası da düzeltildi
+    coordinator = TuyaScaleDataUpdateCoordinator(hass, entry)
     
     # Önce device info'yu al
     await coordinator.get_device_info()
     
-    # Model bilgisini al
+    # Model bilgisini al (YENİ)
     await coordinator.get_device_model()
     
     await coordinator.async_config_entry_first_refresh()
