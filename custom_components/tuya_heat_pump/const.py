@@ -42,7 +42,7 @@ REGIONS = {
 # API Paths
 TOKEN_PATH = "/v1.0/token?grant_type=1"
 DEVICE_DATA_PATH = "/v2.0/cloud/thing/{device_id}/shadow/properties"
-DEVICE_COMMAND_PATH = "/v1.0/devices/{device_id}/commands"
+DEVICE_COMMAND_PATH = "/v2.0/cloud/thing/{device_id}/shadow/properties/issue"  # ← Değişiklik: v2.0 komut gönderme endpoint'i
 
 # Device Info
 DEFAULT_NAME = "Tuya Heat Pump"
