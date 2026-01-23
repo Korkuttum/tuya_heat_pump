@@ -99,6 +99,14 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         self._listener_task = None
         self._heartbeat_task = None
 
+        # Debounce için
+        self._pending_commands = {}  # code → (value, task)
+        self._debounce_delay = 1.0   # 1 saniye (daha güvenli)
+
+        # Son gönderilen değer cache (geri alma sorunu için)
+        self._sent_value_cache = {}  # code → (value, timestamp)
+        self._cache_timeout = 8.0    # 8 sn sonra cache temizlenir
+
         self.device_info = DeviceInfo(
             identifiers={(DOMAIN, self.device_id)},
             name=self.device_name,
@@ -117,7 +125,6 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             self.local_key = config_entry.data[CONF_LOCAL_KEY]
             self.protocol = float(config_entry.data.get(CONF_PROTOCOL, "3.4"))
             try:
-                # Persistent bağlantı aktif edildi
                 self.local_device = tinytuya.Device(
                     dev_id=self.device_id,
                     address=self.ip,
@@ -125,7 +132,9 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     version=self.protocol,
                     persist=True
                 )
-                _LOGGER.info("Local Tuya device initialized (Persistent Mode): %s", self.device_id)
+                self.local_device.set_socketPersistent(True)
+                self.local_device.set_socketNODELAY(True)  # Daha hızlı yanıt için Nagle'ı kapat
+                _LOGGER.info("Local Tuya device initialized (Persistent Mode + NoDelay): %s", self.device_id)
                
                 # Dinleyici döngüsünü başlat
                 self.hass.loop.create_task(self._async_start_listener())
@@ -149,17 +158,17 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         """Loop to receive instant data from the device."""
         while True:
             try:
-                # TinyTuya'nın receive() fonksiyonu bloklayıcıdır, executor ile çalıştırıyoruz
+                await asyncio.sleep(0.05)  # minik ara
                 data = await self.hass.async_add_executor_job(self.local_device.receive)
                
                 if data and 'dps' in data:
                     _LOGGER.debug("Instant update received: %s", data['dps'])
                     new_data = self._process_local_dps(data['dps'])
                     if new_data:
-                        # Coordinator içindeki veriyi güncelle ve entity'lere haber ver
+                        self._apply_sent_cache(new_data)  # Cache ile eski değeri düzelt
                         self.async_set_updated_data(new_data)
                
-                await asyncio.sleep(0.1) # CPU'yu yormamak için minik ara
+                await asyncio.sleep(0.1)
             except Exception as err:
                 _LOGGER.error("Error in listener loop: %s. Retrying in 5s...", err)
                 await asyncio.sleep(5)
@@ -170,10 +179,24 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             try:
                 if self.local_device:
                     await self.hass.async_add_executor_job(self.local_device.heartbeat)
-                await asyncio.sleep(15) # 15 saniyede bir heartbeat idealdir
+                await asyncio.sleep(5)  # Daha sık heartbeat
             except Exception as err:
                 _LOGGER.debug("Heartbeat error: %s", err)
-                await asyncio.sleep(10)
+                await asyncio.sleep(5)
+
+    def _apply_sent_cache(self, new_data: dict):
+        """Gelen veride eski değer varsa, son gönderilen değeri zorla uygula"""
+        current_time = time.time()
+        for code, (sent_value, sent_time) in list(self._sent_value_cache.items()):
+            if current_time - sent_time > self._cache_timeout:
+                del self._sent_value_cache[code]
+                continue
+            
+            if code in new_data and new_data[code]['value'] != sent_value:
+                _LOGGER.warning("Cihaz eski değer döndü (%s = %s), cache'ten düzeltiliyor → %s", 
+                                code, new_data[code]['value'], sent_value)
+                new_data[code]['value'] = sent_value
+                new_data[code]['timestamp'] = int(time.time() * 1000)
 
     def _process_local_dps(self, dps: dict) -> dict:
         """Helper to convert raw DPS to our data format."""
@@ -195,7 +218,6 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             except ValueError:
                 continue
        
-        # Eğer kısmi veri geldiyse, mevcut verilerle birleştir (coordinator.data)
         if self.data and isinstance(self.data, dict):
             updated_data = dict(self.data)
             updated_data.update(data)
@@ -395,7 +417,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             return {}
 
     async def send_command(self, code: str, value: Any) -> bool:
-        """Send command to device - local mantığı gibi dönüşüm yapmadan ham gönderiyoruz"""
+        """Send command to device - local için debounce ile en son değeri gönder"""
         try:
             if self.connection_type == "cloud":
                 if not self.access_token:
@@ -405,14 +427,13 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 path = DEVICE_COMMAND_PATH.format(device_id=self.device_id)
                
                 original_value = value
-                _LOGGER.debug("Cloud → Dönüşüm yapılmadan ham değer gönderiliyor: %s (orijinal HA değeri: %s)", value, original_value)
+                _LOGGER.debug("Cloud → ham değer gönderiliyor: %s", value)
 
-                # v2.0 formatı - ham value'yu gönder
                 properties = {code: value}
                 properties_json = json.dumps(properties)
                 body_dict = {"properties": properties_json}
                
-                body_str = json.dumps(body_dict)  # sign için
+                body_str = json.dumps(body_dict)
                 sign = self._calculate_sign(t, path, self.access_token, "POST", body_str)
                
                 headers = {
@@ -447,28 +468,50 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     _LOGGER.error("❌ Cloud komut başarısız: %s = %s → %s", code, value, error_msg)
                     return False
                    
-            else:
+            else:  # Local mod - DEBOUNCE
                 if not self.local_device:
                     _LOGGER.error("Local device not initialized")
                     return False
-                   
+                
                 dp_id = next((k for k, v in self.dp_mapping.items() if v == code), None)
                 if dp_id is None:
                     _LOGGER.error("No dp_id mapping found for code: %s", code)
                     return False
-               
-                _LOGGER.info("Local komut: dp %s (%s) = %s", dp_id, code, value)
-               
-                result = await self.hass.async_add_executor_job(
-                    self.local_device.set_value, dp_id, value
-                )
-               
-                if result:
-                    _LOGGER.info("✅ Local komut başarılı: dp %s = %s", dp_id, value)
-                    return True
-                else:
-                    _LOGGER.warning("❌ Local komut başarısız dp %s", dp_id)
-                    return False
+                
+                # Mevcut bekleyen task varsa iptal et
+                if code in self._pending_commands:
+                    task = self._pending_commands[code][1]
+                    task.cancel()
+                    _LOGGER.debug("Önceki debounce iptal edildi: %s", code)
+                
+                # Son gönderilen değeri cache'e yaz (geri alma sorunu için)
+                self._sent_value_cache[code] = (value, time.time())
+                
+                # Yeni debounce task oluştur
+                async def delayed_send():
+                    await asyncio.sleep(self._debounce_delay)
+                    try:
+                        result = await self.hass.async_add_executor_job(
+                            self.local_device.set_value, dp_id, value
+                        )
+                        if result:
+                            _LOGGER.info("✅ Debounce sonrası başarılı: dp %s (%s) = %s", dp_id, code, value)
+                        else:
+                            _LOGGER.warning("❌ Debounce sonrası başarısız: dp %s", dp_id)
+                    except Exception as err:
+                        _LOGGER.error("Debounce gönderme hatası %s = %s: %s", code, value, err)
+                    finally:
+                        if code in self._pending_commands:
+                            del self._pending_commands[code]
+                
+                task = self.hass.loop.create_task(delayed_send())
+                self._pending_commands[code] = (value, task)
+                
+                _LOGGER.info("Local komut debounce beklemede: dp %s (%s) = %s (%.1f sn sonra gönderilecek)", 
+                             dp_id, code, value, self._debounce_delay)
+                
+                # Kullanıcıya hemen başarılı göster
+                return True
                    
         except Exception as err:
             _LOGGER.error("Error sending command %s: %s", code, str(err))
@@ -532,20 +575,28 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 raise UpdateFailed(f"Error: {str(err)}")
        
         else:
-            # Local mode initial status fetch
             if not self.local_device:
                 raise UpdateFailed("Local device not initialized")
            
             try:
-                # Durumu zorla sorgula (sadece başlangıçta veya hata anında)
                 status = await self.hass.async_add_executor_job(self.local_device.status)
                
                 if not status or 'dps' not in status:
-                    self.is_online = False
-                    raise UpdateFailed("No 'dps' in local status response")
+                    _LOGGER.warning("No 'dps' in status response - retrying once")
+                    await asyncio.sleep(1.0)
+                    status = await self.hass.async_add_executor_job(self.local_device.status)
+                   
+                    if not status or 'dps' not in status:
+                        self.is_online = False
+                        raise UpdateFailed("No 'dps' in local status response after retry")
                
                 self.is_online = True
-                return self._process_local_dps(status['dps'])
+                data = self._process_local_dps(status['dps'])
+                
+                # Gelen veriyi cache ile düzelt
+                self._apply_sent_cache(data)
+                
+                return data
            
             except Exception as err:
                 self.is_online = False
