@@ -69,8 +69,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
         """Initialize the coordinator."""
         self.connection_type = config_entry.data.get(CONF_CONNECTION_TYPE, "cloud")
-       
-        # Cloud için poll devam eder, Local için anlık dinleme yapacağımızdan interval'i kapatıyoruz
+        
         if self.connection_type == "cloud":
             scan_interval = timedelta(
                 minutes=config_entry.options.get(
@@ -79,7 +78,6 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 )
             )
         else:
-            # Local modda anlık güncelleme (push) kullanacağımız için periyodik sorgulamayı (poll) kapatıyoruz
             scan_interval = None
 
         super().__init__(
@@ -88,24 +86,25 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             name=DOMAIN,
             update_interval=scan_interval,
         )
-       
+        
         self.config_entry = config_entry
         self.device_id = config_entry.data[CONF_DEVICE_ID]
         self.device_name = DEFAULT_NAME
         self.is_online = True
+        self._previous_online = True  # Değişim takibi için
         self.model_id = None
         self.model_mapping = None
         self.dp_mapping = {}
         self._listener_task = None
         self._heartbeat_task = None
 
-        # Debounce için
+        # Debounce için (local)
         self._pending_commands = {}  # code → (value, task)
-        self._debounce_delay = 1.0   # 1 saniye (daha güvenli)
+        self._debounce_delay = 1.0   # 1 saniye
 
         # Son gönderilen değer cache (geri alma sorunu için)
         self._sent_value_cache = {}  # code → (value, timestamp)
-        self._cache_timeout = 8.0    # 8 sn sonra cache temizlenir
+        self._cache_timeout = 8.0    # 8 saniye
 
         self.device_info = DeviceInfo(
             identifiers={(DOMAIN, self.device_id)},
@@ -133,12 +132,11 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     persist=True
                 )
                 self.local_device.set_socketPersistent(True)
-                self.local_device.set_socketNODELAY(True)  # Daha hızlı yanıt için Nagle'ı kapat
+                self.local_device.set_socketNODELAY(True)
                 _LOGGER.info("Local Tuya device initialized (Persistent Mode + NoDelay): %s", self.device_id)
-               
-                # Dinleyici döngüsünü başlat
+                
                 self.hass.loop.create_task(self._async_start_listener())
-               
+                
             except Exception as err:
                 _LOGGER.error("Failed to initialize TinyTuya device: %s", err)
                 self.local_device = None
@@ -146,11 +144,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
     async def _async_start_listener(self):
         """Start the background listener for instant updates."""
         _LOGGER.info("Starting TinyTuya listener loop for %s", self.device_id)
-       
-        # İlk veriyi bir kez çekelim
         await self.async_refresh()
-       
-        # Dinleme ve Heartbeat döngülerini başlat
         self._listener_task = self.hass.loop.create_task(self._listen_loop())
         self._heartbeat_task = self.hass.loop.create_task(self._heartbeat_loop())
 
@@ -158,16 +152,14 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         """Loop to receive instant data from the device."""
         while True:
             try:
-                await asyncio.sleep(0.05)  # minik ara
+                await asyncio.sleep(0.05)
                 data = await self.hass.async_add_executor_job(self.local_device.receive)
-               
                 if data and 'dps' in data:
                     _LOGGER.debug("Instant update received: %s", data['dps'])
                     new_data = self._process_local_dps(data['dps'])
                     if new_data:
-                        self._apply_sent_cache(new_data)  # Cache ile eski değeri düzelt
+                        self._apply_sent_cache(new_data)
                         self.async_set_updated_data(new_data)
-               
                 await asyncio.sleep(0.1)
             except Exception as err:
                 _LOGGER.error("Error in listener loop: %s. Retrying in 5s...", err)
@@ -179,7 +171,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             try:
                 if self.local_device:
                     await self.hass.async_add_executor_job(self.local_device.heartbeat)
-                await asyncio.sleep(5)  # Daha sık heartbeat
+                await asyncio.sleep(5)
             except Exception as err:
                 _LOGGER.debug("Heartbeat error: %s", err)
                 await asyncio.sleep(5)
@@ -484,7 +476,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     task.cancel()
                     _LOGGER.debug("Önceki debounce iptal edildi: %s", code)
                 
-                # Son gönderilen değeri cache'e yaz (geri alma sorunu için)
+                # Son gönderilen değeri cache'e yaz
                 self._sent_value_cache[code] = (value, time.time())
                 
                 # Yeni debounce task oluştur
@@ -523,10 +515,11 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             try:
                 if not self.access_token:
                     await self._get_token()
+
                 t = str(int(time.time() * 1000))
                 path = DEVICE_DATA_PATH.format(device_id=self.device_id)
                 sign = self._calculate_sign(t, path, self.access_token)
-               
+                
                 headers = {
                     'client_id': self.access_id,
                     'access_token': self.access_token,
@@ -534,31 +527,65 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     't': t,
                     'sign_method': 'HMAC-SHA256',
                 }
-               
+                
                 url = f"{self.api_endpoint}{path}"
-               
+                
                 response = await self.hass.async_add_executor_job(
                     make_api_request,
                     url,
                     headers
                 )
-               
+                
                 if response.status_code == 401:
+                    _LOGGER.warning("401 Unauthorized - token yenileniyor")
                     self.access_token = None
                     return await self._async_update_data()
-               
+                
                 if response.status_code != 200:
+                    self.is_online = False
+                    _LOGGER.info("Online status değişti: OFFLINE (HTTP %s)", response.status_code)
+                    self.async_update_listeners()
                     raise UpdateFailed(f"HTTP error {response.status_code}")
-               
+                
                 result = response.json()
                 if not result.get('success', False):
                     msg = result.get('msg', '')
                     if 'token' in msg.lower():
                         self.access_token = None
                         return await self._async_update_data()
+                    self.is_online = False
+                    _LOGGER.info("Online status değişti: OFFLINE (API error: %s)", msg)
+                    self.async_update_listeners()
                     raise UpdateFailed(f"API error: {msg}")
-               
+                
+                # YENİ: Eski mantık - timestamp ile online kontrolü
+                current_time = int(time.time() * 1000)
                 properties = result.get('result', {}).get('properties', [])
+                
+                if properties:
+                    latest_timestamp = max(prop.get('time', 0) for prop in properties)
+                    time_diff = current_time - latest_timestamp
+                    
+                    scan_interval_ms = self.update_interval.total_seconds() * 1000 if self.update_interval else 180000
+                    tolerance_ms = scan_interval_ms + (60 * 1000)  # +1 dakika
+                    
+                    if time_diff > tolerance_ms:
+                        self.is_online = False
+                        _LOGGER.info("Device OFFLINE - data %s seconds old", time_diff // 1000)
+                    else:
+                        self.is_online = True
+                        _LOGGER.debug("Device ONLINE - fresh data (%s seconds old)", time_diff // 1000)
+                else:
+                    self.is_online = False
+                    _LOGGER.info("Device OFFLINE - no properties")
+                
+                if self._previous_online != self.is_online:
+                    _LOGGER.info("Online status değişti: %s", "ONLINE" if self.is_online else "OFFLINE")
+                    self._previous_online = self.is_online
+                
+                self.async_update_listeners()  # Binary sensor'ı güncelle
+                
+                # Veri işleme
                 data = {}
                 for prop in properties:
                     code = prop['code']
@@ -569,9 +596,13 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                         'last_update': datetime.fromtimestamp(prop.get('time', 0) / 1000).strftime('%Y-%m-%d %H:%M:%S')
                     }
                 return data
-               
+                
             except Exception as err:
                 self.is_online = False
+                if self._previous_online != self.is_online:
+                    _LOGGER.info("Online status değişti: OFFLINE (exception: %s)", err)
+                    self._previous_online = self.is_online
+                self.async_update_listeners()
                 raise UpdateFailed(f"Error: {str(err)}")
        
         else:
@@ -588,16 +619,25 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                    
                     if not status or 'dps' not in status:
                         self.is_online = False
+                        _LOGGER.info("Online status değişti: OFFLINE (local status başarısız)")
+                        self.async_update_listeners()
                         raise UpdateFailed("No 'dps' in local status response after retry")
                
                 self.is_online = True
+                if self._previous_online != self.is_online:
+                    _LOGGER.info("Online status değişti: ONLINE")
+                    self._previous_online = self.is_online
+                
+                self.async_update_listeners()
+                
                 data = self._process_local_dps(status['dps'])
-                
-                # Gelen veriyi cache ile düzelt
                 self._apply_sent_cache(data)
-                
                 return data
            
             except Exception as err:
                 self.is_online = False
+                if self._previous_online != self.is_online:
+                    _LOGGER.info("Online status değişti: OFFLINE (local exception: %s)", err)
+                    self._previous_online = self.is_online
+                self.async_update_listeners()
                 raise UpdateFailed(f"Local error: {str(err)}")
