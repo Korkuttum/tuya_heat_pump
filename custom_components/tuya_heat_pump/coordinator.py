@@ -62,13 +62,14 @@ def make_api_request(url: str, headers: dict, method: str = "GET", data: dict = 
         _LOGGER.error("Request error for %s: %s", url, err)
         raise
 
+
 class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching Tuya Heatpump data with Instant Updates."""
 
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
         """Initialize the coordinator."""
         self.connection_type = config_entry.data.get(CONF_CONNECTION_TYPE, "cloud")
-        
+       
         # Cloud için poll devam eder, Local için anlık dinleme yapacağımızdan interval'i kapatıyoruz
         if self.connection_type == "cloud":
             scan_interval = timedelta(
@@ -79,7 +80,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             )
         else:
             # Local modda anlık güncelleme (push) kullanacağımız için periyodik sorgulamayı (poll) kapatıyoruz
-            scan_interval = None 
+            scan_interval = None
 
         super().__init__(
             hass,
@@ -87,7 +88,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             name=DOMAIN,
             update_interval=scan_interval,
         )
-        
+       
         self.config_entry = config_entry
         self.device_id = config_entry.data[CONF_DEVICE_ID]
         self.device_name = DEFAULT_NAME
@@ -122,13 +123,13 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     address=self.ip,
                     local_key=self.local_key,
                     version=self.protocol,
-                    persist=True 
+                    persist=True
                 )
                 _LOGGER.info("Local Tuya device initialized (Persistent Mode): %s", self.device_id)
-                
+               
                 # Dinleyici döngüsünü başlat
                 self.hass.loop.create_task(self._async_start_listener())
-                
+               
             except Exception as err:
                 _LOGGER.error("Failed to initialize TinyTuya device: %s", err)
                 self.local_device = None
@@ -136,10 +137,10 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
     async def _async_start_listener(self):
         """Start the background listener for instant updates."""
         _LOGGER.info("Starting TinyTuya listener loop for %s", self.device_id)
-        
+       
         # İlk veriyi bir kez çekelim
         await self.async_refresh()
-        
+       
         # Dinleme ve Heartbeat döngülerini başlat
         self._listener_task = self.hass.loop.create_task(self._listen_loop())
         self._heartbeat_task = self.hass.loop.create_task(self._heartbeat_loop())
@@ -150,14 +151,14 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             try:
                 # TinyTuya'nın receive() fonksiyonu bloklayıcıdır, executor ile çalıştırıyoruz
                 data = await self.hass.async_add_executor_job(self.local_device.receive)
-                
+               
                 if data and 'dps' in data:
                     _LOGGER.debug("Instant update received: %s", data['dps'])
                     new_data = self._process_local_dps(data['dps'])
                     if new_data:
                         # Coordinator içindeki veriyi güncelle ve entity'lere haber ver
                         self.async_set_updated_data(new_data)
-                
+               
                 await asyncio.sleep(0.1) # CPU'yu yormamak için minik ara
             except Exception as err:
                 _LOGGER.error("Error in listener loop: %s. Retrying in 5s...", err)
@@ -179,7 +180,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         data = {}
         current_ms = int(time.time() * 1000)
         current_str = datetime.fromtimestamp(current_ms / 1000).strftime('%Y-%m-%d %H:%M:%S')
-        
+       
         for dp_str, value in dps.items():
             try:
                 dp_id = int(dp_str)
@@ -193,13 +194,13 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     }
             except ValueError:
                 continue
-        
+       
         # Eğer kısmi veri geldiyse, mevcut verilerle birleştir (coordinator.data)
         if self.data and isinstance(self.data, dict):
             updated_data = dict(self.data)
             updated_data.update(data)
             return updated_data
-            
+           
         return data
 
     def _calculate_sign(self, t: str, path: str, access_token: str = None, method: str = "GET", body: str = "") -> str:
@@ -210,55 +211,55 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         str_to_sign.append("")
         str_to_sign.append(path)
         str_to_sign = '\n'.join(str_to_sign)
-        
+       
         message = self.access_id
         if access_token:
             message += access_token
         message += t + str_to_sign
-        
+       
         signature = hmac.new(
             self.access_key.encode('utf-8'),
             message.encode('utf-8'),
             hashlib.sha256
         ).hexdigest().upper()
-        
+       
         return signature
 
     async def _get_token(self) -> bool:
         """Get access token from Tuya API."""
         if self.connection_type != "cloud":
             return True
-            
+           
         try:
             t = str(int(time.time() * 1000))
             sign = self._calculate_sign(t, TOKEN_PATH)
-            
+           
             headers = {
                 'client_id': self.access_id,
                 'sign': sign,
                 't': t,
                 'sign_method': 'HMAC-SHA256'
             }
-            
+           
             url = f"{self.api_endpoint}{TOKEN_PATH}"
-            
+           
             response = await self.hass.async_add_executor_job(
                 make_api_request,
                 url,
                 headers
             )
-            
+           
             if response.status_code != 200:
                 raise ConfigEntryAuthFailed(ERROR_AUTH)
-            
+           
             result = response.json()
             if not result.get('success', False):
                 raise ConfigEntryAuthFailed(ERROR_AUTH)
-            
+           
             self.access_token = result['result']['access_token']
             _LOGGER.debug("Successfully got access token")
             return True
-            
+           
         except Exception as err:
             _LOGGER.error("Error getting token: %s", str(err))
             raise UpdateFailed(ERROR_CONN)
@@ -269,11 +270,11 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             try:
                 if not self.access_token:
                     await self._get_token()
-                    
+                   
                 t = str(int(time.time() * 1000))
                 path = f"/v1.0/devices/{self.device_id}"
                 sign = self._calculate_sign(t, path, self.access_token)
-                
+               
                 headers = {
                     'client_id': self.access_id,
                     'access_token': self.access_token,
@@ -281,25 +282,25 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     't': t,
                     'sign_method': 'HMAC-SHA256',
                 }
-                
+               
                 url = f"{self.api_endpoint}{path}"
                 _LOGGER.info("Getting device info from API...")
-                
+               
                 response = await self.hass.async_add_executor_job(
                     make_api_request,
                     url,
                     headers
                 )
-                
+               
                 result = response.json()
-                
+               
                 if result.get('success', False):
                     device_data = result['result']
                     self.device_name = device_data.get('name', DEFAULT_NAME)
                     product_name = device_data.get('product_name', DEFAULT_MODEL)
-                    
+                   
                     _LOGGER.info("Device name set to: %s", self.device_name)
-                    
+                   
                     self.device_info = DeviceInfo(
                         identifiers={(DOMAIN, self.device_id)},
                         name=self.device_name,
@@ -310,7 +311,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 else:
                     _LOGGER.warning("Failed to get device info, using default name: %s", DEFAULT_NAME)
                     return {}
-                    
+                   
             except Exception as err:
                 _LOGGER.error("Error getting device info: %s", str(err))
                 return {}
@@ -330,11 +331,10 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             try:
                 if not self.access_token:
                     await self._get_token()
-
                 t = str(int(time.time() * 1000))
                 path = f"/v2.0/cloud/thing/{self.device_id}/model"
                 sign = self._calculate_sign(t, path, self.access_token)
-                
+               
                 headers = {
                     'client_id': self.access_id,
                     'access_token': self.access_token,
@@ -342,40 +342,40 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     't': t,
                     'sign_method': 'HMAC-SHA256',
                 }
-                
+               
                 url = f"{self.api_endpoint}{path}"
                 _LOGGER.info("Getting device model from API...")
-                
+               
                 response = await self.hass.async_add_executor_job(
                     make_api_request,
                     url,
                     headers
                 )
-                
+               
                 result = response.json()
-                
+               
                 if result.get('success', False):
                     model_info = json.loads(result['result']['model'])
                     self.model_id = model_info.get('modelId')
-                    
+                   
                     _LOGGER.info("Device model ID: %s", self.model_id)
-                    
+                   
                     self.model_mapping = await async_load_model_mapping(self.hass, self.model_id)
-                    
+                   
                     self.dp_mapping = {}
                     for entity_type in ['sensors', 'binary_sensors', 'switches', 'numbers', 'selects']:
                         for code, config in self.model_mapping.get(entity_type, {}).items():
                             if 'dp_id' in config:
                                 dp_id = config['dp_id']
                                 self.dp_mapping[dp_id] = code
-                    
+                   
                     _LOGGER.info("Loaded model mapping with %d entities", len(self.dp_mapping))
                     return model_info
                 else:
                     _LOGGER.warning("Failed to get device model, using default mapping")
                     self.model_mapping = load_model_mapping("default")
                     return {}
-                    
+                   
             except Exception as err:
                 _LOGGER.error("Error getting device model: %s", str(err))
                 self.model_mapping = load_model_mapping("default")
@@ -383,19 +383,19 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         else:
             self.model_id = "default"
             self.model_mapping = await async_load_model_mapping(self.hass, self.model_id)
-            
+           
             self.dp_mapping = {}
             for entity_type in ['sensors', 'binary_sensors', 'switches', 'numbers', 'selects']:
                 for code, config in self.model_mapping.get(entity_type, {}).items():
                     if 'dp_id' in config:
                         dp_id = config['dp_id']
                         self.dp_mapping[dp_id] = code
-            
+           
             _LOGGER.info("Loaded default model mapping for local device with %d entities", len(self.dp_mapping))
             return {}
 
     async def send_command(self, code: str, value: Any) -> bool:
-        """Send command to device."""
+        """Send command to device - local mantığı gibi dönüşüm yapmadan ham gönderiyoruz"""
         try:
             if self.connection_type == "cloud":
                 if not self.access_token:
@@ -403,29 +403,18 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
 
                 t = str(int(time.time() * 1000))
                 path = DEVICE_COMMAND_PATH.format(device_id=self.device_id)
-                
-                if self.model_mapping:
-                    for entity_type in ['switches', 'numbers', 'selects']:
-                        if code in self.model_mapping.get(entity_type, {}):
-                            config = self.model_mapping[entity_type][code]
-                            if 'api_conversion' in config:
-                                api_value = eval(config['api_conversion'], {"value": value})
-                                _LOGGER.debug("Converted %s → %s for API", value, api_value)
-                                value = api_value
-                            break
-                
-                commands = {
-                    "commands": [
-                        {
-                            "code": code,
-                            "value": value
-                        }
-                    ]
-                }
-                
-                body = json.dumps(commands)
-                sign = self._calculate_sign(t, path, self.access_token, "POST", body)
-                
+               
+                original_value = value
+                _LOGGER.debug("Cloud → Dönüşüm yapılmadan ham değer gönderiliyor: %s (orijinal HA değeri: %s)", value, original_value)
+
+                # v2.0 formatı - ham value'yu gönder
+                properties = {code: value}
+                properties_json = json.dumps(properties)
+                body_dict = {"properties": properties_json}
+               
+                body_str = json.dumps(body_dict)  # sign için
+                sign = self._calculate_sign(t, path, self.access_token, "POST", body_str)
+               
                 headers = {
                     'client_id': self.access_id,
                     'access_token': self.access_token,
@@ -434,57 +423,53 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     'sign_method': 'HMAC-SHA256',
                     'Content-Type': 'application/json'
                 }
-                
+               
                 url = f"{self.api_endpoint}{path}"
-                _LOGGER.info("Sending command: %s = %s", code, value)
-                
+                _LOGGER.info("Cloud komut (v2.0) - ham değer: %s = %s", code, value)
+               
                 response = await self.hass.async_add_executor_job(
                     make_api_request,
                     url,
                     headers,
                     "POST",
-                    commands
+                    body_dict
                 )
-                
+               
                 result = response.json()
-                
+               
                 if result.get('success', False):
-                    _LOGGER.info("✅ Command successful: %s = %s", code, value)
-                    # Instant update geleceği için burada refresh'e gerek olmayabilir 
-                    # ama cloud'da gerekebilir.
+                    _LOGGER.info("✅ Cloud komut başarılı: %s = %s", code, value)
                     await asyncio.sleep(2)
                     await self.async_request_refresh()
                     return True
                 else:
-                    error_msg = result.get('msg', 'Unknown error')
-                    _LOGGER.error("❌ Command failed: %s = %s -> %s", code, value, error_msg)
+                    error_msg = result.get('msg', 'Bilinmeyen hata')
+                    _LOGGER.error("❌ Cloud komut başarısız: %s = %s → %s", code, value, error_msg)
                     return False
-                    
+                   
             else:
                 if not self.local_device:
                     _LOGGER.error("Local device not initialized")
                     return False
-                    
+                   
                 dp_id = next((k for k, v in self.dp_mapping.items() if v == code), None)
                 if dp_id is None:
                     _LOGGER.error("No dp_id mapping found for code: %s", code)
                     return False
-                
-                _LOGGER.info("Sending local command: dp %s (%s) = %s", dp_id, code, value)
-                
+               
+                _LOGGER.info("Local komut: dp %s (%s) = %s", dp_id, code, value)
+               
                 result = await self.hass.async_add_executor_job(
                     self.local_device.set_value, dp_id, value
                 )
-                
+               
                 if result:
-                    _LOGGER.info("✅ Local command successful: dp %s = %s", dp_id, value)
-                    # Cihaz set_value'dan sonra status mesajı push edecektir, 
-                    # bu yüzden manuel refresh'e gerek yok.
+                    _LOGGER.info("✅ Local komut başarılı: dp %s = %s", dp_id, value)
                     return True
                 else:
-                    _LOGGER.warning("❌ Local command failed for dp %s", dp_id)
+                    _LOGGER.warning("❌ Local komut başarısız dp %s", dp_id)
                     return False
-                    
+                   
         except Exception as err:
             _LOGGER.error("Error sending command %s: %s", code, str(err))
             return False
@@ -495,11 +480,10 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             try:
                 if not self.access_token:
                     await self._get_token()
-
                 t = str(int(time.time() * 1000))
                 path = DEVICE_DATA_PATH.format(device_id=self.device_id)
                 sign = self._calculate_sign(t, path, self.access_token)
-                
+               
                 headers = {
                     'client_id': self.access_id,
                     'access_token': self.access_token,
@@ -507,22 +491,22 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     't': t,
                     'sign_method': 'HMAC-SHA256',
                 }
-                
+               
                 url = f"{self.api_endpoint}{path}"
-                
+               
                 response = await self.hass.async_add_executor_job(
                     make_api_request,
                     url,
                     headers
                 )
-                
+               
                 if response.status_code == 401:
                     self.access_token = None
                     return await self._async_update_data()
-                
+               
                 if response.status_code != 200:
                     raise UpdateFailed(f"HTTP error {response.status_code}")
-                
+               
                 result = response.json()
                 if not result.get('success', False):
                     msg = result.get('msg', '')
@@ -530,7 +514,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                         self.access_token = None
                         return await self._async_update_data()
                     raise UpdateFailed(f"API error: {msg}")
-                
+               
                 properties = result.get('result', {}).get('properties', [])
                 data = {}
                 for prop in properties:
@@ -542,27 +526,27 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                         'last_update': datetime.fromtimestamp(prop.get('time', 0) / 1000).strftime('%Y-%m-%d %H:%M:%S')
                     }
                 return data
-                
+               
             except Exception as err:
                 self.is_online = False
                 raise UpdateFailed(f"Error: {str(err)}")
-        
+       
         else:
             # Local mode initial status fetch
             if not self.local_device:
                 raise UpdateFailed("Local device not initialized")
-            
+           
             try:
                 # Durumu zorla sorgula (sadece başlangıçta veya hata anında)
                 status = await self.hass.async_add_executor_job(self.local_device.status)
-                
+               
                 if not status or 'dps' not in status:
                     self.is_online = False
                     raise UpdateFailed("No 'dps' in local status response")
-                
+               
                 self.is_online = True
                 return self._process_local_dps(status['dps'])
-            
+           
             except Exception as err:
                 self.is_online = False
                 raise UpdateFailed(f"Local error: {str(err)}")
