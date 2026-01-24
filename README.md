@@ -12,7 +12,7 @@
 - Water TechniX 
 ---
 
-This project allows you to control and monitor your Tuya cloud-based heat pump device through Home Assistant.
+This project allows you to control and monitor your Tuya heat pump device through Home Assistant — supports both Cloud and Local (push) connection modes.
 
 ---
 
@@ -69,9 +69,14 @@ After installation, restart Home Assistant and follow these steps:
 1. Go to “Settings > Devices & Services”.
 2. Click “Add Integration”.
 3. Search for and select “Tuya Heat Pump”.
-4. Enter your Tuya IoT Platform credentials:
+4. For Cloud mode: enter your Tuya IoT Platform credentials:
     - Access ID
     - Access Secret
+    - Device ID
+5. For Local mode: switch the Connection Type to “Local” and enter:
+    - Device IP
+    - Local Key
+    - Protocol (e.g. 3.3 / 3.4)
     - Device ID
 
 ---
