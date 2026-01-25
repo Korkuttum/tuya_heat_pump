@@ -4,18 +4,18 @@
         "step": {
             "user": {
                 "title": "Tuya Heat Pump Setup",
-                "description": "Enter your Tuya IoT Platform credentials and connection type",
+                "description": "Enter your Tuya IoT Platform credentials and connection type\n\n• Cloud: Recommended for most users, works over the internet\n• Local: Faster response, no API limits, requires device on local network",
                 "data": {
                     "access_id": "Access ID",
                     "access_key": "Access Key",
                     "device_id": "Device ID",
                     "region": "Region",
-                    "connection_type": "Connection Type (Cloud or Local)"
+                    "connection_type": "Connection Type"
                 }
             },
             "local": {
                 "title": "Local Device Setup",
-                "description": "Enter local device details",
+                "description": "Enter local device details\n\nNote: Device must be on the same local network as Home Assistant",
                 "data": {
                     "ip": "Device IP Address",
                     "local_key": "Local Key",
@@ -24,7 +24,7 @@
             },
             "cloud_options": {
                 "title": "Cloud Configuration",
-                "description": "Configure sensor refresh interval",
+                "description": "Configure sensor refresh interval\n\nLower values = faster updates but more API calls",
                 "data": {
                     "scan_interval": "Sensor Refresh Interval (minutes)"
                 }
@@ -43,9 +43,23 @@
         "step": {
             "init": {
                 "title": "Tuya Heat Pump Configuration",
-                "description": "Configure sensor refresh interval",
+                "description": "Configure connection settings",
+                "data": {}
+            },
+            "cloud_options": {
+                "title": "Cloud Device Settings",
+                "description": "Configure sensor refresh interval\n\nLower values = faster updates but more API calls",
                 "data": {
                     "scan_interval": "Sensor Refresh Interval (minutes)"
+                }
+            },
+            "local_options": {
+                "title": "Local Device Settings",
+                "description": "Update local device connection details\n\nDevice must be on the same local network",
+                "data": {
+                    "ip": "Device IP Address",
+                    "local_key": "Local Key",
+                    "protocol": "Protocol Version"
                 }
             }
         }
