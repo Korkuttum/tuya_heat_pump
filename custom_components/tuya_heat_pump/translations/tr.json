@@ -7,10 +7,26 @@
                     "access_key": "Access Key",
                     "device_id": "Cihaz ID",
                     "region": "Bölge",
+                    "connection_type": "Bağlantı Türü"
+                },
+                "description": "Tuya IoT Platform bilgilerinizi girin ve bağlantı türünü seçin\n\n• Cloud: Çoğu kullanıcı için önerilir, internet üzerinden çalışır\n• Local: Daha hızlı, API limiti yok, cihaz yerel ağda olmalı",
+                "title": "Tuya Isı Pompası Kurulumu"
+            },
+            "local": {
+                "data": {
+                    "ip": "Cihaz IP Adresi",
+                    "local_key": "Local Key",
+                    "protocol": "Protokol Versiyonu"
+                },
+                "description": "Yerel cihaz bağlantı bilgilerini girin\n\nNot: Cihaz Home Assistant ile aynı yerel ağda olmalı",
+                "title": "Yerel Cihaz Kurulumu"
+            },
+            "cloud_options": {
+                "data": {
                     "scan_interval": "Sensör Yenileme Süresi (dakika)"
                 },
-                "description": "Tuya IoT Platform bilgilerinizi girin ve bölgenizi seçin",
-                "title": "Tuya Isı Pompası Kurulumu"
+                "description": "Cloud bağlantısı için sensör yenileme süresini ayarlayın\n\nDüşük değerler = daha hızlı güncellemeler ama daha çok API çağrısı",
+                "title": "Cloud Yapılandırması"
             }
         },
         "error": {
@@ -25,11 +41,25 @@
     "options": {
         "step": {
             "init": {
+                "data": {},
+                "description": "Cihaz ayarlarını yapılandırın",
+                "title": "Tuya Isı Pompası Yapılandırması"
+            },
+            "cloud_options": {
                 "data": {
                     "scan_interval": "Sensör Yenileme Süresi (dakika)"
                 },
-                "description": "Sensör yenileme süresini ayarlayın",
-                "title": "Tuya Isı Pompası Yapılandırması"
+                "description": "Sensör yenileme süresini ayarlayın\n\nDüşük değerler = daha hızlı güncellemeler ama daha çok API çağrısı",
+                "title": "Cloud Cihaz Ayarları"
+            },
+            "local_options": {
+                "data": {
+                    "ip": "Cihaz IP Adresi",
+                    "local_key": "Local Key",
+                    "protocol": "Protokol Versiyonu"
+                },
+                "description": "Yerel cihaz bağlantı bilgilerini güncelleyin\n\nCihaz aynı yerel ağda olmalı",
+                "title": "Yerel Cihaz Ayarları"
             }
         }
     },
