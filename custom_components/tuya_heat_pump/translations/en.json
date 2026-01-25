@@ -7,10 +7,26 @@
                     "access_key": "Access Key",
                     "device_id": "Device ID",
                     "region": "Region",
+                    "connection_type": "Connection Type"
+                },
+                "description": "Enter your Tuya IoT Platform credentials and select connection type\n\n• Cloud: Recommended for most users, works over the internet\n• Local: Faster response, no API limits, requires device on local network",
+                "title": "Tuya Heat Pump Setup"
+            },
+            "local": {
+                "data": {
+                    "ip": "Device IP Address",
+                    "local_key": "Local Key",
+                    "protocol": "Protocol Version"
+                },
+                "description": "Enter local device connection details\n\nNote: Device must be on the same local network as Home Assistant",
+                "title": "Local Device Setup"
+            },
+            "cloud_options": {
+                "data": {
                     "scan_interval": "Sensor Refresh Interval (minutes)"
                 },
-                "description": "Enter your Tuya IoT Platform credentials and select your region",
-                "title": "Tuya Heat Pump Setup"
+                "description": "Configure sensor refresh interval for cloud connection\n\nLower values = faster updates but more API calls",
+                "title": "Cloud Configuration"
             }
         },
         "error": {
@@ -25,11 +41,25 @@
     "options": {
         "step": {
             "init": {
+                "data": {},
+                "description": "Configure device settings",
+                "title": "Tuya Heat Pump Configuration"
+            },
+            "cloud_options": {
                 "data": {
                     "scan_interval": "Sensor Refresh Interval (minutes)"
                 },
-                "description": "Configure sensor refresh interval",
-                "title": "Tuya Heat Pump Configuration"
+                "description": "Configure sensor refresh interval\n\nLower values = faster updates but more API calls",
+                "title": "Cloud Device Settings"
+            },
+            "local_options": {
+                "data": {
+                    "ip": "Device IP Address",
+                    "local_key": "Local Key",
+                    "protocol": "Protocol Version"
+                },
+                "description": "Update local device connection details\n\nDevice must be on the same local network",
+                "title": "Local Device Settings"
             }
         }
     },
@@ -50,6 +80,3 @@
         }
     }
 }
-
-
-
