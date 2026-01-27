@@ -1,8 +1,9 @@
 """Model mapping for 000004u5nz (different heat pump model)."""
 
 MODEL_NAME = "Heat Pump Model 000004u5nz"
-
-# Sensor Types - SADECE read-only (ro) ve hesaplanan sensörler
+# ====================================================
+# Adlar Castra @rznq0q
+# ====================================================
 SENSOR_TYPES = {
     "temp_current": {
         "dp_id": 16,
