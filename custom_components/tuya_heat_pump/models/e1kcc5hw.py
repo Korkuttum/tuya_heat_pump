@@ -1,9 +1,8 @@
 """Model mapping for e1kcc5hw Tuya Heat Pump."""
 
 MODEL_NAME = "Tuya Heat Pump (e1kcc5hw)"
-
 # ====================================================
-# SENSOR TYPES (read-only - accessMode: "ro")
+# Heative Next @Franksb
 # ====================================================
 SENSOR_TYPES = {
     "countdown_left": {
