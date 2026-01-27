@@ -1,9 +1,8 @@
 """Model mapping for 000003ynwv Tuya Heat Pump."""
 
 MODEL_NAME = "Tuya Heat Pump (000003ynwv)"
-
 # ====================================================
-# SENSOR TYPES (read-only - accessMode: "ro")
+# MyCond BeeThermic @RuslanNovak
 # ====================================================
 SENSOR_TYPES = {
     "power_consumption": {
