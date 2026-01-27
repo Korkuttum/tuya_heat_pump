@@ -9,7 +9,9 @@
 ### Supported Brands
 - Arçelik (Beko, Grundig)
 - Adlar Castra
-- Water TechniX 
+- Heative Next
+- MyCond BeeThermic
+- Water TechniX
 ---
 
 This project allows you to control and monitor your Tuya heat pump device through Home Assistant — supports both Cloud and Local (push) connection modes.
