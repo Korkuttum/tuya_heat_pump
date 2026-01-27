@@ -9,7 +9,6 @@ import json
 import asyncio
 from datetime import datetime, timedelta
 from typing import Any
-
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
@@ -18,7 +17,6 @@ from homeassistant.helpers.update_coordinator import (
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.device_registry import DeviceInfo
-
 from .const import (
     DOMAIN,
     DEFAULT_SCAN_INTERVAL,
@@ -45,7 +43,6 @@ import tinytuya
 from .model_loader import load_model_mapping, async_load_model_mapping
 
 _LOGGER = logging.getLogger(__name__)
-
 
 def make_api_request(url: str, headers: dict, method: str = "GET", data: dict = None) -> requests.Response:
     """Make API request."""
@@ -98,23 +95,32 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         self._heartbeat_task = None
         # Debounce için (local)
         self._pending_commands = {}  # code → (value, task)
-        self._debounce_delay = 1.0  # 1 saniye
+        self._debounce_delay = 1.0   # 1 saniye
         # Son gönderilen değer cache (geri alma sorunu için)
         self._sent_value_cache = {}  # code → (value, timestamp)
-        self._cache_timeout = 8.0  # 8 saniye
+        self._cache_timeout = 8.0    # 8 saniye
+
         self.device_info = DeviceInfo(
             identifiers={(DOMAIN, self.device_id)},
             name=self.device_name,
             manufacturer=DEFAULT_MANUFACTURER,
             model=DEFAULT_MODEL,
         )
+
+        # Cloud kimlik bilgileri - her iki modda da tutuluyor (local'da model ID için gerekli)
+        self.access_id = config_entry.data.get(CONF_ACCESS_ID)
+        self.access_key = config_entry.data.get(CONF_ACCESS_KEY)
+        self.region = config_entry.data.get(CONF_REGION)
+        self.api_endpoint = REGIONS.get(self.region)
+
+        self.access_token = None
+
         if self.connection_type == "cloud":
-            self.access_id = config_entry.data[CONF_ACCESS_ID]
-            self.access_key = config_entry.data[CONF_ACCESS_KEY]
-            self.region = config_entry.data[CONF_REGION]
-            self.api_endpoint = REGIONS[self.region]
-            self.access_token = None
+            # Cloud modda ekstra bir şey gerekmiyor
+            pass
+
         else:
+            # Local mod: Cloud credentials'ları da sakla (model ID için gerekli)
             self.ip = config_entry.data[CONF_IP]
             self.local_key = config_entry.data[CONF_LOCAL_KEY]
             self.protocol = float(config_entry.data.get(CONF_PROTOCOL, "3.4"))
@@ -235,10 +241,11 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         return signature
 
     async def _get_token(self) -> bool:
-        """Get access token from Tuya API."""
-        if self.connection_type != "cloud":
+        """Get access token from Tuya API - hem cloud hem local için kullanılır."""
+        if self.access_token:
+            _LOGGER.debug("Token zaten var, tekrar alınmıyor")
             return True
-          
+
         try:
             t = str(int(time.time() * 1000))
             sign = self._calculate_sign(t, TOKEN_PATH)
@@ -259,19 +266,22 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             )
           
             if response.status_code != 200:
+                _LOGGER.error("Token endpoint HTTP %s döndü", response.status_code)
                 raise ConfigEntryAuthFailed(ERROR_AUTH)
           
             result = response.json()
             if not result.get('success', False):
-                raise ConfigEntryAuthFailed(ERROR_AUTH)
+                error_msg = result.get('msg', 'Bilinmeyen hata')
+                _LOGGER.error("Token alınamadı: %s", error_msg)
+                raise ConfigEntryAuthFailed(f"{ERROR_AUTH}: {error_msg}")
           
             self.access_token = result['result']['access_token']
-            _LOGGER.debug("Successfully got access token")
+            _LOGGER.info("Access token başarıyla alındı")
             return True
           
         except Exception as err:
-            _LOGGER.error("Error getting token: %s", str(err))
-            raise UpdateFailed(ERROR_CONN)
+            _LOGGER.error("Token alma hatası: %s", str(err))
+            raise UpdateFailed(f"{ERROR_CONN}: {str(err)}")
 
     async def get_device_info(self) -> dict:
         """Get device information."""
@@ -334,79 +344,73 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             )
             return {}
 
-    async def get_device_model(self):
-        """Get device model information - local modda bile cloud API kullanılır."""
-        # Eğer zaten yüklendiyse atla
-        if self.model_id and self.model_id != "default":
-            _LOGGER.debug("Model ID zaten yüklü: %s", self.model_id)
-            return
-
-        # Cloud kimlik bilgileri varsa (local modda bile) model ID'yi çek
-        if all([
-            self.config_entry.data.get(CONF_ACCESS_ID),
-            self.config_entry.data.get(CONF_ACCESS_KEY),
-            self.config_entry.data.get(CONF_REGION),
-            self.config_entry.data.get(CONF_DEVICE_ID)
-        ]):
-            try:
-                if self.connection_type != "cloud":
-                    _LOGGER.info("Local modda bile cloud'dan model ID çekiliyor...")
-
-                if not self.access_token:
-                    success = await self._get_token()
-                    if not success:
-                        raise Exception("Token alınamadı")
-
-                t = str(int(time.time() * 1000))
-                path = f"/v2.0/cloud/thing/{self.device_id}/model"  # Senin orijinal endpoint'in
-                sign = self._calculate_sign(t, path, self.access_token)
-
-                headers = {
-                    'client_id': self.access_id,
-                    'access_token': self.access_token,
-                    'sign': sign,
-                    't': t,
-                    'sign_method': 'HMAC-SHA256',
-                }
-
-                url = f"{self.api_endpoint}{path}"
-                _LOGGER.info("Getting device model from API: %s", url)
-
-                response = await self.hass.async_add_executor_job(
-                    make_api_request,
-                    url,
-                    headers
-                )
-
-                result = response.json()
-
-                if result.get('success', False):
-                    model_info = json.loads(result['result']['model'])
-                    self.model_id = model_info.get('modelId')
-                    _LOGGER.info("Device model ID alındı: %s", self.model_id)
-                else:
-                    _LOGGER.warning("Model API başarısız: %s → default", result.get('msg'))
-                    self.model_id = "default"
-
-            except Exception as err:
-                _LOGGER.error("Model ID alınamadı (cloud API hatası): %s → default", err)
+    async def get_device_model(self) -> dict:
+        """Get device model information - local modda da cloud API kullanılır."""
+        _LOGGER.info("get_device_model çağrıldı - connection_type: %s", self.connection_type)
+        
+        try:
+            if not self.access_token:
+                _LOGGER.info("Token yok → token alınıyor...")
+                await self._get_token()
+            
+            t = str(int(time.time() * 1000))
+            path = f"/v2.0/cloud/thing/{self.device_id}/model"
+            sign = self._calculate_sign(t, path, self.access_token)
+          
+            headers = {
+                'client_id': self.access_id,
+                'access_token': self.access_token,
+                'sign': sign,
+                't': t,
+                'sign_method': 'HMAC-SHA256',
+            }
+          
+            url = f"{self.api_endpoint}{path}"
+            _LOGGER.info("Cloud API'den model bilgisi alınıyor: %s", url)
+          
+            response = await self.hass.async_add_executor_job(
+                make_api_request,
+                url,
+                headers
+            )
+          
+            result = response.json()
+          
+            if result.get('success', False):
+                model_info = json.loads(result['result']['model'])
+                self.model_id = model_info.get('modelId')
+                _LOGGER.info("✅ Model ID alındı: %s", self.model_id)
+              
+                self.model_mapping = await async_load_model_mapping(self.hass, self.model_id)
+              
+                self.dp_mapping = {}
+                for entity_type in ['sensors', 'binary_sensors', 'switches', 'numbers', 'selects']:
+                    for code, config in self.model_mapping.get(entity_type, {}).items():
+                        if 'dp_id' in config:
+                            dp_id = config['dp_id']
+                            self.dp_mapping[dp_id] = code
+              
+                _LOGGER.info("Model mapping yüklendi - %d DP tanımlı", len(self.dp_mapping))
+                return model_info
+            else:
+                _LOGGER.warning("Model API success=false → default kullanılıyor. Msg: %s", result.get('msg', '—'))
                 self.model_id = "default"
-        else:
-            _LOGGER.warning("Cloud kimlikleri eksik → default model")
+              
+        except Exception as err:
+            _LOGGER.warning("Model bilgisi alınamadı: %s → default mapping kullanılacak", str(err))
             self.model_id = "default"
 
-        # Mapping'i yükle
-        self.model_mapping = await async_load_model_mapping(self.hass, self.model_id)
-
-        # DP mapping oluştur
+        # Default fallback
+        self.model_mapping = load_model_mapping("default")
         self.dp_mapping = {}
         for entity_type in ['sensors', 'binary_sensors', 'switches', 'numbers', 'selects']:
             for code, config in self.model_mapping.get(entity_type, {}).items():
                 if 'dp_id' in config:
                     dp_id = config['dp_id']
                     self.dp_mapping[dp_id] = code
-
-        _LOGGER.info("Loaded model mapping '%s' with %d DP mappings", self.model_id, len(self.dp_mapping))
+        
+        _LOGGER.info("Default model mapping yüklendi - %d DP tanımlı", len(self.dp_mapping))
+        return {}
 
     async def send_command(self, code: str, value: Any) -> bool:
         """Send command to device - local için debounce ile en son değeri gönder"""
@@ -458,7 +462,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     _LOGGER.error("❌ Cloud komut başarısız: %s = %s → %s", code, value, error_msg)
                     return False
                   
-            else:  # Local mod - DEBOUNCE
+            else: # Local mod - DEBOUNCE
                 if not self.local_device:
                     _LOGGER.error("Local device not initialized")
                     return False
