@@ -1,6 +1,9 @@
 """Default model mapping for Tuya Heat Pump (your device)"""
 
-# Sensor Types - dp_id'leri ekledim
+MODEL_NAME = "Tuya Heat Pump (Default)"
+# ====================================================
+# Arçelik @korkuttum
+# ====================================================
 SENSOR_TYPES = {
     "in_water_temp": {
         "dp_id": 106,
@@ -316,6 +319,3 @@ SELECT_TYPES = {
         "conversion": "value"
     }
 }
-
-# Optional: Model info
-MODEL_NAME = "Tuya Heat Pump (Default)"
