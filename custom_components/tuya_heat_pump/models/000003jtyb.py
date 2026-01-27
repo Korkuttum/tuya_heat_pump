@@ -1,8 +1,9 @@
 """Model mapping for 000003jtyb (simple heat pump model)."""
 
 MODEL_NAME = "Heat Pump Model 000003jtyb"
-
-# Sensor Types - read-only value types
+# ====================================================
+# WaterTechnix @SabreT1952
+# ====================================================
 SENSOR_TYPES = {
     "temp_current": {
         "dp_id": 3,
