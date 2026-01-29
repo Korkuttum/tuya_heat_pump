@@ -4,7 +4,6 @@ MODEL_NAME = "Tuya Heat Pump (EnviroSun HP+)"
 # ====================================================
 # EnviroSun HP+ @jascham
 # ====================================================
-
 SENSOR_TYPES = {
     "temp_current": {
         "dp_id": 16,
