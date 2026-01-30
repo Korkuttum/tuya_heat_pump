@@ -27,14 +27,19 @@ async def async_setup_entry(
     # Model mapping'den switch'leri al
     switch_configs = coordinator.model_mapping.get("switches", {})
     
+    # 🔴 DEĞİŞİKLİK: coordinator.data kontrolü kaldırıldı
     for switch_code, switch_config in switch_configs.items():
-        if coordinator.data and switch_code in coordinator.data:
-            switches.append(TuyaHeatpumpSwitch(coordinator, switch_code, switch_config))
-            _LOGGER.info("Adding switch: %s (%s)", switch_config.get('name', switch_code), switch_code)
-        else:
-            _LOGGER.warning("Switch %s not found in device data, skipping", switch_code)
+        switches.append(
+            TuyaHeatpumpSwitch(coordinator, switch_code, switch_config)
+        )
+        _LOGGER.info(
+            "Adding switch: %s (%s)",
+            switch_config.get('name', switch_code),
+            switch_code
+        )
     
     async_add_entities(switches)
+
 
 class TuyaHeatpumpSwitch(SwitchEntity):
     """Representation of a Tuya Heatpump Switch."""
