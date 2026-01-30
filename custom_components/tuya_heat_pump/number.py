@@ -27,14 +27,19 @@ async def async_setup_entry(
     # Model mapping'den number'ları al
     number_configs = coordinator.model_mapping.get("numbers", {})
     
+    # 🔴 DEĞİŞİKLİK: coordinator.data kontrolü kaldırıldı
     for number_code, number_config in number_configs.items():
-        if coordinator.data and number_code in coordinator.data:
-            numbers.append(TuyaHeatpumpNumber(coordinator, number_code, number_config))
-            _LOGGER.info("Adding number: %s (%s)", number_config.get('name', number_code), number_code)
-        else:
-            _LOGGER.warning("Number %s not found in device data, skipping", number_code)
+        numbers.append(
+            TuyaHeatpumpNumber(coordinator, number_code, number_config)
+        )
+        _LOGGER.info(
+            "Adding number: %s (%s)",
+            number_config.get('name', number_code),
+            number_code
+        )
     
     async_add_entities(numbers)
+
 
 class TuyaHeatpumpNumber(NumberEntity):
     """Representation of a Tuya Heatpump Number."""
