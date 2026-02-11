@@ -3,11 +3,6 @@
 MODEL_NAME = "Cordivari Vestalis (eu20ns)"
 # ====================================================
 # Cordivari Vestalis @carpenv
-# Based on actual device data from 2026-02-11
-# ====================================================
-
-# ====================================================
-# SENSOR TYPES (read-only value)
 # ====================================================
 SENSOR_TYPES = {
     # Temperature Sensors
