@@ -9,6 +9,8 @@
 ### Supported Brands
 - Arçelik (Beko, Grundig)
 - Adlar Castra
+- Aquatech X6
+- Cordivari Vestalis
 - Heative Next
 - MyCond BeeThermic
 - Water TechniX
