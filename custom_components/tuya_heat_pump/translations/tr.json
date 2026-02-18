@@ -35,7 +35,7 @@
             "unknown": "Beklenmeyen hata"
         },
         "abort": {
-            "already_configured": "Cihaz zaten yapılandırılmış"
+            "already_configured": "⚠️ Bu cihaz zaten eklenmiş! Lütfen Ayarlar > Cihazlar ve Servisler'den kontrol edin."
         }
     },
     "options": {
