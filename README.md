@@ -11,6 +11,7 @@
 - Adlar Castra
 - Aquatech X6
 - Cordivari Vestalis
+- EnviroSun HP+  _(Still not working yet.)_
 - Heative Next
 - MyCond BeeThermic
 - Water TechniX
