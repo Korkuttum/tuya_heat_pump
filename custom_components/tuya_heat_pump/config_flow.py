@@ -280,7 +280,14 @@ class TuyaHeatpumpConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             try:
                 info = await validate_input(self.hass, full_data, "cloud")
                 await self.async_set_unique_id(full_data[CONF_DEVICE_ID])
-                self._abort_if_unique_id_configured()
+                
+                # Check if device is already configured
+                try:
+                    self._abort_if_unique_id_configured()
+                except:
+                    _LOGGER.error("Device already configured, aborting")
+                    return self.async_abort(reason="already_configured")
+                
                 return self.async_create_entry(title=info["title"], data=full_data)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
@@ -301,7 +308,14 @@ class TuyaHeatpumpConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             try:
                 info = await validate_input(self.hass, full_data, "local")
                 await self.async_set_unique_id(full_data[CONF_DEVICE_ID])
-                self._abort_if_unique_id_configured()
+                
+                # Check if device is already configured
+                try:
+                    self._abort_if_unique_id_configured()
+                except:
+                    _LOGGER.error("Device already configured, aborting")
+                    return self.async_abort(reason="already_configured")
+                
                 return self.async_create_entry(title=info["title"], data=full_data)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
