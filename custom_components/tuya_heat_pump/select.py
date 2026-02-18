@@ -27,14 +27,19 @@ async def async_setup_entry(
     # Model mapping'den select'leri al
     select_configs = coordinator.model_mapping.get("selects", {})
     
+    # 🔴 DEĞİŞİKLİK: coordinator.data kontrolü kaldırıldı
     for select_code, select_config in select_configs.items():
-        if coordinator.data and select_code in coordinator.data:
-            selects.append(TuyaHeatpumpSelect(coordinator, select_code, select_config))
-            _LOGGER.info("Adding select: %s (%s)", select_config.get('name', select_code), select_code)
-        else:
-            _LOGGER.warning("Select %s not found in device data, skipping", select_code)
+        selects.append(
+            TuyaHeatpumpSelect(coordinator, select_code, select_config)
+        )
+        _LOGGER.info(
+            "Adding select: %s (%s)",
+            select_config.get('name', select_code),
+            select_code
+        )
     
     async_add_entities(selects)
+
 
 class TuyaHeatpumpSelect(SelectEntity):
     """Representation of a Tuya Heatpump Select."""
