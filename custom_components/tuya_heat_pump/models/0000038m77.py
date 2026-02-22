@@ -1,0 +1,241 @@
+"""Model mapping for 0000038m77 heat pump."""
+
+MODEL_NAME = "Heat Pump Model 0000038m77"
+# ====================================================
+# Kushiro (Luqstoff) @tortu091
+# ====================================================
+SENSOR_TYPES = {
+    "temp_current": {
+        "dp_id": 3,
+        "code": "temp_current",
+        "name": "Current Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    "AmbientTemp": {
+        "dp_id": 102,
+        "code": "AmbientTemp",
+        "name": "Ambient Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    "OCT1": {
+        "dp_id": 103,
+        "code": "OCT1",
+        "name": "Outdoor Coil Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    "CTT": {
+        "dp_id": 104,
+        "code": "CTT",
+        "name": "Compressor Discharge Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    "ReturnAirTemp": {
+        "dp_id": 105,
+        "code": "ReturnAirTemp",
+        "name": "Return Air Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    "WaterTankTemp": {
+        "dp_id": 106,
+        "code": "WaterTankTemp",
+        "name": "Water Tank Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer-water",
+        "device_class": "temperature",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    "OCT_Cool": {
+        "dp_id": 107,
+        "code": "OCT_Cool",
+        "name": "Outdoor Coil Temperature (Cool)",
+        "unit": "°C",
+        "icon": "mdi:thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    "WaterInTemp": {
+        "dp_id": 108,
+        "code": "WaterInTemp",
+        "name": "Water Inlet Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer-water",
+        "device_class": "temperature",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    "WaterOutTemp": {
+        "dp_id": 109,
+        "code": "WaterOutTemp",
+        "name": "Water Outlet Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer-water",
+        "device_class": "temperature",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    "ValveFrontTemp": {
+        "dp_id": 110,
+        "code": "ValveFrontTemp",
+        "name": "Valve Front Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    "ValvePostTemp": {
+        "dp_id": 111,
+        "code": "ValvePostTemp",
+        "name": "Valve Post Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+}
+
+# Read-only bool/bitmap sensors
+BINARY_SENSOR_TYPES = {
+    "fault": {
+        "dp_id": 6,
+        "code": "fault",
+        "name": "Fault Alarm",
+        "device_class": "problem",
+        "conversion": "value != 0",
+    },
+    "Compressor": {
+        "dp_id": 112,
+        "code": "Compressor",
+        "name": "Compressor",
+        "icon": "mdi:engine",
+        "device_class": "running",
+        "conversion": "value",
+    },
+    "FouValve": {
+        "dp_id": 113,
+        "code": "FouValve",
+        "name": "Four-Way Valve",
+        "icon": "mdi:valve",
+        "device_class": "opening",
+        "conversion": "value",
+    },
+    "Heat": {
+        "dp_id": 114,
+        "code": "Heat",
+        "name": "Electric Heater",
+        "icon": "mdi:heating-coil",
+        "device_class": "heat",
+        "conversion": "value",
+    },
+    "Fan": {
+        "dp_id": 115,
+        "code": "Fan",
+        "name": "Fan",
+        "icon": "mdi:fan",
+        "device_class": "running",
+        "conversion": "value",
+    },
+    "Pumb": {
+        "dp_id": 116,
+        "code": "Pumb",
+        "name": "Pump",
+        "icon": "mdi:pump",
+        "device_class": "running",
+        "conversion": "value",
+    },
+    "ChassisHeat": {
+        "dp_id": 117,
+        "code": "ChassisHeat",
+        "name": "Chassis Heater",
+        "icon": "mdi:heating-coil",
+        "device_class": "heat",
+        "conversion": "value",
+    },
+    "CrankshaftHeat": {
+        "dp_id": 118,
+        "code": "CrankshaftHeat",
+        "name": "Crankshaft Heater",
+        "icon": "mdi:heating-coil",
+        "device_class": "heat",
+        "conversion": "value",
+    },
+}
+
+# Read-write bool switches
+SWITCH_TYPES = {
+    "switch": {
+        "dp_id": 1,
+        "code": "switch",
+        "name": "Power",
+        "icon": "mdi:power",
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
+    },
+}
+
+# Read-write value numbers
+NUMBER_TYPES = {
+    "temp_set": {
+        "dp_id": 2,
+        "code": "temp_set",
+        "name": "Target Temperature",
+        "icon": "mdi:thermometer",
+        "unit": "°C",
+        "min_value": 5.0,
+        "max_value": 80.0,
+        "step": 1.0,
+        "conversion": "value",
+        "api_conversion": "value",
+    },
+    "Temp_Offset": {
+        "dp_id": 101,
+        "code": "Temp_Offset",
+        "name": "Temperature Offset",
+        "icon": "mdi:thermometer-plus",
+        "unit": "°C",
+        "min_value": -9.0,
+        "max_value": 9.0,
+        "step": 1.0,
+        "conversion": "value",
+        "api_conversion": "value",
+    },
+}
+
+# Read-write enum selects
+SELECT_TYPES = {
+    "mode": {
+        "dp_id": 4,
+        "code": "mode",
+        "name": "Working Mode",
+        "icon": "mdi:air-conditioner",
+        "options": {
+            "hot": "Heat",
+            "cold": "Cool",
+            "eco": "Eco",
+            "auto": "Auto",
+        },
+        "conversion": "value",
+    },
+}
