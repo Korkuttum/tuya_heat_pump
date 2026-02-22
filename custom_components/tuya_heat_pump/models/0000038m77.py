@@ -1,8 +1,9 @@
 """Model mapping for 0000038m77 heat pump."""
 
 MODEL_NAME = "Heat Pump Model 0000038m77"
-
-# Read-only temperature/value sensors
+# ====================================================
+# Kushiro (Luqstoff) @tortu091
+# ====================================================
 SENSOR_TYPES = {
     "temp_current": {
         "dp_id": 3,
