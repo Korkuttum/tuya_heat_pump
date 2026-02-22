@@ -13,6 +13,7 @@
 - Cordivari Vestalis
 - EnviroSun HP+  _(Still not working yet.)_
 - Heative Next
+- Kushiro (Luqstoff)
 - MyCond BeeThermic
 - Water TechniX
 ---
