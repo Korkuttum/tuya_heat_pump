@@ -5,7 +5,7 @@ MODEL_NAME = "Tuya Heat Pump (000004joyp)"
 # EVOHEAT 40T @andrewboller
 # ====================================================
 SENSOR_TYPES = {
-    # Inlet Water Temperature (ro)
+    # Inlet Water Temperature
     "wintemp": {
         "dp_id": 103,
         "code": "wintemp",
@@ -14,9 +14,9 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-water",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",  # Scale 0, so direct value
+        "conversion": "value",
     },
-    # Speed Percentage (ro)
+    # Speed Percentage
     "speedpercentage": {
         "dp_id": 105,
         "code": "speedpercentage",
@@ -26,7 +26,7 @@ SENSOR_TYPES = {
         "state_class": "measurement",
         "conversion": "value",
     },
-    # Temperature Lower Limit (ro)
+    # Temperature Lower Limit
     "setdnlimit": {
         "dp_id": 108,
         "code": "setdnlimit",
@@ -37,7 +37,7 @@ SENSOR_TYPES = {
         "state_class": "measurement",
         "conversion": "value",
     },
-    # Temperature Upper Limit (ro)
+    # Temperature Upper Limit
     "setuplimit": {
         "dp_id": 109,
         "code": "setuplimit",
@@ -48,7 +48,7 @@ SENSOR_TYPES = {
         "state_class": "measurement",
         "conversion": "value",
     },
-    # Power (ro) - with scale 3 (divide by 1000)
+    # Power (with scale 3)
     "rateofwork": {
         "dp_id": 112,
         "code": "rateofwork",
@@ -57,23 +57,41 @@ SENSOR_TYPES = {
         "icon": "mdi:flash",
         "device_class": "power",
         "state_class": "measurement",
-        "conversion": "value / 1000",  # scale: 3
+        "conversion": "value / 1000",
+    },
+    
+    # ========== HATA KODU SENSÖRLERİ ==========
+    # Fault 1 Code - Sadece hata kodu veya "OK"
+    "fault1_code": {
+        "dp_id": 110,
+        "code": "fault1",
+        "name": "Fault Code 1",
+        "icon": "mdi:alert-circle",
+        "conversion": "'OK' if value == 0 else f'Code: {value}'",
+    },
+    # Fault 2 Code - Sadece hata kodu veya "OK"
+    "fault2_code": {
+        "dp_id": 111,
+        "code": "fault2",
+        "name": "Fault Code 2",
+        "icon": "mdi:alert-circle",
+        "conversion": "'OK' if value == 0 else f'Code: {value}'",
     },
 }
 
 # ====================================================
-# BINARY SENSOR TYPES - Read-only boolean/bitmap
+# BINARY SENSOR TYPES - Hızlı uyarı için
 # ====================================================
 BINARY_SENSOR_TYPES = {
-    # Fault 1 (ro) - Bitmap
+    # Fault 1 Binary - Arıza var/yok
     "fault1": {
         "dp_id": 110,
         "code": "fault1",
         "name": "Fault Status 1",
         "device_class": "problem",
-        "conversion": "value != 0",  # 0 = no fault
+        "conversion": "value != 0",
     },
-    # Fault 2 (ro) - Bitmap
+    # Fault 2 Binary - Arıza var/yok
     "fault2": {
         "dp_id": 111,
         "code": "fault2",
@@ -81,7 +99,7 @@ BINARY_SENSOR_TYPES = {
         "device_class": "problem",
         "conversion": "value != 0",
     },
-    # Power Display Enable (ro)
+    # Power Display Enable
     "enablepowerbit": {
         "dp_id": 113,
         "code": "enablepowerbit",
@@ -92,19 +110,19 @@ BINARY_SENSOR_TYPES = {
 }
 
 # ====================================================
-# SWITCH TYPES - Read-write boolean
+# SWITCH TYPES
 # ====================================================
 SWITCH_TYPES = {
-    # Power Switch (rw)
+    # Power Switch
     "power": {
         "dp_id": 101,
         "code": "power",
         "name": "Power",
         "icon": "mdi:power",
         "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
-        "api_conversion": "value",  # Direct boolean
+        "api_conversion": "value",
     },
-    # Temperature Unit Switch (rw) - 0=Celsius, 1=Fahrenheit
+    # Temperature Unit (0=Celsius, 1=Fahrenheit)
     "change_tem": {
         "dp_id": 104,
         "code": "change_tem",
@@ -116,18 +134,18 @@ SWITCH_TYPES = {
 }
 
 # ====================================================
-# NUMBER TYPES - Read-write numeric values
+# NUMBER TYPES
 # ====================================================
 NUMBER_TYPES = {
-    # Temperature Setpoint (rw)
+    # Target Temperature
     "settemp": {
         "dp_id": 107,
         "code": "settemp",
         "name": "Target Temperature",
         "icon": "mdi:thermostat",
         "unit": "°C",
-        "min_value": -22.0,  # From model spec
-        "max_value": 122.0,  # From model spec
+        "min_value": -22.0,
+        "max_value": 122.0,
         "step": 1.0,
         "conversion": "value",
         "api_conversion": "value",
@@ -135,10 +153,10 @@ NUMBER_TYPES = {
 }
 
 # ====================================================
-# SELECT TYPES - Read-write enum
+# SELECT TYPES
 # ====================================================
 SELECT_TYPES = {
-    # Operation Mode 1 (rw) - silence, smart, booster
+    # Operation Mode 1
     "mode1": {
         "dp_id": 102,
         "code": "mode1",
@@ -152,7 +170,7 @@ SELECT_TYPES = {
         "conversion": "value",
         "api_conversion": "value",
     },
-    # Operation Mode 2 (rw) - smart, warm, cool
+    # Operation Mode 2
     "setmode": {
         "dp_id": 106,
         "code": "setmode",
@@ -166,7 +184,7 @@ SELECT_TYPES = {
         "conversion": "value",
         "api_conversion": "value",
     },
-    # Cooling Enable (ro) - 0 or 1
+    # Cooling Enable (read-only)
     "cool_en": {
         "dp_id": 114,
         "code": "cool_en",
@@ -179,7 +197,7 @@ SELECT_TYPES = {
         "conversion": "value",
         "api_conversion": "value",
     },
-    # Booster Enable (ro) - 0 or 1
+    # Booster Enable (read-only)
     "booster_en": {
         "dp_id": 115,
         "code": "booster_en",
