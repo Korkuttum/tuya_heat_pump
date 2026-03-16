@@ -1,9 +1,8 @@
 """Model mapping for 000004joyp (New Heat Pump Model)."""
 
 MODEL_NAME = "Tuya Heat Pump (000004joyp)"
-
 # ====================================================
-# SENSOR TYPES - Read-only values from the device
+# EVOHEAT 40T @andrewboller
 # ====================================================
 SENSOR_TYPES = {
     # Inlet Water Temperature (ro)
