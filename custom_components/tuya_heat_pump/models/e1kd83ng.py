@@ -13,7 +13,7 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-water",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
+        "conversion": "value / 10",
     },
     "effluent_temp": {
         "dp_id": 25,
@@ -23,7 +23,7 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-water",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
+        "conversion": "value / 10",
     },
     "return_temp": {
         "dp_id": 121,
@@ -33,7 +33,7 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
+        "conversion": "value / 10",
     },
     
     # ========== HEAT PUMP COMPONENT TEMPERATURES (Celsius) ==========
@@ -45,7 +45,7 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
+        "conversion": "value / 10",
     },
     "venting_temp": {
         "dp_id": 24,
@@ -55,7 +55,7 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-alert",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
+        "conversion": "value / 10",
     },
     "around_temp": {
         "dp_id": 26,
@@ -65,7 +65,7 @@ SENSOR_TYPES = {
         "icon": "mdi:home-thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
+        "conversion": "value / 10",
     },
     "cool_coiler_temp": {
         "dp_id": 123,
@@ -75,7 +75,7 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
+        "conversion": "value / 10",
     },
 
     # ========== FAHRENHEIT VERSIONS (read-only) ==========
