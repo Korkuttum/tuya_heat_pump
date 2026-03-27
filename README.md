@@ -1,6 +1,6 @@
 # Tuya Heat Pump - Home Assistant Integration
 
-<img src="https://www.arcelik.com.tr/media/resize/8510551100_MDM2_LOW_2.png/2000Wx2000H/image.webp" alt="Heat Pump" width="200"/>
+<img src="images/heatpump.webp" alt="Heat Pump" width="200"/>
 
  ⚠️ **Note:**  
 > This integration has only been tested with the heat pump brands listed below.  
