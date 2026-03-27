@@ -16,7 +16,7 @@
 - Heative Next
 - Kushiro (Luqstoff)
 - MyCond BeeThermic
-- Poolsana Heat Pump
+- Poolsana
 - Water TechniX
 ---
 
