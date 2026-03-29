@@ -9,8 +9,9 @@
 | 5 | EnviroSun HP+ (Still not working yet.) | @jascham | e1mnja6s | * |
 | 6 | Evoheat 40T | @andrewboller | 000004joyp |  |
 | 7 | Heative Next | @Franksb | e1kcc5hw | * |
-| 8 | Kushiro (Luqstoff) | @tortu091 | 0000038m77 |  |
-| 9 | Mitte Aerotermia | @jeroen-s | e1kcc5hw |  |
-| 10 | MyCond BeeThermic | @RuslanNovak | 000003ynwv | * |
-| 11 | Poolsana | @rommelfs | e1kd83ng |  |
-| 12 | Water TechniX | @SabreT1952 | 000003jtyb | * |
+| 8 | Inventor Xforce | @DrRikons | 000004lh21 |  |
+| 9 | Kushiro (Luqstoff) | @tortu091 | 0000038m77 |  |
+| 10 | Mitte Aerotermia | @jeroen-s | e1kcc5hw |  |
+| 11 | MyCond BeeThermic | @RuslanNovak | 000003ynwv | * |
+| 12 | Poolsana | @rommelfs | e1kd83ng |  |
+| 13 | Water TechniX | @SabreT1952 | 000003jtyb | * |
