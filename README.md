@@ -15,6 +15,7 @@
 - Evoheat 40T
 - Heative Next
 - Kushiro (Luqstoff)
+- Mitte Aerotermia
 - MyCond BeeThermic
 - Poolsana
 - Water TechniX
