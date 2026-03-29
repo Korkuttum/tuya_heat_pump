@@ -14,6 +14,7 @@
 - EnviroSun HP+  _(Still not working yet.)_
 - Evoheat 40T
 - Heative Next
+- Inventor Xforce
 - Kushiro (Luqstoff)
 - Mitte Aerotermia
 - MyCond BeeThermic
