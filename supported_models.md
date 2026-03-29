@@ -10,6 +10,7 @@
 | 6 | Evoheat 40T | @andrewboller | 000004joyp |  |
 | 7 | Heative Next | @Franksb | e1kcc5hw | * |
 | 8 | Kushiro (Luqstoff) | @tortu091 | 0000038m77 |  |
-| 9 | MyCond BeeThermic | @RuslanNovak | 000003ynwv | * |
-| 10 | Poolsana | @rommelfs | e1kd83ng |  |
-| 11 | Water TechniX | @SabreT1952 | 000003jtyb | * |
+| 9 | Mitte Aerotermia | @jeroen-s | e1kcc5hw |  |
+| 10 | MyCond BeeThermic | @RuslanNovak | 000003ynwv | * |
+| 11 | Poolsana | @rommelfs | e1kd83ng |  |
+| 12 | Water TechniX | @SabreT1952 | 000003jtyb | * |
