@@ -11,6 +11,7 @@
 - Adlar Castra
 - Aquatech X6
 - Cordivari Vestalis
+- Ecologic Ecopool
 - EnviroSun HP+  _(Still not working yet.)_
 - Evoheat 40T
 - Heative Next
