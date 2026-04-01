@@ -126,7 +126,7 @@ SENSOR_TYPES = {
         "icon": "mdi:thermostat",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value / 10",  # API 280 = 28.0°C
+        "conversion": "value",  # API 28 → 28°C
     },
     "Temp_Offset": {
         "dp_id": 101,
@@ -136,7 +136,7 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-plus",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value / 10",  # API 10 = 1.0°C
+        "conversion": "value",  # API 1 → 1°C
     },
 }
 
@@ -236,8 +236,8 @@ NUMBER_TYPES = {
         "min_value": 7.0,
         "max_value": 60.0,
         "step": 1.0,
-        "conversion": "value / 10",      # API → HA: 280 → 28.0°C
-        "api_conversion": "value * 10"   # HA → API: 28.0°C → 280
+        "conversion": "value",           # API → HA: 28 → 28°C
+        "api_conversion": "value * 10"   # HA → API: 28°C → 280
     },
     "Temp_Offset": {
         "dp_id": 101,
@@ -248,8 +248,8 @@ NUMBER_TYPES = {
         "min_value": 1.0,
         "max_value": 15.0,
         "step": 1.0,
-        "conversion": "value / 10",      # API → HA: 10 → 1.0°C
-        "api_conversion": "value * 10"   # HA → API: 1.0°C → 10
+        "conversion": "value",           # API → HA: 1 → 1°C
+        "api_conversion": "value * 10"   # HA → API: 1°C → 10
     },
 }
 
