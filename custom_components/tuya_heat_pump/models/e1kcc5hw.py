@@ -2,7 +2,7 @@
 
 MODEL_NAME = "Tuya Heat Pump (e1kcc5hw)"
 # ====================================================
-# Heative Next @Franksb
+# Heative Next @Franksb | Mitte Aerotermia @jeroen-s
 # ====================================================
 SENSOR_TYPES = {
     "countdown_left": {
