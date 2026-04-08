@@ -233,11 +233,11 @@ NUMBER_TYPES = {
         "name": "Temperature Setpoint",
         "icon": "mdi:thermostat",
         "unit": "°C",
-        "min_value": 7.0,
-        "max_value": 60.0,
+        "min_value": 8.0,
+        "max_value": 40.0,
         "step": 1.0,
-        "conversion": "value",           # API → HA: 28 → 28°C
-        "api_conversion": "value * 10"   # HA → API: 28°C → 280
+        "conversion": "value",
+        "api_conversion": "value / 10"
     },
     "Temp_Offset": {
         "dp_id": 101,
@@ -248,8 +248,8 @@ NUMBER_TYPES = {
         "min_value": 1.0,
         "max_value": 15.0,
         "step": 1.0,
-        "conversion": "value",           # API → HA: 1 → 1°C
-        "api_conversion": "value * 10"   # HA → API: 1°C → 10
+        "conversion": "value",
+        "api_conversion": "value / 10" 
     },
 }
 
