@@ -15,5 +15,6 @@
 | 11 | Mitte Aerotermia | @jeroen-s | e1kcc5hw |  |
 | 12 | MyCond BeeThermic | @RuslanNovak | 000003ynwv | * |
 | 13 | Poolsana | @rommelfs | e1kd83ng |  |
-| 14 | Pure Blue Onyx | @warrenjmcdonald | f6ry00 |  |
-| 15 | Water TechniX | @SabreT1952 | 000003jtyb | * |
+| 14 | Power World | @brownnath2000 | fc1fls |  |
+| 15 | Pure Blue Onyx | @warrenjmcdonald | f6ry00 |  |
+| 16 | Water TechniX | @SabreT1952 | 000003jtyb | * |
