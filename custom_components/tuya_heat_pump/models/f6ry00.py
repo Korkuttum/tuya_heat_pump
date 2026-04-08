@@ -2,7 +2,7 @@
 
 MODEL_NAME = "Heat Pump (f6ry00)"
 # ====================================================
-# New model @warrenjmcdonald
+# Pure Blue Onyx @warrenjmcdonald
 # ====================================================
 SENSOR_TYPES = {
     # ========== TEMPERATURE SENSORS ==========
