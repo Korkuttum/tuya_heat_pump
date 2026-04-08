@@ -20,6 +20,7 @@
 - Mitte Aerotermia
 - MyCond BeeThermic
 - Poolsana
+- Power World
 - Pure Blue Onyx
 - Water TechniX
 ---
