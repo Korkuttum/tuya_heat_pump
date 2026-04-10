@@ -23,6 +23,7 @@
 - Power World
 - Pure Blue Onyx
 - Water TechniX
+- W'eau
 ---
 
 This project allows you to control and monitor your Tuya heat pump device through Home Assistant — supports both Cloud and Local (push) connection modes.
