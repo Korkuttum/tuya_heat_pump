@@ -14,7 +14,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "AmbientTemp": {
         "dp_id": 102,
@@ -24,7 +23,6 @@ SENSOR_TYPES = {
         "icon": "mdi:home-thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "OCT1": {
         "dp_id": 103,
@@ -34,7 +32,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "CTT": {
         "dp_id": 104,
@@ -44,7 +41,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-alert",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "ReturnAirTemp": {
         "dp_id": 105,
@@ -54,7 +50,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "WaterTankTemp": {
         "dp_id": 106,
@@ -64,7 +59,6 @@ SENSOR_TYPES = {
         "icon": "mdi:water-thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "OCT_Cool": {
         "dp_id": 107,
@@ -74,7 +68,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "WaterInTemp": {
         "dp_id": 108,
@@ -84,7 +77,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-water",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "WaterOutTemp": {
         "dp_id": 109,
@@ -94,7 +86,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-water",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "ValveFrontTemp": {
         "dp_id": 110,
@@ -104,7 +95,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "ValvePostTemp": {
         "dp_id": 111,
@@ -114,7 +104,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     
     # ========== SETPOINTS (read-only for display) ==========
@@ -126,7 +115,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermostat",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",  # API 28 → 28°C
     },
     "Temp_Offset": {
         "dp_id": 101,
@@ -136,7 +124,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-plus",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",  # API 1 → 1°C
     },
 }
 
@@ -236,7 +223,6 @@ NUMBER_TYPES = {
         "min_value": 8.0,
         "max_value": 40.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value / 10"
     },
     "Temp_Offset": {
@@ -248,8 +234,7 @@ NUMBER_TYPES = {
         "min_value": 1.0,
         "max_value": 15.0,
         "step": 1.0,
-        "conversion": "value",
-        "api_conversion": "value / 10" 
+        "api_conversion": "value / 10"
     },
 }
 
@@ -268,6 +253,5 @@ SELECT_TYPES = {
             "auto": "Auto",
             "eco": "ECO"
         },
-        "conversion": "value"
     },
 }

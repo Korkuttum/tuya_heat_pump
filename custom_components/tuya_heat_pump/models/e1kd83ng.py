@@ -87,7 +87,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-water",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "effluent_temp_f": {
         "dp_id": 40,
@@ -97,7 +96,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-water",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "return_temp_f": {
         "dp_id": 122,
@@ -107,7 +105,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "coiler_temp_f": {
         "dp_id": 41,
@@ -117,7 +114,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "venting_temp_f": {
         "dp_id": 39,
@@ -127,7 +123,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-alert",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "around_temp_f": {
         "dp_id": 38,
@@ -137,7 +132,6 @@ SENSOR_TYPES = {
         "icon": "mdi:home-thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "cool_coiler_temp_f": {
         "dp_id": 124,
@@ -147,7 +141,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
 
     # ========== UNIT INFORMATION ==========
@@ -156,7 +149,6 @@ SENSOR_TYPES = {
         "code": "unit_type",
         "name": "Unit Type",
         "icon": "mdi:information",
-        "conversion": "value",
         "options": {
             0: "Standard",
             1: "Inverter"
@@ -171,7 +163,6 @@ SENSOR_TYPES = {
         "unit": "P",
         "icon": "mdi:pipe-valve",
         "state_class": "measurement",
-        "conversion": "value",
     },
     
     # ========== WORK STATE (read-only enum - accessMode: "ro") ==========
@@ -180,7 +171,6 @@ SENSOR_TYPES = {
         "code": "work_state",
         "name": "Work State",
         "icon": "mdi:state-machine",
-        "conversion": "value",
         "options": {
             "Running": "Running",
             "Defrosting": "Defrosting",
@@ -228,7 +218,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermostat",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "set_cold_temp_f": {
         "dp_id": 106,
@@ -238,7 +227,6 @@ SENSOR_TYPES = {
         "icon": "mdi:snowflake",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "set_auto_temp_f": {
         "dp_id": 108,
@@ -248,7 +236,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermostat-auto",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
 }
 
@@ -379,7 +366,6 @@ NUMBER_TYPES = {
         "min_value": 59.0,
         "max_value": 104.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
     "set_cold_temp_f": {
@@ -391,7 +377,6 @@ NUMBER_TYPES = {
         "min_value": 46.0,
         "max_value": 82.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
     "set_auto_temp_f": {
@@ -403,7 +388,6 @@ NUMBER_TYPES = {
         "min_value": 46.0,
         "max_value": 104.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
 }
@@ -427,7 +411,6 @@ SELECT_TYPES = {
             "Heating_Silent": "Heating (Silent)",
             "Cooling_Silent": "Cooling (Silent)"
         },
-        "conversion": "value"
     },
     # Work Mode (Cool/Heat/Auto)
     "work_mode": {
@@ -440,7 +423,6 @@ SELECT_TYPES = {
             "Heat_mode": "Heating",
             "Auto_mode": "Auto"
         },
-        "conversion": "value"
     },
     # Temperature Unit
     "temp_unit_convert": {
@@ -452,7 +434,6 @@ SELECT_TYPES = {
             "c": "Celsius",
             "f": "Fahrenheit"
         },
-        "conversion": "value"
     },
     # Frequency Mode (read-write enum)
     "frequency": {
@@ -465,6 +446,5 @@ SELECT_TYPES = {
             "Smart": "Smart",
             "Powerful": "Powerful"
         },
-        "conversion": "value"
     },
 }

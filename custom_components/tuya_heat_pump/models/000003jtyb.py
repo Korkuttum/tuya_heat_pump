@@ -13,7 +13,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"  # Direkt °C
     },
 }
 
@@ -50,7 +49,6 @@ NUMBER_TYPES = {
         "min_value": 5.0,
         "max_value": 80.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
 }
@@ -71,7 +69,6 @@ SELECT_TYPES = {
             "silent_heat": "Silent Heat",
             "silent_cool": "Silent Cool"
         },
-        "conversion": "value"
     },
     "freq": {
         "dp_id": 101,
@@ -83,6 +80,5 @@ SELECT_TYPES = {
             "normal": "Normal",
             "strong": "Strong"
         },
-        "conversion": "value"
     },
 }

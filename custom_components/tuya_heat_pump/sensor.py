@@ -9,6 +9,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
+from .conversion import Conversion
 from .coordinator import TuyaScaleDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -84,12 +85,10 @@ class TuyaHeatpumpSensor(SensorEntity):
             return None
             
         raw_value = self.coordinator.data[self._sensor_code]['value']
-        
-        # Conversion uygula
-        conversion = self._config.get('conversion', 'value')
+
+        conversion = Conversion(self._config.get('conversion', 'value'))
         try:
-            # Güvenli eval
-            result = eval(conversion, {"value": raw_value, "__builtins__": {}})
+            result = conversion.convert(raw_value)
             return float(result) if isinstance(result, (int, float)) else result
         except Exception as err:
             _LOGGER.warning("Conversion failed for %s: %s", self._sensor_code, err)
@@ -109,18 +108,18 @@ class TuyaHeatpumpSensor(SensorEntity):
         if 'ac_vol' in sensor_configs and 'ac_vol' in self.coordinator.data:
             config = sensor_configs['ac_vol']
             raw_voltage = self.coordinator.data['ac_vol']['value']
-            conversion = config.get('conversion', 'value')
+            conversion = Conversion(config.get('conversion', 'value'))
             try:
-                voltage = eval(conversion, {"value": raw_voltage, "__builtins__": {}})
+                voltage = conversion.convert(raw_voltage)
             except:
                 voltage = raw_voltage
         
         if 'ac_curr' in sensor_configs and 'ac_curr' in self.coordinator.data:
             config = sensor_configs['ac_curr']
             raw_current = self.coordinator.data['ac_curr']['value']
-            conversion = config.get('conversion', 'value')
+            conversion = Conversion(config.get('conversion', 'value'))
             try:
-                current = eval(conversion, {"value": raw_current, "__builtins__": {}})
+                current = conversion.convert(raw_current)
             except:
                 current = raw_current
         
@@ -227,9 +226,9 @@ class TuyaEnergySensor(SensorEntity, RestoreEntity):
         if 'ac_vol' in sensor_configs and 'ac_vol' in self.coordinator.data:
             config = sensor_configs['ac_vol']
             raw_voltage = self.coordinator.data['ac_vol']['value']
-            conversion = config.get('conversion', 'value')
+            conversion = Conversion(config.get('conversion', 'value'))
             try:
-                voltage = eval(conversion, {"value": raw_voltage, "__builtins__": {}})
+                voltage = conversion.convert(raw_voltage)
                 if isinstance(voltage, (int, float)) and voltage > 0:
                     voltage = float(voltage)
             except:
@@ -238,9 +237,9 @@ class TuyaEnergySensor(SensorEntity, RestoreEntity):
         if 'ac_curr' in sensor_configs and 'ac_curr' in self.coordinator.data:
             config = sensor_configs['ac_curr']
             raw_current = self.coordinator.data['ac_curr']['value']
-            conversion = config.get('conversion', 'value')
+            conversion = Conversion(config.get('conversion', 'value'))
             try:
-                current = eval(conversion, {"value": raw_current, "__builtins__": {}})
+                current = conversion.convert(raw_current)
                 if isinstance(current, (int, float)) and current > 0:
                     current = float(current)
             except:

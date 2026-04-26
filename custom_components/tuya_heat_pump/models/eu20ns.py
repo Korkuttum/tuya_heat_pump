@@ -114,7 +114,6 @@ SENSOR_TYPES = {
         "icon": "mdi:chip",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     
     # Compressor & Performance
@@ -126,7 +125,6 @@ SENSOR_TYPES = {
         "icon": "mdi:sine-wave",
         "device_class": "frequency",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "compressor_strength": {
         "dp_id": 20,
@@ -165,7 +163,6 @@ SENSOR_TYPES = {
         "unit": "times",
         "icon": "mdi:counter",
         "state_class": "total_increasing",
-        "conversion": "value"
     },
     "times_defrosting": {
         "dp_id": 144,
@@ -174,7 +171,6 @@ SENSOR_TYPES = {
         "unit": "times",
         "icon": "mdi:snowflake",
         "state_class": "total_increasing",
-        "conversion": "value"
     },
     
     # Fans & Valves
@@ -185,7 +181,6 @@ SENSOR_TYPES = {
         "unit": "RPM",
         "icon": "mdi:fan",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "valve_step_1": {
         "dp_id": 134,
@@ -194,7 +189,6 @@ SENSOR_TYPES = {
         "unit": "steps",
         "icon": "mdi:pipe-valve",
         "state_class": "measurement",
-        "conversion": "value"
     },
     
     # Water Flow
@@ -228,7 +222,6 @@ SENSOR_TYPES = {
         "unit": "",
         "icon": "mdi:alert-circle",
         "device_class": "enum",
-        "conversion": "value",
         "options": {
             "0": "No Fault",
             "1": "Acceleration Overcurrent",
@@ -253,7 +246,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "p03_cooling": {
         "dp_id": 118,
@@ -263,7 +255,6 @@ SENSOR_TYPES = {
         "icon": "mdi:snowflake",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "p04_dhw": {
         "dp_id": 119,
@@ -273,7 +264,6 @@ SENSOR_TYPES = {
         "icon": "mdi:water-thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "temp_": {
         "dp_id": 125,
@@ -283,7 +273,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermostat",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "t_room1_setting": {
         "dp_id": 130,
@@ -293,7 +282,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermostat-box",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "t_room2_setting": {
         "dp_id": 131,
@@ -402,7 +390,6 @@ NUMBER_TYPES = {
         "min_value": 0.0,
         "max_value": 23.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
     "water_set": {
@@ -414,7 +401,6 @@ NUMBER_TYPES = {
         "min_value": 0.0,
         "max_value": 23.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
     "p02_heating": {
@@ -426,7 +412,6 @@ NUMBER_TYPES = {
         "min_value": 10.0,
         "max_value": 75.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
     "p03_cooling": {
@@ -438,7 +423,6 @@ NUMBER_TYPES = {
         "min_value": 7.0,
         "max_value": 25.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
     "p04_dhw": {
@@ -450,7 +434,6 @@ NUMBER_TYPES = {
         "min_value": 10.0,
         "max_value": 70.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
     "temp_": {
@@ -462,7 +445,6 @@ NUMBER_TYPES = {
         "min_value": 7.0,
         "max_value": 75.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
     "t_room1_setting": {
@@ -474,7 +456,6 @@ NUMBER_TYPES = {
         "min_value": 18.0,
         "max_value": 35.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
     "t_room2_setting": {
@@ -507,7 +488,6 @@ SELECT_TYPES = {
             "Cooling": "Cooling Only",
             "Hot_Cooling": "Hot Water + Cooling"
         },
-        "conversion": "value"
     },
 }
 

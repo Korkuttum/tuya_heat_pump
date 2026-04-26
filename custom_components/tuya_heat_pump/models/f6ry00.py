@@ -14,7 +14,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "temp_top": {
         "dp_id": 110,
@@ -24,7 +23,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-chevron-up",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "temp_bottom": {
         "dp_id": 111,
@@ -34,7 +32,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-chevron-down",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "temp_coiler": {
         "dp_id": 112,
@@ -44,7 +41,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "temp_venting": {
         "dp_id": 113,
@@ -54,7 +50,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-alert",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "temp_effluent": {
         "dp_id": 114,
@@ -74,7 +69,6 @@ SENSOR_TYPES = {
         "icon": "mdi:home-thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "temp_inflow": {
         "dp_id": 117,
@@ -94,7 +88,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "temp_coiler_inside": {
         "dp_id": 119,
@@ -104,7 +97,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "temp_radiator": {
         "dp_id": 120,
@@ -114,7 +106,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     
     # ========== COMPRESSOR & VALVE ==========
@@ -125,7 +116,6 @@ SENSOR_TYPES = {
         "unit": "%",
         "icon": "mdi:engine",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "expansion_valve": {
         "dp_id": 121,
@@ -134,7 +124,6 @@ SENSOR_TYPES = {
         "unit": "P",
         "icon": "mdi:pipe-valve",
         "state_class": "measurement",
-        "conversion": "value",
     },
     
     # ========== POWER & ENERGY ==========
@@ -158,7 +147,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermostat",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     
     # ========== STATUS SENSORS ==========
@@ -167,7 +155,6 @@ SENSOR_TYPES = {
         "code": "power_w",
         "name": "Power Display",
         "icon": "mdi:eye",
-        "conversion": "value",
         "options": {
             0: "Not Display",
             1: "Display"
@@ -178,7 +165,6 @@ SENSOR_TYPES = {
         "code": "cool_enable",
         "name": "Cooling Mode",
         "icon": "mdi:snowflake",
-        "conversion": "value",
         "options": {
             0: "Single Temperature Mode",
             1: "Dual Temperature Mode"
@@ -189,7 +175,6 @@ SENSOR_TYPES = {
         "code": "oc_mode",
         "name": "Overclock Mode",
         "icon": "mdi:speedometer",
-        "conversion": "value",
         "options": {
             "oc_0": "No Overclock",
             "oc_1": "Overclock Mode 1",
@@ -251,7 +236,6 @@ NUMBER_TYPES = {
         "min_value": -22.0,
         "max_value": 104.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
 }
@@ -270,7 +254,6 @@ SELECT_TYPES = {
             "heating": "Heating",
             "cold": "Cooling"
         },
-        "conversion": "value"
     },
     "work_mode": {
         "dp_id": 105,
@@ -283,7 +266,6 @@ SELECT_TYPES = {
             "silence": "Silence",
             "perfect": "Perfect"
         },
-        "conversion": "value"
     },
     "temp_unit_convert1": {
         "dp_id": 106,
@@ -294,6 +276,5 @@ SELECT_TYPES = {
             "c": "Celsius",
             "f": "Fahrenheit"
         },
-        "conversion": "value"
     },
 }

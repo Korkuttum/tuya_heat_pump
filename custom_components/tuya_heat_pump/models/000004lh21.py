@@ -72,7 +72,6 @@ SENSOR_TYPES = {
         "unit": "Hz",
         "icon": "mdi:cosine-wave",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "m_eev": {
         "dp_id": 122,
@@ -81,7 +80,6 @@ SENSOR_TYPES = {
         "unit": "step",
         "icon": "mdi:valve",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "a_eev": {
         "dp_id": 123,
@@ -90,7 +88,6 @@ SENSOR_TYPES = {
         "unit": "step",
         "icon": "mdi:valve",
         "state_class": "measurement",
-        "conversion": "value"        
     },
     "dc_fan1": {
         "dp_id": 125,
@@ -99,7 +96,6 @@ SENSOR_TYPES = {
         "unit": "RPM",
         "icon": "mdi:fan-speed-1",
         "state_class": "measurement",
-        "conversion": "value"        
     },
     "dc_fan2": {
         "dp_id": 126,
@@ -108,7 +104,6 @@ SENSOR_TYPES = {
         "unit": "RPM",
         "icon": "mdi:fan-speed-2",
         "state_class": "measurement",
-        "conversion": "value"        
     },
     "flow_rate": {
         "dp_id": 127,
@@ -144,7 +139,6 @@ SENSOR_TYPES = {
         "icon": "mdi:flash",
         "device_class": "power",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "total_energy": {
         "code": "total_energy", 
@@ -153,7 +147,6 @@ SENSOR_TYPES = {
         "icon": "mdi:chart-line",
         "device_class": "energy",
         "state_class": "total_increasing",
-        "conversion": "value"
     },
     "tidr": {
         "dp_id": 181,

@@ -23,7 +23,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "temp_bottom": {
         "dp_id": 22,
@@ -33,7 +32,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "cur_current": {
         "dp_id": 102,
@@ -123,7 +121,6 @@ NUMBER_TYPES = {
         "min_value": 5.0,
         "max_value": 80.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
     "water_set": {
@@ -135,7 +132,6 @@ NUMBER_TYPES = {
         "min_value": 0.0,
         "max_value": 1.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
     "minitemp_set": {
@@ -147,7 +143,6 @@ NUMBER_TYPES = {
         "min_value": 5.0,
         "max_value": 80.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
     "volume_set": {
@@ -159,7 +154,6 @@ NUMBER_TYPES = {
         "min_value": 0.0,
         "max_value": 1.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
 }
@@ -182,7 +176,6 @@ SELECT_TYPES = {
             "heating_and_hot_water": "Heat & Hot Water",
             "floor_heatign_and_hot_water": "Floor Heat & Hot Water"
         },
-        "conversion": "value"
     },
     "work_mode": {
         "dp_id": 5,
@@ -193,7 +186,6 @@ SELECT_TYPES = {
             "ECO": "ECO",
             "Normal": "Normal"
         },
-        "conversion": "value"
     },
     "capacity_set": {
         "dp_id": 11,
@@ -207,7 +199,6 @@ SELECT_TYPES = {
             "H3": "H3",
             "H4": "H4"
         },
-        "conversion": "value"
     },
     "countdown_set": {
         "dp_id": 13,
@@ -233,6 +224,5 @@ SELECT_TYPES = {
             "L7": "L7",
             "L8": "L8"
         },
-        "conversion": "value"
     },
 }
