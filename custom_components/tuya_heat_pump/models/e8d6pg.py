@@ -14,7 +14,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "AmbientTemp": {
         "dp_id": 102,
@@ -24,7 +23,6 @@ SENSOR_TYPES = {
         "icon": "mdi:home-thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "OCT1": {
         "dp_id": 103,
@@ -34,7 +32,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "CTT": {
         "dp_id": 104,
@@ -44,7 +41,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-alert",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "ReturnAirTemp": {
         "dp_id": 105,
@@ -54,7 +50,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "WaterTankTemp": {
         "dp_id": 106,
@@ -64,7 +59,6 @@ SENSOR_TYPES = {
         "icon": "mdi:water-thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "OCT_Cool": {
         "dp_id": 107,
@@ -74,7 +68,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "WaterInTemp": {
         "dp_id": 108,
@@ -84,7 +77,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-water",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "WaterOutTemp": {
         "dp_id": 109,
@@ -94,7 +86,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-water",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "ValveFrontTemp": {
         "dp_id": 110,
@@ -104,7 +95,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "ValvePostTemp": {
         "dp_id": 111,
@@ -114,9 +104,7 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
-    
     # ========== SETPOINTS (read-only for display) ==========
     "temp_set": {
         "dp_id": 2,
@@ -126,7 +114,7 @@ SENSOR_TYPES = {
         "icon": "mdi:thermostat",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",  # API 28 → 28°C
+        # API 28 → 28°C
     },
     "Temp_Offset": {
         "dp_id": 101,
@@ -136,7 +124,7 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-plus",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",  # API 1 → 1°C
+        # API 1 → 1°C
     },
 }
 
@@ -150,7 +138,7 @@ BINARY_SENSOR_TYPES = {
         "name": "Fault Alarm",
         "icon": "mdi:alert-circle",
         "device_class": "problem",
-        "conversion": "value != 0"
+        "conversion": "value != 0",
     },
     "Compressor": {
         "dp_id": 112,
@@ -158,7 +146,7 @@ BINARY_SENSOR_TYPES = {
         "name": "Compressor",
         "icon": "mdi:engine",
         "device_class": "running",
-        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
     "FouValve": {
         "dp_id": 113,
@@ -166,7 +154,7 @@ BINARY_SENSOR_TYPES = {
         "name": "Four-Way Valve",
         "icon": "mdi:valve",
         "device_class": "opening",
-        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
     "Heat": {
         "dp_id": 114,
@@ -174,7 +162,7 @@ BINARY_SENSOR_TYPES = {
         "name": "Auxiliary Electric Heater",
         "icon": "mdi:heating-coil",
         "device_class": "heat",
-        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
     "Fan": {
         "dp_id": 115,
@@ -182,7 +170,7 @@ BINARY_SENSOR_TYPES = {
         "name": "Fan",
         "icon": "mdi:fan",
         "device_class": "running",
-        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
     "Pumb": {
         "dp_id": 116,
@@ -190,7 +178,7 @@ BINARY_SENSOR_TYPES = {
         "name": "Water Pump",
         "icon": "mdi:water-pump",
         "device_class": "running",
-        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
     "ChassisHeat": {
         "dp_id": 117,
@@ -198,7 +186,7 @@ BINARY_SENSOR_TYPES = {
         "name": "Chassis Heater",
         "icon": "mdi:heating-coil",
         "device_class": "heat",
-        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
     "CrankshaftHeat": {
         "dp_id": 118,
@@ -206,7 +194,7 @@ BINARY_SENSOR_TYPES = {
         "name": "Crankshaft Heater",
         "icon": "mdi:heating-coil",
         "device_class": "heat",
-        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
 }
 
@@ -219,7 +207,7 @@ SWITCH_TYPES = {
         "code": "switch",
         "name": "Power",
         "icon": "mdi:power",
-        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
 }
 
@@ -236,8 +224,7 @@ NUMBER_TYPES = {
         "min_value": 8.0,
         "max_value": 40.0,
         "step": 1.0,
-        "conversion": "value",
-        "api_conversion": "value / 10"
+        "api_conversion": "value / 10",
     },
     "Temp_Offset": {
         "dp_id": 101,
@@ -248,8 +235,7 @@ NUMBER_TYPES = {
         "min_value": 1.0,
         "max_value": 15.0,
         "step": 1.0,
-        "conversion": "value",
-        "api_conversion": "value / 10" 
+        "api_conversion": "value / 10",
     },
 }
 
@@ -266,8 +252,7 @@ SELECT_TYPES = {
             "hot": "Heating",
             "cold": "Cooling",
             "auto": "Auto",
-            "eco": "ECO"
+            "eco": "ECO",
         },
-        "conversion": "value"
     },
 }

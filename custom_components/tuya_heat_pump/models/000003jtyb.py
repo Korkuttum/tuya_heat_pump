@@ -13,7 +13,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"  # Direkt °C
     },
 }
 
@@ -24,7 +23,7 @@ BINARY_SENSOR_TYPES = {
         "code": "fault",
         "name": "Fault Alarm",
         "device_class": "problem",
-        "conversion": "value != 0"  # bitmap, 0 ise fault yok
+        "conversion": "value != 0",  # bitmap, 0 ise fault yok
     },
 }
 
@@ -35,7 +34,7 @@ SWITCH_TYPES = {
         "code": "switch",
         "name": "Power",
         "icon": "mdi:power",
-        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
 }
 
@@ -50,8 +49,6 @@ NUMBER_TYPES = {
         "min_value": 5.0,
         "max_value": 80.0,
         "step": 1.0,
-        "conversion": "value",
-        "api_conversion": "value"
     },
 }
 
@@ -69,9 +66,8 @@ SELECT_TYPES = {
             "eco_heat": "ECO Heat",
             "eco_cool": "ECO Cool",
             "silent_heat": "Silent Heat",
-            "silent_cool": "Silent Cool"
+            "silent_cool": "Silent Cool",
         },
-        "conversion": "value"
     },
     "freq": {
         "dp_id": 101,
@@ -81,8 +77,7 @@ SELECT_TYPES = {
         "options": {
             "silent": "Silent",
             "normal": "Normal",
-            "strong": "Strong"
+            "strong": "Strong",
         },
-        "conversion": "value"
     },
 }

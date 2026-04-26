@@ -13,14 +13,12 @@ SENSOR_TYPES = {
         "icon": "mdi:alert-circle",
         "device_class": "problem",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "products_id": {
         "dp_id": 180,
         "code": "products_id",
         "name": "Product ID",
         "icon": "mdi:identifier",
-        "conversion": "value",
     },
 }
 
@@ -34,7 +32,7 @@ BINARY_SENSOR_TYPES = {
         "name": "Fault Alarm",
         "icon": "mdi:alert-circle",
         "device_class": "problem",
-        "conversion": "value != 0"
+        "conversion": "value != 0",
     },
 }
 
@@ -47,14 +45,14 @@ SWITCH_TYPES = {
         "code": "switch",
         "name": "Power",
         "icon": "mdi:power",
-        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
     "reset": {
         "dp_id": 125,
         "code": "reset",
         "name": "Reset to Default",
         "icon": "mdi:restore",
-        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
 }
 
@@ -71,8 +69,6 @@ NUMBER_TYPES = {
         "min_value": 0.0,
         "max_value": 99.0,
         "step": 1.0,
-        "conversion": "value",
-        "api_conversion": "value"
     },
     "heating_setting": {
         "dp_id": 111,
@@ -83,8 +79,6 @@ NUMBER_TYPES = {
         "min_value": 0.0,
         "max_value": 99.0,
         "step": 1.0,
-        "conversion": "value",
-        "api_conversion": "value"
     },
     "cooling_setting": {
         "dp_id": 112,
@@ -95,8 +89,6 @@ NUMBER_TYPES = {
         "min_value": 0.0,
         "max_value": 99.0,
         "step": 1.0,
-        "conversion": "value",
-        "api_conversion": "value"
     },
     "hdef": {
         "dp_id": 130,
@@ -107,8 +99,6 @@ NUMBER_TYPES = {
         "min_value": 1.0,
         "max_value": 8.0,
         "step": 1.0,
-        "conversion": "value",
-        "api_conversion": "value"
     },
 }
 
@@ -124,9 +114,8 @@ SELECT_TYPES = {
         "options": {
             "smart": "Smart",
             "strong": "Strong",
-            "mute": "Mute"
+            "mute": "Mute",
         },
-        "conversion": "value"
     },
     "work_mode": {
         "dp_id": 5,
@@ -138,9 +127,8 @@ SELECT_TYPES = {
             "heat": "Heating",
             "cool": "Cooling",
             "wth_heat": "Hot Water + Heating",
-            "wth_cool": "Hot Water + Cooling"
+            "wth_cool": "Hot Water + Cooling",
         },
-        "conversion": "value"
     },
     "temp_unit_convert": {
         "dp_id": 6,
@@ -149,8 +137,7 @@ SELECT_TYPES = {
         "icon": "mdi:thermometer",
         "options": {
             "c": "Celsius",
-            "f": "Fahrenheit"
+            "f": "Fahrenheit",
         },
-        "conversion": "value"
     },
 }

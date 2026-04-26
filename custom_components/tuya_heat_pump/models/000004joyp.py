@@ -14,7 +14,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-water",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     # Speed Percentage
     "speedpercentage": {
@@ -24,7 +23,6 @@ SENSOR_TYPES = {
         "unit": "%",
         "icon": "mdi:speedometer",
         "state_class": "measurement",
-        "conversion": "value",
     },
     # Temperature Lower Limit
     "setdnlimit": {
@@ -35,7 +33,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-chevron-down",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     # Temperature Upper Limit
     "setuplimit": {
@@ -46,7 +43,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-chevron-up",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     # Power (with scale 3)
     "rateofwork": {
@@ -59,7 +55,6 @@ SENSOR_TYPES = {
         "state_class": "measurement",
         "conversion": "value / 1000",
     },
-    
     # ========== HATA KODU SENSÖRLERİ ==========
     # Fault 1 Code - Sadece hata kodu veya "OK"
     "fault1_code": {
@@ -120,7 +115,6 @@ SWITCH_TYPES = {
         "name": "Power",
         "icon": "mdi:power",
         "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
-        "api_conversion": "value",
     },
     # Temperature Unit (0=Celsius, 1=Fahrenheit)
     "change_tem": {
@@ -129,7 +123,6 @@ SWITCH_TYPES = {
         "name": "Temperature Unit",
         "icon": "mdi:thermometer",
         "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
-        "api_conversion": "value",
     },
 }
 
@@ -147,8 +140,6 @@ NUMBER_TYPES = {
         "min_value": -22.0,
         "max_value": 122.0,
         "step": 1.0,
-        "conversion": "value",
-        "api_conversion": "value",
     },
 }
 
@@ -167,8 +158,6 @@ SELECT_TYPES = {
             "smart": "Smart",
             "booster": "Booster",
         },
-        "conversion": "value",
-        "api_conversion": "value",
     },
     # Operation Mode 2
     "setmode": {
@@ -181,8 +170,6 @@ SELECT_TYPES = {
             "warm": "Warm",
             "cool": "Cool",
         },
-        "conversion": "value",
-        "api_conversion": "value",
     },
     # Cooling Enable (read-only)
     "cool_en": {
@@ -194,8 +181,6 @@ SELECT_TYPES = {
             "0": "Disabled",
             "1": "Enabled",
         },
-        "conversion": "value",
-        "api_conversion": "value",
     },
     # Booster Enable (read-only)
     "booster_en": {
@@ -207,7 +192,5 @@ SELECT_TYPES = {
             "0": "Disabled",
             "1": "Enabled",
         },
-        "conversion": "value",
-        "api_conversion": "value",
     },
 }

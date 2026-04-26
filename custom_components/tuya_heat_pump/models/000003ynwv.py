@@ -13,7 +13,7 @@ SENSOR_TYPES = {
         "icon": "mdi:flash",
         "device_class": "energy",
         "state_class": "total_increasing",
-        "conversion": "value / 100"
+        "conversion": "value / 100",
     },
     "temp_top": {
         "dp_id": 21,
@@ -23,7 +23,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "temp_bottom": {
         "dp_id": 22,
@@ -33,7 +32,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "cur_current": {
         "dp_id": 102,
@@ -43,7 +41,7 @@ SENSOR_TYPES = {
         "icon": "mdi:current-ac",
         "device_class": "current",
         "state_class": "measurement",
-        "conversion": "value / 1000"
+        "conversion": "value / 1000",
     },
     "voltage_current": {
         "dp_id": 103,
@@ -53,7 +51,7 @@ SENSOR_TYPES = {
         "icon": "mdi:lightning-bolt",
         "device_class": "voltage",
         "state_class": "measurement",
-        "conversion": "value / 10"
+        "conversion": "value / 10",
     },
     "cur_power": {
         "dp_id": 104,
@@ -63,7 +61,7 @@ SENSOR_TYPES = {
         "icon": "mdi:flash",
         "device_class": "power",
         "state_class": "measurement",
-        "conversion": "value / 10"
+        "conversion": "value / 10",
     },
     "electric_total": {
         "dp_id": 105,
@@ -73,7 +71,7 @@ SENSOR_TYPES = {
         "icon": "mdi:chart-line",
         "device_class": "energy",
         "state_class": "total_increasing",
-        "conversion": "value / 100"
+        "conversion": "value / 100",
     },
 }
 
@@ -86,14 +84,14 @@ BINARY_SENSOR_TYPES = {
         "code": "fault",
         "name": "Fault Status",
         "device_class": "problem",
-        "conversion": "value != 0"
+        "conversion": "value != 0",
     },
     "defrost_state": {
         "dp_id": 33,
         "code": "defrost_state",
         "name": "Defrost State",
         "device_class": "cold",
-        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
 }
 
@@ -106,7 +104,7 @@ SWITCH_TYPES = {
         "code": "switch",
         "name": "Power",
         "icon": "mdi:power",
-        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
 }
 
@@ -123,8 +121,6 @@ NUMBER_TYPES = {
         "min_value": 5.0,
         "max_value": 80.0,
         "step": 1.0,
-        "conversion": "value",
-        "api_conversion": "value"
     },
     "water_set": {
         "dp_id": 10,
@@ -135,8 +131,6 @@ NUMBER_TYPES = {
         "min_value": 0.0,
         "max_value": 1.0,
         "step": 1.0,
-        "conversion": "value",
-        "api_conversion": "value"
     },
     "minitemp_set": {
         "dp_id": 101,
@@ -147,8 +141,6 @@ NUMBER_TYPES = {
         "min_value": 5.0,
         "max_value": 80.0,
         "step": 1.0,
-        "conversion": "value",
-        "api_conversion": "value"
     },
     "volume_set": {
         "dp_id": 106,
@@ -159,8 +151,6 @@ NUMBER_TYPES = {
         "min_value": 0.0,
         "max_value": 1.0,
         "step": 1.0,
-        "conversion": "value",
-        "api_conversion": "value"
     },
 }
 
@@ -180,9 +170,8 @@ SELECT_TYPES = {
             "hot_water": "Hot Water",
             "cold_and_hotwater": "Cool & Hot Water",
             "heating_and_hot_water": "Heat & Hot Water",
-            "floor_heatign_and_hot_water": "Floor Heat & Hot Water"
+            "floor_heatign_and_hot_water": "Floor Heat & Hot Water",
         },
-        "conversion": "value"
     },
     "work_mode": {
         "dp_id": 5,
@@ -191,9 +180,8 @@ SELECT_TYPES = {
         "icon": "mdi:cog",
         "options": {
             "ECO": "ECO",
-            "Normal": "Normal"
+            "Normal": "Normal",
         },
-        "conversion": "value"
     },
     "capacity_set": {
         "dp_id": 11,
@@ -205,9 +193,8 @@ SELECT_TYPES = {
             "H1": "H1",
             "H2": "H2",
             "H3": "H3",
-            "H4": "H4"
+            "H4": "H4",
         },
-        "conversion": "value"
     },
     "countdown_set": {
         "dp_id": 13,
@@ -231,8 +218,7 @@ SELECT_TYPES = {
             "L5": "L5",
             "L6": "L6",
             "L7": "L7",
-            "L8": "L8"
+            "L8": "L8",
         },
-        "conversion": "value"
     },
 }

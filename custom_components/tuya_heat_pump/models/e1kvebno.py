@@ -20,13 +20,12 @@ SENSOR_TYPES = {
         "code": "machine_type",
         "name": "Machine Type",
         "icon": "mdi:information",
-        "conversion": "value",
         "options": {
             0: "Mini (eh/ec)",
             1: "4 Mode (bh/eh/ec/auto)",
             2: "7 Mode (bh/eh/sh/bc/ec/sc/auto)",
-            3: "ZK 4 Mode (eh/sh/ec/auto)"
-        }
+            3: "ZK 4 Mode (eh/sh/ec/auto)",
+        },
     },
     "temp_up": {
         "dp_id": 102,
@@ -36,7 +35,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-chevron-up",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "temp_low": {
         "dp_id": 103,
@@ -46,7 +44,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-chevron-down",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "fault": {
         "dp_id": 20,
@@ -54,7 +51,6 @@ SENSOR_TYPES = {
         "name": "Fault Codes",
         "icon": "mdi:alert-circle",
         "device_class": "problem",
-        "conversion": "value",
         "options": {
             1: "E01 - Phase Error",
             2: "E02 - Phase Loss",
@@ -80,7 +76,7 @@ SENSOR_TYPES = {
             2097152: "E42 - Cooling Coil Sensor Fault",
             4194304: "E44 - Low Ambient Temp Protection",
             8388608: "E45 - High Ambient Temp Protection",
-        }
+        },
     },
 }
 
@@ -96,8 +92,8 @@ BINARY_SENSOR_TYPES = {
         "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
         "options": {
             True: "Celsius",
-            False: "Fahrenheit"
-        }
+            False: "Fahrenheit",
+        },
     },
 }
 
@@ -110,7 +106,7 @@ SWITCH_TYPES = {
         "code": "switch",
         "name": "Power",
         "icon": "mdi:power",
-        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
 }
 
@@ -127,8 +123,6 @@ NUMBER_TYPES = {
         "min_value": 8.0,
         "max_value": 40.0,
         "step": 1.0,
-        "conversion": "value",
-        "api_conversion": "value"
     },
 }
 
@@ -148,8 +142,7 @@ SELECT_TYPES = {
             "bcool": "Powerful Cooling",
             "ecool": "Smart Cooling",
             "scool": "Silent Cooling",
-            "auto": "Auto"
+            "auto": "Auto",
         },
-        "conversion": "value"
     },
 }

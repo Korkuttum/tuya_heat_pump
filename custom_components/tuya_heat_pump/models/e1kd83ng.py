@@ -35,7 +35,6 @@ SENSOR_TYPES = {
         "state_class": "measurement",
         "conversion": "value / 10",
     },
-    
     # ========== HEAT PUMP COMPONENT TEMPERATURES (Celsius) ==========
     "coiler_temp": {
         "dp_id": 23,
@@ -77,7 +76,6 @@ SENSOR_TYPES = {
         "state_class": "measurement",
         "conversion": "value / 10",
     },
-
     # ========== FAHRENHEIT VERSIONS (read-only) ==========
     "temp_current_f": {
         "dp_id": 35,
@@ -87,7 +85,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-water",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "effluent_temp_f": {
         "dp_id": 40,
@@ -97,7 +94,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-water",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "return_temp_f": {
         "dp_id": 122,
@@ -107,7 +103,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "coiler_temp_f": {
         "dp_id": 41,
@@ -117,7 +112,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "venting_temp_f": {
         "dp_id": 39,
@@ -127,7 +121,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-alert",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "around_temp_f": {
         "dp_id": 38,
@@ -137,7 +130,6 @@ SENSOR_TYPES = {
         "icon": "mdi:home-thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "cool_coiler_temp_f": {
         "dp_id": 124,
@@ -147,22 +139,18 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
-
     # ========== UNIT INFORMATION ==========
     "unit_type": {
         "dp_id": 109,
         "code": "unit_type",
         "name": "Unit Type",
         "icon": "mdi:information",
-        "conversion": "value",
         "options": {
             0: "Standard",
-            1: "Inverter"
-        }
+            1: "Inverter",
+        },
     },
-    
     # ========== VALVE POSITION ==========
     "opening": {
         "dp_id": 125,
@@ -171,24 +159,20 @@ SENSOR_TYPES = {
         "unit": "P",
         "icon": "mdi:pipe-valve",
         "state_class": "measurement",
-        "conversion": "value",
     },
-    
     # ========== WORK STATE (read-only enum - accessMode: "ro") ==========
     "work_state": {
         "dp_id": 17,
         "code": "work_state",
         "name": "Work State",
         "icon": "mdi:state-machine",
-        "conversion": "value",
         "options": {
             "Running": "Running",
             "Defrosting": "Defrosting",
             "Standby": "Standby",
-            "Fault": "Fault"
-        }
+            "Fault": "Fault",
+        },
     },
-    
     # ========== TEMPERATURE SETPOINTS (read-only for display) ==========
     "set_heating_temp": {
         "dp_id": 101,
@@ -228,7 +212,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermostat",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "set_cold_temp_f": {
         "dp_id": 106,
@@ -238,7 +221,6 @@ SENSOR_TYPES = {
         "icon": "mdi:snowflake",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "set_auto_temp_f": {
         "dp_id": 108,
@@ -248,7 +230,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermostat-auto",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
 }
 
@@ -262,7 +243,7 @@ BINARY_SENSOR_TYPES = {
         "code": "fault",
         "name": "Fault Alarm",
         "device_class": "problem",
-        "conversion": "value != 0"
+        "conversion": "value != 0",
     },
     # Detailed Fault Code Tables
     "new_fault_01": {
@@ -270,28 +251,28 @@ BINARY_SENSOR_TYPES = {
         "code": "new_fault_01",
         "name": "Fault Code Table 1",
         "device_class": "problem",
-        "conversion": "value != 0"
+        "conversion": "value != 0",
     },
     "new_fault_02": {
         "dp_id": 107,
         "code": "new_fault_02",
         "name": "Fault Code Table 2",
         "device_class": "problem",
-        "conversion": "value != 0"
+        "conversion": "value != 0",
     },
     "fault_2": {
         "dp_id": 118,
         "code": "fault_2",
         "name": "Fault Alarm 2",
         "device_class": "problem",
-        "conversion": "value != 0"
+        "conversion": "value != 0",
     },
     "fault_3": {
         "dp_id": 119,
         "code": "fault_3",
         "name": "Fault Alarm 3",
         "device_class": "problem",
-        "conversion": "value != 0"
+        "conversion": "value != 0",
     },
     # Driver Faults
     "new_driver_fault_01": {
@@ -299,21 +280,21 @@ BINARY_SENSOR_TYPES = {
         "code": "new_driver_fault_01",
         "name": "Driver Fault Code Table 1",
         "device_class": "problem",
-        "conversion": "value != 0"
+        "conversion": "value != 0",
     },
     "new_driver_fault_02": {
         "dp_id": 111,
         "code": "new_driver_fault_02",
         "name": "Driver Fault Code Table 2",
         "device_class": "problem",
-        "conversion": "value != 0"
+        "conversion": "value != 0",
     },
     "driver_fault_1": {
         "dp_id": 120,
         "code": "driver_fault_1",
         "name": "Driver Fault",
         "device_class": "problem",
-        "conversion": "value != 0"
+        "conversion": "value != 0",
     },
 }
 
@@ -326,7 +307,7 @@ SWITCH_TYPES = {
         "code": "switch",
         "name": "Power",
         "icon": "mdi:power",
-        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
 }
 
@@ -344,7 +325,7 @@ NUMBER_TYPES = {
         "max_value": 40.0,
         "step": 1.0,
         "conversion": "value / 10",
-        "api_conversion": "value * 10"
+        "api_conversion": "value * 10",
     },
     "set_cold_temp": {
         "dp_id": 102,
@@ -356,7 +337,7 @@ NUMBER_TYPES = {
         "max_value": 28.0,
         "step": 1.0,
         "conversion": "value / 10",
-        "api_conversion": "value * 10"
+        "api_conversion": "value * 10",
     },
     "set_auto_temp": {
         "dp_id": 104,
@@ -368,7 +349,7 @@ NUMBER_TYPES = {
         "max_value": 40.0,
         "step": 1.0,
         "conversion": "value / 10",
-        "api_conversion": "value * 10"
+        "api_conversion": "value * 10",
     },
     "set_heating_temp_f": {
         "dp_id": 105,
@@ -379,8 +360,6 @@ NUMBER_TYPES = {
         "min_value": 59.0,
         "max_value": 104.0,
         "step": 1.0,
-        "conversion": "value",
-        "api_conversion": "value"
     },
     "set_cold_temp_f": {
         "dp_id": 106,
@@ -391,8 +370,6 @@ NUMBER_TYPES = {
         "min_value": 46.0,
         "max_value": 82.0,
         "step": 1.0,
-        "conversion": "value",
-        "api_conversion": "value"
     },
     "set_auto_temp_f": {
         "dp_id": 108,
@@ -403,8 +380,6 @@ NUMBER_TYPES = {
         "min_value": 46.0,
         "max_value": 104.0,
         "step": 1.0,
-        "conversion": "value",
-        "api_conversion": "value"
     },
 }
 
@@ -425,9 +400,8 @@ SELECT_TYPES = {
             "Heating_Smart": "Heating (Smart)",
             "Cooling_Smart": "Cooling (Smart)",
             "Heating_Silent": "Heating (Silent)",
-            "Cooling_Silent": "Cooling (Silent)"
+            "Cooling_Silent": "Cooling (Silent)",
         },
-        "conversion": "value"
     },
     # Work Mode (Cool/Heat/Auto)
     "work_mode": {
@@ -438,9 +412,8 @@ SELECT_TYPES = {
         "options": {
             "Cool_mode": "Cooling",
             "Heat_mode": "Heating",
-            "Auto_mode": "Auto"
+            "Auto_mode": "Auto",
         },
-        "conversion": "value"
     },
     # Temperature Unit
     "temp_unit_convert": {
@@ -450,9 +423,8 @@ SELECT_TYPES = {
         "icon": "mdi:thermometer",
         "options": {
             "c": "Celsius",
-            "f": "Fahrenheit"
+            "f": "Fahrenheit",
         },
-        "conversion": "value"
     },
     # Frequency Mode (read-write enum)
     "frequency": {
@@ -463,8 +435,7 @@ SELECT_TYPES = {
         "options": {
             "Silent": "Silent",
             "Smart": "Smart",
-            "Powerful": "Powerful"
+            "Powerful": "Powerful",
         },
-        "conversion": "value"
     },
 }
