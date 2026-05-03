@@ -1,0 +1,586 @@
+"""Model mapping for SolarEast Heat Pump (e1kt5k90)."""
+
+MODEL_NAME = "SolarEast Heat Pump (e1kt5k90)"
+# ====================================================
+# SolarEast @Harm1990
+# ====================================================
+SENSOR_TYPES = {
+    # ========== TEMPERATURE SENSORS ==========
+    "temp_top": {
+        "dp_id": 21,
+        "code": "temp_top",
+        "name": "Inlet Water Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer-water",
+        "device_class": "temperature",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    "temp_bottom": {
+        "dp_id": 22,
+        "code": "temp_bottom",
+        "name": "Outlet Water Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer-water",
+        "device_class": "temperature",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    "coiler_temp": {
+        "dp_id": 23,
+        "code": "coiler_temp",
+        "name": "Coil Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    "venting_temp": {
+        "dp_id": 24,
+        "code": "venting_temp",
+        "name": "Exhaust Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer-alert",
+        "device_class": "temperature",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    "around_temp": {
+        "dp_id": 26,
+        "code": "around_temp",
+        "name": "Ambient Temperature",
+        "unit": "°C",
+        "icon": "mdi:home-thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    "temp_current_f": {
+        "dp_id": 35,
+        "code": "temp_current_f",
+        "name": "High Pressure Saturation Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    "top_temp_f": {
+        "dp_id": 36,
+        "code": "top_temp_f",
+        "name": "Low Pressure Saturation Temperature",
+        "unit": "°F",
+        "icon": "mdi:thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    "bottom_temp_f": {
+        "dp_id": 37,
+        "code": "bottom_temp_f",
+        "name": "Internal Coil Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    "around_temp_f": {
+        "dp_id": 38,
+        "code": "around_temp_f",
+        "name": "Tank Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer-water",
+        "device_class": "temperature",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    "venting_temp_f": {
+        "dp_id": 39,
+        "code": "venting_temp_f",
+        "name": "Water Flow Rate",
+        "unit": "L/min",
+        "icon": "mdi:water-pump",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    "effluent_temp_f": {
+        "dp_id": 40,
+        "code": "effluent_temp_f",
+        "name": "Fan Frequency",
+        "unit": "Hz",
+        "icon": "mdi:fan",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    "coiler_temp_f": {
+        "dp_id": 41,
+        "code": "coiler_temp_f",
+        "name": "Suction Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    "eviin": {
+        "dp_id": 107,
+        "code": "eviin",
+        "name": "Economizer Inlet Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    "eviout": {
+        "dp_id": 108,
+        "code": "eviout",
+        "name": "Economizer Outlet Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    "indoor_temp": {
+        "dp_id": 117,
+        "code": "indoor_temp",
+        "name": "Indoor Temperature",
+        "unit": "°C",
+        "icon": "mdi:home-thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    
+    # ========== VALVE & PRESSURE ==========
+    "temp_current": {
+        "dp_id": 16,
+        "code": "temp_current",
+        "name": "Main Valve Pressure",
+        "unit": "P",
+        "icon": "mdi:gauge",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    "effluent_temp": {
+        "dp_id": 25,
+        "code": "effluent_temp",
+        "name": "Aux Valve Pressure",
+        "unit": "P",
+        "icon": "mdi:gauge",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    
+    # ========== COMPRESSOR & PERFORMANCE ==========
+    "compressor_strength": {
+        "dp_id": 20,
+        "code": "compressor_strength",
+        "name": "Compressor Frequency",
+        "unit": "Hz",
+        "icon": "mdi:sine-wave",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    "countdown_left": {
+        "dp_id": 14,
+        "code": "countdown_left",
+        "name": "Mainboard Program",
+        "icon": "mdi:chip",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    
+    # ========== ENERGY & POWER ==========
+    "power_consumption": {
+        "dp_id": 18,
+        "code": "power_consumption",
+        "name": "Today's Energy",
+        "unit": "kWh",
+        "icon": "mdi:flash",
+        "device_class": "energy",
+        "state_class": "total_increasing",
+        "conversion": "value / 100",  # scale: 2
+    },
+    "electric_total": {
+        "dp_id": 105,
+        "code": "electric_total",
+        "name": "Total Energy",
+        "unit": "kWh",
+        "icon": "mdi:chart-line",
+        "device_class": "energy",
+        "state_class": "total_increasing",
+        "conversion": "value / 100",  # scale: 2
+    },
+    "cur_power": {
+        "dp_id": 104,
+        "code": "cur_power",
+        "name": "Power",
+        "unit": "W",
+        "icon": "mdi:flash",
+        "device_class": "power",
+        "state_class": "measurement",
+        "conversion": "value / 10",  # scale: 1
+    },
+    
+    # ========== ELECTRICAL (3-PHASE) ==========
+    "cur_current": {
+        "dp_id": 102,
+        "code": "cur_current",
+        "name": "Phase A Current",
+        "unit": "A",
+        "icon": "mdi:current-ac",
+        "device_class": "current",
+        "state_class": "measurement",
+        "conversion": "value / 1000",  # scale: 3
+    },
+    "voltage_current": {
+        "dp_id": 103,
+        "code": "voltage_current",
+        "name": "Phase A Voltage",
+        "unit": "V",
+        "icon": "mdi:lightning-bolt",
+        "device_class": "voltage",
+        "state_class": "measurement",
+        "conversion": "value / 10",  # scale: 1
+    },
+    "b_cur": {
+        "dp_id": 109,
+        "code": "b_cur",
+        "name": "Phase B Current",
+        "unit": "A",
+        "icon": "mdi:current-ac",
+        "device_class": "current",
+        "state_class": "measurement",
+        "conversion": "value / 1000",  # scale: 3
+    },
+    "c_cur": {
+        "dp_id": 110,
+        "code": "c_cur",
+        "name": "Phase C Current",
+        "unit": "A",
+        "icon": "mdi:current-ac",
+        "device_class": "current",
+        "state_class": "measurement",
+        "conversion": "value / 1000",  # scale: 3
+    },
+    "bv": {
+        "dp_id": 111,
+        "code": "bv",
+        "name": "Phase B Voltage",
+        "unit": "V",
+        "icon": "mdi:lightning-bolt",
+        "device_class": "voltage",
+        "state_class": "measurement",
+        "conversion": "value / 10",  # scale: 1
+    },
+    "cv": {
+        "dp_id": 112,
+        "code": "cv",
+        "name": "Phase C Voltage",
+        "unit": "V",
+        "icon": "mdi:lightning-bolt",
+        "device_class": "voltage",
+        "state_class": "measurement",
+        "conversion": "value / 10",  # scale: 1
+    },
+    
+    # ========== SETPOINTS (read-only for display) ==========
+    "temp_set": {
+        "dp_id": 4,
+        "code": "temp_set",
+        "name": "Temperature Setpoint",
+        "unit": "°C",
+        "icon": "mdi:thermostat",
+        "device_class": "temperature",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    "minitemp_set": {
+        "dp_id": 101,
+        "code": "minitemp_set",
+        "name": "Hot Water Temperature Setpoint",
+        "unit": "°C",
+        "icon": "mdi:water-thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    "indoor_st": {
+        "dp_id": 116,
+        "code": "indoor_st",
+        "name": "Indoor Temperature Setpoint",
+        "unit": "°C",
+        "icon": "mdi:thermostat",
+        "device_class": "temperature",
+        "state_class": "measurement",
+        "conversion": "value",
+    },
+    
+    # ========== FAULT (detailed) ==========
+    "fault": {
+        "dp_id": 15,
+        "code": "fault",
+        "name": "Fault Codes",
+        "icon": "mdi:alert-circle",
+        "device_class": "problem",
+        "conversion": "value",
+    },
+    "temp_int": {
+        "dp_id": 119,
+        "code": "temp_int",
+        "name": "Temperature Type",
+        "icon": "mdi:thermometer",
+        "conversion": "value",
+        "options": {
+            "OFF": "Off",
+            "INDOOR": "Indoor",
+            "ZONE2": "Zone 2"
+        }
+    },
+}
+
+# ====================================================
+# BINARY SENSOR TYPES (read-only bool - accessMode: "ro")
+# ====================================================
+BINARY_SENSOR_TYPES = {
+    "compressor_state": {
+        "dp_id": 27,
+        "code": "compressor_state",
+        "name": "Compressor State",
+        "icon": "mdi:engine",
+        "device_class": "running",
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+    },
+    "backwater": {
+        "dp_id": 31,
+        "code": "backwater",
+        "name": "Hot Water Mode",
+        "icon": "mdi:water",
+        "device_class": "heat",
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+    },
+    "defrost_state": {
+        "dp_id": 33,
+        "code": "defrost_state",
+        "name": "Defrost State",
+        "icon": "mdi:snowflake-melt",
+        "device_class": "cold",
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+    },
+}
+
+# ====================================================
+# SWITCH TYPES (read-write bool - accessMode: "rw")
+# ====================================================
+SWITCH_TYPES = {
+    "switch": {
+        "dp_id": 1,
+        "code": "switch",
+        "name": "Power",
+        "icon": "mdi:power",
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+    },
+}
+
+# ====================================================
+# NUMBER TYPES (read-write value - accessMode: "rw")
+# ====================================================
+NUMBER_TYPES = {
+    "temp_set": {
+        "dp_id": 4,
+        "code": "temp_set",
+        "name": "Temperature Setpoint",
+        "icon": "mdi:thermostat",
+        "unit": "°C",
+        "min_value": 5.0,
+        "max_value": 80.0,
+        "step": 1.0,
+        "conversion": "value",
+        "api_conversion": "value"
+    },
+    "water_set": {
+        "dp_id": 10,
+        "code": "water_set",
+        "name": "Control Temperature",
+        "icon": "mdi:thermometer-water",
+        "unit": "L",
+        "min_value": 0.0,
+        "max_value": 1.0,
+        "step": 1.0,
+        "conversion": "value",
+        "api_conversion": "value"
+    },
+    "minitemp_set": {
+        "dp_id": 101,
+        "code": "minitemp_set",
+        "name": "Hot Water Temperature Setpoint",
+        "icon": "mdi:water-thermometer",
+        "unit": "°C",
+        "min_value": 5.0,
+        "max_value": 80.0,
+        "step": 1.0,
+        "conversion": "value",
+        "api_conversion": "value"
+    },
+    "volume_set": {
+        "dp_id": 106,
+        "code": "volume_set",
+        "name": "Power Detection Module",
+        "icon": "mdi:meter-electric",
+        "unit": "",
+        "min_value": 0.0,
+        "max_value": 2.0,
+        "step": 1.0,
+        "conversion": "value",
+        "api_conversion": "value"
+    },
+    "indoor_st": {
+        "dp_id": 116,
+        "code": "indoor_st",
+        "name": "Indoor Temperature Setpoint",
+        "icon": "mdi:thermostat",
+        "unit": "°C",
+        "min_value": 15.0,
+        "max_value": 55.0,
+        "step": 1.0,
+        "conversion": "value",
+        "api_conversion": "value"
+    },
+    "indoor_temp": {
+        "dp_id": 117,
+        "code": "indoor_temp",
+        "name": "Indoor Temperature",
+        "icon": "mdi:home-thermometer",
+        "unit": "°C",
+        "min_value": -50.0,
+        "max_value": 150.0,
+        "step": 1.0,
+        "conversion": "value",
+        "api_conversion": "value"
+    },
+}
+
+# ====================================================
+# SELECT TYPES (read-write enum - accessMode: "rw")
+# ====================================================
+SELECT_TYPES = {
+    "mode": {
+        "dp_id": 2,
+        "code": "mode",
+        "name": "Mode",
+        "icon": "mdi:hvac",
+        "options": {
+            "cold": "Cooling",
+            "heating": "Heating",
+            "floor_heating": "Floor Heating",
+            "hot_water": "Hot Water",
+            "cold_and_hotwater": "Cooling + Hot Water",
+            "heating_and_hot_water": "Heating + Hot Water",
+            "floor_heatign_and_hot_water": "Floor Heating + Hot Water"
+        },
+        "conversion": "value"
+    },
+    "work_mode": {
+        "dp_id": 5,
+        "code": "work_mode",
+        "name": "Work Mode",
+        "icon": "mdi:cog",
+        "options": {
+            "ECO": "ECO",
+            "Normal": "Normal",
+            "Boost": "Boost"
+        },
+        "conversion": "value"
+    },
+    "capacity_set": {
+        "dp_id": 11,
+        "code": "capacity_set",
+        "name": "Hot Water Curve Setting",
+        "icon": "mdi:chart-line",
+        "options": {
+            "OFF": "Off",
+            "H1": "H1",
+            "H2": "H2",
+            "H3": "H3",
+            "H4": "H4"
+        },
+        "conversion": "value"
+    },
+    "countdown_set": {
+        "dp_id": 13,
+        "code": "countdown_set",
+        "name": "Curve Setting",
+        "icon": "mdi:timer",
+        "options": {
+            "OFF": "Off",
+            "H1": "H1",
+            "H2": "H2",
+            "H3": "H3",
+            "H4": "H4",
+            "H5": "H5",
+            "H6": "H6",
+            "H7": "H7",
+            "H8": "H8",
+            "L1": "L1",
+            "L2": "L2",
+            "L3": "L3",
+            "L4": "L4",
+            "L5": "L5",
+            "L6": "L6",
+            "L7": "L7",
+            "L8": "L8"
+        },
+        "conversion": "value"
+    },
+    "syscomp": {
+        "dp_id": 113,
+        "code": "syscomp",
+        "name": "System Selection",
+        "icon": "mdi:application-settings",
+        "options": {
+            "0": "System 0",
+            "1": "System 1"
+        },
+        "conversion": "value"
+    },
+    "threemode": {
+        "dp_id": 114,
+        "code": "threemode",
+        "name": "System Setting",
+        "icon": "mdi:application-settings",
+        "options": {
+            "1": "Mode 1",
+            "2": "Mode 2"
+        },
+        "conversion": "value"
+    },
+    "fourmode": {
+        "dp_id": 115,
+        "code": "fourmode",
+        "name": "Four Mode",
+        "icon": "mdi:hvac",
+        "options": {
+            "Cool": "Cooling",
+            "Water": "Water",
+            "Heat": "Heating",
+            "WaterHeat": "Water + Heating"
+        },
+        "conversion": "value"
+    },
+    "three_mode": {
+        "dp_id": 118,
+        "code": "three_mode",
+        "name": "Three Mode",
+        "icon": "mdi:hvac",
+        "options": {
+            "Cool": "Cooling",
+            "Heat": "Heating",
+            "GndHeat": "Ground Heating"
+        },
+        "conversion": "value"
+    },
+}
