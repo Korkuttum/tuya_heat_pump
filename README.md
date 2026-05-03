@@ -9,6 +9,7 @@
 ### Supported Brands
 - Arçelik (Beko, Grundig)
 - Adlar Castra
+- Aquark
 - Aquatech X6
 - Cordivari Vestalis
 - Ecologic Ecopool
@@ -22,6 +23,7 @@
 - Poolsana
 - Power World
 - Pure Blue Onyx
+- SolarEast
 - Water TechniX
 - W'eau
 ---
