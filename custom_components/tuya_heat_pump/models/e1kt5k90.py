@@ -4,6 +4,10 @@ MODEL_NAME = "SolarEast Heat Pump (e1kt5k90)"
 # ====================================================
 # SolarEast @Harm1990
 # ====================================================
+
+# ====================================================
+# SENSOR TYPES (read-only value - accessMode: "ro")
+# ====================================================
 SENSOR_TYPES = {
     # ========== TEMPERATURE SENSORS ==========
     "temp_top": {
@@ -152,7 +156,7 @@ SENSOR_TYPES = {
         "icon": "mdi:home-thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value / 10,
+        "conversion": "value / 10",
     },
     
     # ========== VALVE & PRESSURE ==========
@@ -297,7 +301,7 @@ SENSOR_TYPES = {
         "icon": "mdi:thermostat",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value / 10,
+        "conversion": "value / 10",
     },
     "minitemp_set": {
         "dp_id": 101,
@@ -307,7 +311,7 @@ SENSOR_TYPES = {
         "icon": "mdi:water-thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value / 10,
+        "conversion": "value / 10",
     },
     "indoor_st": {
         "dp_id": 116,
@@ -317,7 +321,7 @@ SENSOR_TYPES = {
         "icon": "mdi:thermostat",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value / 10,
+        "conversion": "value / 10",
     },
     
     # ========== FAULT & STATUS ==========
@@ -338,8 +342,8 @@ SENSOR_TYPES = {
         "options": {
             "OFF": "Off",
             "INDOOR": "Indoor",
-            "ZONE2": "Zone 2"
-        }
+            "ZONE2": "Zone 2",
+        },
     },
 }
 
@@ -353,7 +357,7 @@ BINARY_SENSOR_TYPES = {
         "name": "Compressor State",
         "icon": "mdi:engine",
         "device_class": "running",
-        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
     "backwater": {
         "dp_id": 31,
@@ -361,7 +365,7 @@ BINARY_SENSOR_TYPES = {
         "name": "Hot Water Mode",
         "icon": "mdi:water",
         "device_class": "heat",
-        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
     "defrost_state": {
         "dp_id": 33,
@@ -369,7 +373,7 @@ BINARY_SENSOR_TYPES = {
         "name": "Defrost State",
         "icon": "mdi:snowflake-melt",
         "device_class": "cold",
-        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
 }
 
@@ -382,7 +386,7 @@ SWITCH_TYPES = {
         "code": "switch",
         "name": "Power",
         "icon": "mdi:power",
-        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
 }
 
@@ -399,8 +403,8 @@ NUMBER_TYPES = {
         "min_value": 5.0,
         "max_value": 80.0,
         "step": 1.0,
-        "conversion": "value / 10,
-        "api_conversion": "value * 10"
+        "conversion": "value / 10",
+        "api_conversion": "value * 10",
     },
     "water_set": {
         "dp_id": 10,
@@ -412,7 +416,7 @@ NUMBER_TYPES = {
         "max_value": 1.0,
         "step": 1.0,
         "conversion": "value",
-        "api_conversion": "value"
+        "api_conversion": "value",
     },
     "minitemp_set": {
         "dp_id": 101,
@@ -423,8 +427,8 @@ NUMBER_TYPES = {
         "min_value": 5.0,
         "max_value": 80.0,
         "step": 1.0,
-        "conversion": "value / 10,
-        "api_conversion": "value * 10"
+        "conversion": "value / 10",
+        "api_conversion": "value * 10",
     },
     "volume_set": {
         "dp_id": 106,
@@ -436,7 +440,7 @@ NUMBER_TYPES = {
         "max_value": 2.0,
         "step": 1.0,
         "conversion": "value",
-        "api_conversion": "value"
+        "api_conversion": "value",
     },
     "indoor_st": {
         "dp_id": 116,
@@ -447,8 +451,8 @@ NUMBER_TYPES = {
         "min_value": 15.0,
         "max_value": 55.0,
         "step": 1.0,
-        "conversion": "value / 10,
-        "api_conversion": "value * 10"
+        "conversion": "value / 10",
+        "api_conversion": "value * 10",
     },
     "indoor_temp": {
         "dp_id": 117,
@@ -459,8 +463,8 @@ NUMBER_TYPES = {
         "min_value": -50.0,
         "max_value": 150.0,
         "step": 1.0,
-        "conversion": "value / 10,
-        "api_conversion": "value * 10"
+        "conversion": "value / 10",
+        "api_conversion": "value * 10",
     },
 }
 
@@ -480,9 +484,9 @@ SELECT_TYPES = {
             "hot_water": "Hot Water",
             "cold_and_hotwater": "Cooling + Hot Water",
             "heating_and_hot_water": "Heating + Hot Water",
-            "floor_heatign_and_hot_water": "Floor Heating + Hot Water"
+            "floor_heatign_and_hot_water": "Floor Heating + Hot Water",
         },
-        "conversion": "value"
+        "conversion": "value",
     },
     "work_mode": {
         "dp_id": 5,
@@ -492,9 +496,9 @@ SELECT_TYPES = {
         "options": {
             "ECO": "ECO",
             "Normal": "Normal",
-            "Boost": "Boost"
+            "Boost": "Boost",
         },
-        "conversion": "value"
+        "conversion": "value",
     },
     "capacity_set": {
         "dp_id": 11,
@@ -506,9 +510,9 @@ SELECT_TYPES = {
             "H1": "H1",
             "H2": "H2",
             "H3": "H3",
-            "H4": "H4"
+            "H4": "H4",
         },
-        "conversion": "value"
+        "conversion": "value",
     },
     "countdown_set": {
         "dp_id": 13,
@@ -532,9 +536,9 @@ SELECT_TYPES = {
             "L5": "L5",
             "L6": "L6",
             "L7": "L7",
-            "L8": "L8"
+            "L8": "L8",
         },
-        "conversion": "value"
+        "conversion": "value",
     },
     "syscomp": {
         "dp_id": 113,
@@ -543,9 +547,9 @@ SELECT_TYPES = {
         "icon": "mdi:application-settings",
         "options": {
             "0": "System 0",
-            "1": "System 1"
+            "1": "System 1",
         },
-        "conversion": "value"
+        "conversion": "value",
     },
     "threemode": {
         "dp_id": 114,
@@ -554,9 +558,9 @@ SELECT_TYPES = {
         "icon": "mdi:application-settings",
         "options": {
             "1": "Mode 1",
-            "2": "Mode 2"
+            "2": "Mode 2",
         },
-        "conversion": "value"
+        "conversion": "value",
     },
     "fourmode": {
         "dp_id": 115,
@@ -567,9 +571,9 @@ SELECT_TYPES = {
             "Cool": "Cooling",
             "Water": "Water",
             "Heat": "Heating",
-            "WaterHeat": "Water + Heating"
+            "WaterHeat": "Water + Heating",
         },
-        "conversion": "value"
+        "conversion": "value",
     },
     "three_mode": {
         "dp_id": 118,
@@ -579,8 +583,8 @@ SELECT_TYPES = {
         "options": {
             "Cool": "Cooling",
             "Heat": "Heating",
-            "GndHeat": "Ground Heating"
+            "GndHeat": "Ground Heating",
         },
-        "conversion": "value"
+        "conversion": "value",
     },
 }
