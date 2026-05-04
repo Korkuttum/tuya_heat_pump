@@ -152,7 +152,7 @@ SENSOR_TYPES = {
         "icon": "mdi:home-thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
+        "conversion": "value / 10,
     },
     
     # ========== VALVE & PRESSURE ==========
@@ -203,7 +203,7 @@ SENSOR_TYPES = {
         "icon": "mdi:flash",
         "device_class": "energy",
         "state_class": "total_increasing",
-        "conversion": "value / 100",  # scale: 2
+        "conversion": "value / 100",
     },
     "electric_total": {
         "dp_id": 105,
@@ -213,7 +213,7 @@ SENSOR_TYPES = {
         "icon": "mdi:chart-line",
         "device_class": "energy",
         "state_class": "total_increasing",
-        "conversion": "value / 100",  # scale: 2
+        "conversion": "value / 100",
     },
     "cur_power": {
         "dp_id": 104,
@@ -223,7 +223,7 @@ SENSOR_TYPES = {
         "icon": "mdi:flash",
         "device_class": "power",
         "state_class": "measurement",
-        "conversion": "value / 10",  # scale: 1
+        "conversion": "value / 10",
     },
     
     # ========== ELECTRICAL (3-PHASE) ==========
@@ -235,7 +235,7 @@ SENSOR_TYPES = {
         "icon": "mdi:current-ac",
         "device_class": "current",
         "state_class": "measurement",
-        "conversion": "value / 1000",  # scale: 3
+        "conversion": "value / 1000",
     },
     "voltage_current": {
         "dp_id": 103,
@@ -245,7 +245,7 @@ SENSOR_TYPES = {
         "icon": "mdi:lightning-bolt",
         "device_class": "voltage",
         "state_class": "measurement",
-        "conversion": "value / 10",  # scale: 1
+        "conversion": "value / 10",
     },
     "b_cur": {
         "dp_id": 109,
@@ -255,7 +255,7 @@ SENSOR_TYPES = {
         "icon": "mdi:current-ac",
         "device_class": "current",
         "state_class": "measurement",
-        "conversion": "value / 1000",  # scale: 3
+        "conversion": "value / 1000",
     },
     "c_cur": {
         "dp_id": 110,
@@ -265,7 +265,7 @@ SENSOR_TYPES = {
         "icon": "mdi:current-ac",
         "device_class": "current",
         "state_class": "measurement",
-        "conversion": "value / 1000",  # scale: 3
+        "conversion": "value / 1000",
     },
     "bv": {
         "dp_id": 111,
@@ -275,7 +275,7 @@ SENSOR_TYPES = {
         "icon": "mdi:lightning-bolt",
         "device_class": "voltage",
         "state_class": "measurement",
-        "conversion": "value / 10",  # scale: 1
+        "conversion": "value / 10",
     },
     "cv": {
         "dp_id": 112,
@@ -285,7 +285,7 @@ SENSOR_TYPES = {
         "icon": "mdi:lightning-bolt",
         "device_class": "voltage",
         "state_class": "measurement",
-        "conversion": "value / 10",  # scale: 1
+        "conversion": "value / 10",
     },
     
     # ========== SETPOINTS (read-only for display) ==========
@@ -297,7 +297,7 @@ SENSOR_TYPES = {
         "icon": "mdi:thermostat",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
+        "conversion": "value / 10,
     },
     "minitemp_set": {
         "dp_id": 101,
@@ -307,7 +307,7 @@ SENSOR_TYPES = {
         "icon": "mdi:water-thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
+        "conversion": "value / 10,
     },
     "indoor_st": {
         "dp_id": 116,
@@ -317,10 +317,10 @@ SENSOR_TYPES = {
         "icon": "mdi:thermostat",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
+        "conversion": "value / 10,
     },
     
-    # ========== FAULT (detailed) ==========
+    # ========== FAULT & STATUS ==========
     "fault": {
         "dp_id": 15,
         "code": "fault",
@@ -399,8 +399,8 @@ NUMBER_TYPES = {
         "min_value": 5.0,
         "max_value": 80.0,
         "step": 1.0,
-        "conversion": "value",
-        "api_conversion": "value"
+        "conversion": "value / 10,
+        "api_conversion": "value * 10"
     },
     "water_set": {
         "dp_id": 10,
@@ -423,8 +423,8 @@ NUMBER_TYPES = {
         "min_value": 5.0,
         "max_value": 80.0,
         "step": 1.0,
-        "conversion": "value",
-        "api_conversion": "value"
+        "conversion": "value / 10,
+        "api_conversion": "value * 10"
     },
     "volume_set": {
         "dp_id": 106,
@@ -447,8 +447,8 @@ NUMBER_TYPES = {
         "min_value": 15.0,
         "max_value": 55.0,
         "step": 1.0,
-        "conversion": "value",
-        "api_conversion": "value"
+        "conversion": "value / 10,
+        "api_conversion": "value * 10"
     },
     "indoor_temp": {
         "dp_id": 117,
@@ -459,8 +459,8 @@ NUMBER_TYPES = {
         "min_value": -50.0,
         "max_value": 150.0,
         "step": 1.0,
-        "conversion": "value",
-        "api_conversion": "value"
+        "conversion": "value / 10,
+        "api_conversion": "value * 10"
     },
 }
 
