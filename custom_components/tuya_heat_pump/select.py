@@ -137,9 +137,9 @@ class TuyaHeatpumpSelect(SelectEntity):
             _LOGGER.warning("❌ Failed to change %s to %s", self._select_code, option)
             
             raise HomeAssistantError(
-                f"{self._config.get('name', self._select_code)} değiştirilemiyor. "
-                f"Cihazınız bu modu değiştirmeye izin vermiyor. "
-                f"Lütfen modu cihaz üzerinden yapın."
+                f"Cannot change {self._config.get('name', self._select_code)}. "
+                f"Your device does not allow changing this mode. "
+                f"Please change the mode on the device."
             )
 
     @property
