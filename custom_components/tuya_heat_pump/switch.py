@@ -28,7 +28,6 @@ async def async_setup_entry(
     # Model mapping'den switch'leri al
     switch_configs = coordinator.model_mapping.get("switches", {})
     
-    # 🔴 DEĞİŞİKLİK: coordinator.data kontrolü kaldırıldı
     for switch_code, switch_config in switch_configs.items():
         switches.append(
             TuyaHeatpumpSwitch(coordinator, switch_code, switch_config)
@@ -97,6 +96,20 @@ class TuyaHeatpumpSwitch(SwitchEntity):
             
             return False
 
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Tuya DP ID ve Code bilgilerini attributes'a ekle."""
+        attrs: dict[str, Any] = {}
+        
+        dp_info = self.coordinator.get_tuya_dp_info(self._switch_code)
+        attrs["tuya_code"] = dp_info["code"]
+        attrs["tuya_dp_id"] = dp_info["dp_id"]
+
+        if self.coordinator.model_id:
+            attrs["tuya_model_id"] = self.coordinator.model_id
+
+        return attrs
+
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the switch on."""
         _LOGGER.info("Turning ON %s", self._switch_code)
@@ -117,11 +130,8 @@ class TuyaHeatpumpSwitch(SwitchEntity):
             await self.coordinator.async_request_refresh()
         else:
             _LOGGER.warning("❌ Failed to turn ON %s", self._switch_code)
-            
             raise HomeAssistantError(
-                f"{self._config.get('name', self._switch_code)} cannot be turned on. "
-                f"Your device does not allow changing this setting. "
-                f"Please change the setting on the device."
+                f"{self._config.get('name', self._switch_code)} cannot be turned on."
             )
 
     async def async_turn_off(self, **kwargs: Any) -> None:
@@ -144,11 +154,8 @@ class TuyaHeatpumpSwitch(SwitchEntity):
             await self.coordinator.async_request_refresh()
         else:
             _LOGGER.warning("❌ Failed to turn OFF %s", self._switch_code)
-            
             raise HomeAssistantError(
-                f"{self._config.get('name', self._switch_code)} cannot be turned off. "
-                f"Your device does not allow changing this setting. "
-                f"Please change the setting on the device."
+                f"{self._config.get('name', self._switch_code)} cannot be turned off."
             )
 
     @property
