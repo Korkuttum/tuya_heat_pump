@@ -116,7 +116,7 @@ class TuyaHeatpumpNumber(NumberEntity):
             _LOGGER.warning("❌ Failed to set %s to %s", self._number_code, value)
             
             raise HomeAssistantError(
-                f"Cannot change value of {self._config.get('name', self._number_code)}. "
+                f"{self._config.get('name', self._number_code)} Cannot change value of. "
                 f"Your device does not allow changing this setting. "
                 f"Please change the setting on the device."
             )
