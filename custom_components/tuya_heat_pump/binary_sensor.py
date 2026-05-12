@@ -147,10 +147,24 @@ class TuyaHeatpumpBinarySensor(BinarySensorEntity):
             return False
 
     @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Tuya DP ID ve Code bilgilerini attributes'a ekle."""
+        attrs: dict[str, Any] = {}
+        
+        dp_info = self.coordinator.get_tuya_dp_info(self._sensor_code)
+        attrs["tuya_code"] = dp_info["code"]
+        attrs["tuya_dp_id"] = dp_info["dp_id"]
+
+        if self.coordinator.model_id:
+            attrs["tuya_model_id"] = self.coordinator.model_id
+
+        return attrs
+
+    @property
     def available(self) -> bool:
         """Return if entity is available."""
         return (
-            self.coordinator.last_update_success and 
+            self.coordinator.last_update_success and
             self.coordinator.data is not None and
             self._sensor_code in self.coordinator.data
         )
