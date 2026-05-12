@@ -99,7 +99,7 @@ class TuyaHeatpumpNumber(NumberEntity):
                     self._number_code, value, self._attr_native_unit_of_measurement)
         
         api_value = value
-        if (api_conversion := self._config.get('api_conversion') is not None:
+        if (api_conversion := self._config.get('api_conversion')) is not None:
             conversion = Conversion(api_conversion)
             try:
                 api_value = conversion.convert(value)
