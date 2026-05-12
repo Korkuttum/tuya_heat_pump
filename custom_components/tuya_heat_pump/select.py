@@ -120,7 +120,7 @@ class TuyaHeatpumpSelect(SelectEntity):
         _LOGGER.info("Changing %s to %s", self._select_code, option)
 
         api_value = option
-        if (api_conversion := self._config.get('api_conversion') is not None:
+        if (api_conversion := self._config.get('api_conversion')) is not None:
             conversion = Conversion(api_conversion)
             try:
                 api_value = conversion.convert(option)
