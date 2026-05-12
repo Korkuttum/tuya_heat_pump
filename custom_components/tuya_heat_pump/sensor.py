@@ -1,6 +1,8 @@
 """Sensor platform for Tuya Heatpump."""
 from __future__ import annotations
 import logging
+from typing import Any
+
 from homeassistant.core import HomeAssistant
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -24,26 +26,23 @@ async def async_setup_entry(
     
     sensors = []
     
-    # Model mapping'den sensörleri al
     sensor_configs = coordinator.model_mapping.get("sensors", {})
     
     for sensor_code, sensor_config in sensor_configs.items():
-        # API'de bu code var mı kontrol et
         if coordinator.data and sensor_code in coordinator.data:
             sensors.append(TuyaHeatpumpSensor(coordinator, sensor_code, sensor_config))
             _LOGGER.info("Adding sensor: %s (%s)", sensor_config.get('name', sensor_code), sensor_code)
         elif sensor_code == "calculated_power":
-            # calculated_power her zaman eklenir (API'de yok, hesaplanır)
             sensors.append(TuyaHeatpumpSensor(coordinator, sensor_code, sensor_config))
             _LOGGER.info("Adding calculated sensor: %s", sensor_config.get('name', sensor_code))
         elif sensor_code == "total_energy":
-            # total_energy her zaman eklenir
             sensors.append(TuyaEnergySensor(coordinator, sensor_config))
             _LOGGER.info("Adding energy sensor: %s", sensor_config.get('name', sensor_code))
         else:
             _LOGGER.debug("Sensor %s not found in device data, skipping", sensor_code)
     
     async_add_entities(sensors)
+
 
 class TuyaHeatpumpSensor(SensorEntity):
     """Representation of a Tuya Heatpump Sensor."""
@@ -102,7 +101,6 @@ class TuyaHeatpumpSensor(SensorEntity):
         voltage = None
         current = None
         
-        # Model mapping'den ac_vol ve ac_curr config'lerini bul
         sensor_configs = self.coordinator.model_mapping.get("sensors", {})
         
         if 'ac_vol' in sensor_configs and 'ac_vol' in self.coordinator.data:
@@ -128,6 +126,20 @@ class TuyaHeatpumpSensor(SensorEntity):
             return round(power, 2)
             
         return None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Tuya DP ID ve Code bilgilerini attributes'a ekle."""
+        attrs: dict[str, Any] = {}
+        
+        dp_info = self.coordinator.get_tuya_dp_info(self._sensor_code)
+        attrs["tuya_code"] = dp_info["code"]
+        attrs["tuya_dp_id"] = dp_info["dp_id"]
+
+        if self.coordinator.model_id:
+            attrs["tuya_model_id"] = self.coordinator.model_id
+
+        return attrs
 
     @property
     def available(self) -> bool:
@@ -175,7 +187,6 @@ class TuyaEnergySensor(SensorEntity, RestoreEntity):
         """When entity is added to hass."""
         await super().async_added_to_hass()
         
-        # Restore state
         if (last_state := await self.async_get_last_state()) is not None:
             try:
                 self._total_energy = float(last_state.state)
@@ -183,11 +194,9 @@ class TuyaEnergySensor(SensorEntity, RestoreEntity):
             except (ValueError, TypeError):
                 self._total_energy = 0.0
         
-        # Set initial values
         self._last_power = self._get_current_power() or 0.0
         self._last_update = dt_util.utcnow()
         
-        # Listen for updates
         self.async_on_remove(
             self.coordinator.async_add_listener(self._handle_coordinator_update)
         )
@@ -197,19 +206,16 @@ class TuyaEnergySensor(SensorEntity, RestoreEntity):
         current_power = self._get_current_power() or 0.0
         current_time = dt_util.utcnow()
         
-        # Calculate energy
         if self._last_update is not None:
-            time_diff = (current_time - self._last_update).total_seconds() / 3600.0  # hours
+            time_diff = (current_time - self._last_update).total_seconds() / 3600.0
             
             if time_diff > 0 and self._last_power > 0:
-                energy_increment = self._last_power * time_diff  # Wh
+                energy_increment = self._last_power * time_diff
                 self._total_energy += energy_increment
                 _LOGGER.debug("Energy added: %.6f Wh, Total: %.3f Wh", energy_increment, self._total_energy)
         
-        # Update values
         self._last_power = current_power
         self._last_update = current_time
-        
         self.async_write_ha_state()
 
     def _get_current_power(self) -> float | None:
@@ -219,8 +225,6 @@ class TuyaEnergySensor(SensorEntity, RestoreEntity):
             
         voltage = None
         current = None
-        
-        # Model mapping'den config'leri kullan
         sensor_configs = self.coordinator.model_mapping.get("sensors", {})
         
         if 'ac_vol' in sensor_configs and 'ac_vol' in self.coordinator.data:
@@ -247,7 +251,6 @@ class TuyaEnergySensor(SensorEntity, RestoreEntity):
         
         if voltage is not None and current is not None:
             return voltage * current
-        
         return None
 
     @property
@@ -264,3 +267,13 @@ class TuyaEnergySensor(SensorEntity, RestoreEntity):
     def device_info(self):
         """Return device info."""
         return self.coordinator.device_info
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Tuya info for total_energy sensor."""
+        attrs: dict[str, Any] = {}
+        attrs["tuya_code"] = "total_energy"
+        attrs["tuya_dp_id"] = None
+        if self.coordinator.model_id:
+            attrs["tuya_model_id"] = self.coordinator.model_id
+        return attrs
