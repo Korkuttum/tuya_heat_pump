@@ -146,9 +146,9 @@ class TuyaHeatpumpSwitch(SwitchEntity):
             _LOGGER.warning("❌ Failed to turn OFF %s", self._switch_code)
             
             raise HomeAssistantError(
-                f"{self._config.get('name', self._switch_code)} kapatılamıyor. "
-                f"Cihazınız bu özelliği değiştirmeye izin vermiyor. "
-                f"Lütfen ayarı cihaz üzerinden yapın."
+                f"Cannot turn off {self._config.get('name', self._switch_code)}. "
+                f"Your device does not allow changing this setting. "
+                f"Please change the setting on the device."
             )
 
     @property
