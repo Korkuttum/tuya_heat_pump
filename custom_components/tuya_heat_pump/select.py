@@ -25,10 +25,8 @@ async def async_setup_entry(
     
     selects = []
     
-    # Model mapping'den select'leri al
     select_configs = coordinator.model_mapping.get("selects", {})
     
-    # 🔴 DEĞİŞİKLİK: coordinator.data kontrolü kaldırıldı
     for select_code, select_config in select_configs.items():
         selects.append(
             TuyaHeatpumpSelect(coordinator, select_code, select_config)
@@ -72,10 +70,9 @@ class TuyaHeatpumpSelect(SelectEntity):
         
         # Options'ları config'den al
         options_dict = config.get('options', {})
-        # options dict ise value:label şeklinde, liste ise direkt
         if isinstance(options_dict, dict):
             self._attr_options = list(options_dict.keys())
-            self._option_labels = options_dict  # value → label mapping
+            self._option_labels = options_dict
         else:
             self._attr_options = options_dict
             self._option_labels = {opt: opt for opt in options_dict}
@@ -96,7 +93,6 @@ class TuyaHeatpumpSelect(SelectEntity):
             
         raw_value = self.coordinator.data[self._select_code]['value']
         
-        # Conversion varsa uygula
         conversion = Conversion(self._config.get('conversion', 'value'))
         try:
             value = conversion.convert(raw_value)
@@ -114,6 +110,24 @@ class TuyaHeatpumpSelect(SelectEntity):
     def options(self) -> list[str]:
         """Return a list of available options."""
         return self._attr_options
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Tuya DP ID ve Code bilgilerini attributes'a ekle."""
+        attrs: dict[str, Any] = {}
+        
+        dp_info = self.coordinator.get_tuya_dp_info(self._select_code)
+        attrs["tuya_code"] = dp_info["code"]
+        attrs["tuya_dp_id"] = dp_info["dp_id"]
+
+        if self.coordinator.model_id:
+            attrs["tuya_model_id"] = self.coordinator.model_id
+
+        # Select için values bilgisi faydalı olur
+        if self._config and isinstance(self._config, dict) and "values" in self._config:
+            attrs["tuya_values"] = self._config["values"]
+
+        return attrs
 
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
@@ -135,11 +149,9 @@ class TuyaHeatpumpSelect(SelectEntity):
             await self.coordinator.async_request_refresh()
         else:
             _LOGGER.warning("❌ Failed to change %s to %s", self._select_code, option)
-            
             raise HomeAssistantError(
                 f"{self._config.get('name', self._select_code)} cannot be changed. "
-                f"Your device does not allow changing this mode. "
-                f"Please change the mode on the device."
+                f"Your device does not allow changing this mode."
             )
 
     @property
