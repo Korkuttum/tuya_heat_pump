@@ -642,3 +642,38 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     self._previous_online = self.is_online
                 self.async_update_listeners()
                 raise UpdateFailed(f"Local error: {str(err)}")
+
+    # ============================================================================
+    # TÜM ENTITY'LER İÇİN TUYA DP ve CODE BİLGİLERİ (YENİ EKLENDİ)
+    # ============================================================================
+
+    @property
+    def dp_mapping_dict(self) -> dict:
+        """DP ID → Code mapping (tinytuya tarzı)"""
+        return self.dp_mapping
+
+    def get_dp_id(self, code: str) -> int | None:
+        """Verilen code için DP ID'yi döndürür."""
+        if not self.dp_mapping:
+            return None
+        for dp_id, c in self.dp_mapping.items():
+            if c == code:
+                return dp_id
+        return None
+
+    def get_tuya_dp_info(self, code: str) -> dict:
+        """Code için tam DP bilgilerini döndürür."""
+        dp_id = self.get_dp_id(code)
+        return {
+            "code": code,
+            "dp_id": dp_id,
+        }
+
+    @property
+    def extra_tuya_info(self) -> dict:
+        """Tüm entity'lerde kullanılabilecek genel Tuya bilgileri."""
+        return {
+            "model_id": self.model_id,
+            "connection_type": self.connection_type,
+            "device_id": self.device_id,
+        }
