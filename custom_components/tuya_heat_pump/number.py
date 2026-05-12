@@ -25,10 +25,8 @@ async def async_setup_entry(
     
     numbers = []
     
-    # Model mapping'den number'ları al
     number_configs = coordinator.model_mapping.get("numbers", {})
     
-    # 🔴 DEĞİŞİKLİK: coordinator.data kontrolü kaldırıldı
     for number_code, number_config in number_configs.items():
         numbers.append(
             TuyaHeatpumpNumber(coordinator, number_code, number_config)
@@ -120,6 +118,24 @@ class TuyaHeatpumpNumber(NumberEntity):
                 f"Your device does not allow changing this setting. "
                 f"Please change the setting on the device."
             )
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Tuya DP ID ve Code bilgilerini attributes'a ekle."""
+        attrs: dict[str, Any] = {}
+
+        dp_info = self.coordinator.get_tuya_dp_info(self._number_code)
+        attrs["tuya_code"] = dp_info["code"]
+        attrs["tuya_dp_id"] = dp_info["dp_id"]
+
+        if self.coordinator.model_id:
+            attrs["tuya_model_id"] = self.coordinator.model_id
+
+        if self._config and isinstance(self._config, dict):
+            if "values" in self._config:
+                attrs["tuya_values"] = self._config["values"]
+
+        return attrs
 
     @property
     def available(self) -> bool:
