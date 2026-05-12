@@ -403,8 +403,8 @@ NUMBER_TYPES = {
         "min_value": 5.0,
         "max_value": 80.0,
         "step": 1.0,
-        "conversion": "value / 10",
-        "api_conversion": "value * 10",
+        "conversion": "value",
+        "api_conversion": "value / 10",
     },
     "water_set": {
         "dp_id": 10,
@@ -427,8 +427,8 @@ NUMBER_TYPES = {
         "min_value": 5.0,
         "max_value": 80.0,
         "step": 1.0,
-        "conversion": "value / 10",
-        "api_conversion": "value * 10",
+        "conversion": "value",
+        "api_conversion": "value / 10",
     },
     "volume_set": {
         "dp_id": 106,
