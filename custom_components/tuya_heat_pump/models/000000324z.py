@@ -144,7 +144,7 @@ BINARY_SENSOR_TYPES = {
         "name": "Fault Code 1",
         "icon": "mdi:alert-circle",
         "device_class": "problem",
-        "conversion": "value != 0"
+        "conversion": "value != 0",
     },
     "fault2": {
         "dp_id": 116,
@@ -152,7 +152,7 @@ BINARY_SENSOR_TYPES = {
         "name": "Fault Code 2",
         "icon": "mdi:alert-circle",
         "device_class": "problem",
-        "conversion": "value != 0"
+        "conversion": "value != 0",
     },
     "WarmOrCool": {
         "dp_id": 118,
@@ -162,8 +162,8 @@ BINARY_SENSOR_TYPES = {
         "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
         "options": {
             False: "Heating",
-            True: "Cooling"
-        }
+            True: "Cooling",
+        },
     },
     "Defrost": {
         "dp_id": 130,
@@ -171,7 +171,7 @@ BINARY_SENSOR_TYPES = {
         "name": "Defrost Status",
         "icon": "mdi:snowflake-melt",
         "device_class": "cold",
-        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
     "CompRly": {
         "dp_id": 134,
@@ -179,7 +179,7 @@ BINARY_SENSOR_TYPES = {
         "name": "Compressor Contactor",
         "icon": "mdi:engine",
         "device_class": "running",
-        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
     "CyclePump": {
         "dp_id": 135,
@@ -187,7 +187,7 @@ BINARY_SENSOR_TYPES = {
         "name": "Circulation Pump",
         "icon": "mdi:water-pump",
         "device_class": "running",
-        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
     "ReserveValve": {
         "dp_id": 136,
@@ -195,14 +195,14 @@ BINARY_SENSOR_TYPES = {
         "name": "Four-Way Valve",
         "icon": "mdi:valve",
         "device_class": "opening",
-        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
     "ChargeRly": {
         "dp_id": 139,
         "code": "ChargeRly",
         "name": "Charge Relay",
         "icon": "mdi:flash",
-        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
 }
 
@@ -215,7 +215,7 @@ SWITCH_TYPES = {
         "code": "Power",
         "name": "Power",
         "icon": "mdi:power",
-        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
     "change_tem": {
         "dp_id": 103,
@@ -225,15 +225,15 @@ SWITCH_TYPES = {
         "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
         "options": {
             False: "Celsius",
-            True: "Fahrenheit"
-        }
+            True: "Fahrenheit",
+        },
     },
     "SilentMdoe": {
         "dp_id": 117,
         "code": "SilentMdoe",
         "name": "Silent Mode",
         "icon": "mdi:volume-off",
-        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
+        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
 }
 
@@ -251,7 +251,7 @@ NUMBER_TYPES = {
         "max_value": 104.0,
         "step": 1.0,
         "conversion": "value",
-        "api_conversion": "value"
+        "api_conversion": "value",
     },
 }
 
@@ -265,11 +265,11 @@ SELECT_TYPES = {
         "name": "Mode",
         "icon": "mdi:hvac",
         "options": {
-            "smart": "Smart",
+            "smart": "Auto",
             "warm": "Heating",
-            "cool": "Cooling"
+            "cool": "Cooling",
         },
-        "conversion": "value"
+        "conversion": "value",
     },
     "ACFanSpeed": {
         "dp_id": 140,
@@ -279,8 +279,8 @@ SELECT_TYPES = {
         "options": {
             "LowSpeed": "Low Speed",
             "MidSpeed": "Mid Speed",
-            "HighSpeed": "High Speed"
+            "HighSpeed": "High Speed",
         },
-        "conversion": "value"
+        "conversion": "value",
     },
 }
