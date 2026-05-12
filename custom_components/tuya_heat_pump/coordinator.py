@@ -186,7 +186,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 continue
            
             if code in new_data and new_data[code]['value'] != sent_value:
-                _LOGGER.warning("Cihaz eski değer döndü (%s = %s), cache'ten düzeltiliyor → %s",
+                _LOGGER.warning("Device returned old value (%s = %s), correcting from cache → %s",
                                 code, new_data[code]['value'], sent_value)
                 new_data[code]['value'] = sent_value
                 new_data[code]['timestamp'] = int(time.time() * 1000)
@@ -243,7 +243,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
     async def _get_token(self) -> bool:
         """Get access token from Tuya API - hem cloud hem local için kullanılır."""
         if self.access_token:
-            _LOGGER.debug("Token zaten var, tekrar alınmıyor")
+            _LOGGER.debug("Token already exists, not re-fetching")
             return True
 
         try:
