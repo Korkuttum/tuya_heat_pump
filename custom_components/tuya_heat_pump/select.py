@@ -10,6 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import DOMAIN
+from .conversion import Conversion
 from .coordinator import TuyaScaleDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -93,16 +94,16 @@ class TuyaHeatpumpSelect(SelectEntity):
         if not self.coordinator.data or self._select_code not in self.coordinator.data:
             return None
             
-        value = self.coordinator.data[self._select_code]['value']
+        raw_value = self.coordinator.data[self._select_code]['value']
         
         # Conversion varsa uygula
-        conversion = self._config.get('conversion', 'value')
-        if conversion != 'value':
-            try:
-                value = eval(conversion, {"value": value, "__builtins__": {}})
-            except Exception as err:
-                _LOGGER.warning("Conversion failed for %s: %s", self._select_code, err)
-        
+        conversion = Conversion(self._config.get('conversion', 'value'))
+        try:
+            value = conversion.convert(raw_value)
+        except Exception as err:
+            value = raw_value
+            _LOGGER.warning("Conversion failed for %s: %s", self._select_code, err)
+
         if isinstance(value, str):
             return value
         
@@ -117,12 +118,12 @@ class TuyaHeatpumpSelect(SelectEntity):
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
         _LOGGER.info("Changing %s to %s", self._select_code, option)
-        
-        # API conversion varsa uygula
+
         api_value = option
-        if 'api_conversion' in self._config:
+        if (api_conversion := self._config.get('api_conversion')) is not None:
+            conversion = Conversion(api_conversion)
             try:
-                api_value = eval(self._config['api_conversion'], {"value": option, "__builtins__": {}})
+                api_value = conversion.convert(option)
                 _LOGGER.debug("Converted HA option %s → API value %s", option, api_value)
             except Exception as err:
                 _LOGGER.warning("API conversion failed: %s", err)

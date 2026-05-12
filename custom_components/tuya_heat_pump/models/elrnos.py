@@ -14,7 +14,6 @@ SENSOR_TYPES = {
         "icon": "mdi:water-thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "compressor_strength": {
         "dp_id": 20,
@@ -24,7 +23,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "temp_top": {
         "dp_id": 21,
@@ -34,7 +32,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "temp_bottom": {
         "dp_id": 22,
@@ -44,7 +41,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-water",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "coiler_temp": {
         "dp_id": 23,
@@ -54,7 +50,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "venting_temp": {
         "dp_id": 24,
@@ -64,7 +59,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-alert",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "effluent_temp": {
         "dp_id": 25,
@@ -74,7 +68,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "around_temp": {
         "dp_id": 26,
@@ -84,7 +77,6 @@ SENSOR_TYPES = {
         "icon": "mdi:home-thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     
     # Temperature Sensors - Fahrenheit
@@ -96,7 +88,6 @@ SENSOR_TYPES = {
         "icon": "mdi:water-thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "bottom_temp_f": {
         "dp_id": 37,
@@ -106,7 +97,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-water",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "around_temp_f": {
         "dp_id": 38,
@@ -116,7 +106,6 @@ SENSOR_TYPES = {
         "icon": "mdi:home-thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "venting_temp_f": {
         "dp_id": 39,
@@ -126,7 +115,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-alert",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     
     # Device Info & Counters
@@ -137,7 +125,6 @@ SENSOR_TYPES = {
         "unit": "P",
         "icon": "mdi:pipe-valve",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "effluent_temp_f": {
         "dp_id": 40,
@@ -146,7 +133,6 @@ SENSOR_TYPES = {
         "unit": "",
         "icon": "mdi:counter",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "coiler_temp_f": {
         "dp_id": 41,
@@ -155,7 +141,6 @@ SENSOR_TYPES = {
         "unit": "min",
         "icon": "mdi:timer",
         "state_class": "measurement",
-        "conversion": "value"
     },
     
     # Electrical Sensors (with scale conversion)
@@ -363,7 +348,6 @@ NUMBER_TYPES = {
         "min_value": 15.0,
         "max_value": 75.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
     "temp_set_f": {
@@ -375,7 +359,6 @@ NUMBER_TYPES = {
         "min_value": 59.0,
         "max_value": 167.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
 }
@@ -397,7 +380,6 @@ SELECT_TYPES = {
             "HYB1": "Hybrid Mode 1",
             "ELE": "Electric Mode"
         },
-        "conversion": "value"
     },
     "temp_unit_convert": {
         "dp_id": 6,
@@ -408,7 +390,6 @@ SELECT_TYPES = {
             "c": "Celsius",
             "f": "Fahrenheit"
         },
-        "conversion": "value"
     },
     "work_state": {
         "dp_id": 17,
@@ -420,7 +401,6 @@ SELECT_TYPES = {
             "ERR": "Error",
             "NO": "No Status"
         },
-        "conversion": "value"
     },
     "flow": {
         "dp_id": 19,
@@ -432,7 +412,6 @@ SELECT_TYPES = {
             "LOW": "Low Speed",
             "High": "High Speed"
         },
-        "conversion": "value"
     },
 }
 # ====================================================

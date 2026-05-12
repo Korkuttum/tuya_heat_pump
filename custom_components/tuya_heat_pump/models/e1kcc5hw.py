@@ -12,7 +12,6 @@ SENSOR_TYPES = {
         "unit": "",
         "icon": "mdi:chip",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "temp_current": {
         "dp_id": 16,
@@ -21,7 +20,6 @@ SENSOR_TYPES = {
         "unit": "P",
         "icon": "mdi:gauge",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "power_consumption": {
         "dp_id": 18,
@@ -40,7 +38,6 @@ SENSOR_TYPES = {
         "unit": "Hz",
         "icon": "mdi:cosine-wave",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "temp_top": {
         "dp_id": 21,
@@ -50,7 +47,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "temp_bottom": {
         "dp_id": 22,
@@ -60,7 +56,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "coiler_temp": {
         "dp_id": 23,
@@ -70,7 +65,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "venting_temp": {
         "dp_id": 24,
@@ -80,7 +74,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "effluent_temp": {
         "dp_id": 25,
@@ -89,7 +82,6 @@ SENSOR_TYPES = {
         "unit": "P",
         "icon": "mdi:gauge",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "around_temp": {
         "dp_id": 26,
@@ -99,7 +91,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "temp_current_f": {
         "dp_id": 35,
@@ -109,7 +100,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "top_temp_f": {
         "dp_id": 36,
@@ -119,7 +109,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "bottom_temp_f": {
         "dp_id": 37,
@@ -129,7 +118,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "around_temp_f": {
         "dp_id": 38,
@@ -139,7 +127,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "venting_temp_f": {
         "dp_id": 39,
@@ -148,7 +135,6 @@ SENSOR_TYPES = {
         "unit": "L/min",
         "icon": "mdi:water-pump",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "effluent_temp_f": {
         "dp_id": 40,
@@ -157,7 +143,6 @@ SENSOR_TYPES = {
         "unit": "Hz",
         "icon": "mdi:fan",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "coiler_temp_f": {
         "dp_id": 41,
@@ -167,7 +152,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "cur_current": {
         "dp_id": 102,
@@ -217,7 +201,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "eviout": {
         "dp_id": 108,
@@ -227,7 +210,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "b_cur": {
         "dp_id": 109,
@@ -277,7 +259,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     # Hesaplanan sensörler
     "calculated_total_power": {
@@ -287,7 +268,6 @@ SENSOR_TYPES = {
         "icon": "mdi:flash",
         "device_class": "power",
         "state_class": "measurement",
-        "conversion": "value"
     },
 }
 
@@ -358,7 +338,6 @@ NUMBER_TYPES = {
         "min_value": -20.0,
         "max_value": 80.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
     "water_set": {
@@ -370,7 +349,6 @@ NUMBER_TYPES = {
         "min_value": 0.0,
         "max_value": 1.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
     "minitemp_set": {
@@ -382,7 +360,6 @@ NUMBER_TYPES = {
         "min_value": 5.0,
         "max_value": 80.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
     "volume_set": {
@@ -394,7 +371,6 @@ NUMBER_TYPES = {
         "min_value": 0.0,
         "max_value": 2.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
 }
@@ -417,7 +393,6 @@ SELECT_TYPES = {
             "heating_and_hot_water": "Heat & Hot Water",
             "floor_heatign_and_hot_water": "Floor Heat & Hot Water"
         },
-        "conversion": "value"
     },
     "work_mode": {
         "dp_id": 5,
@@ -429,7 +404,6 @@ SELECT_TYPES = {
             "Normal": "Normal",
             "Boost": "Boost"
         },
-        "conversion": "value"
     },
     "capacity_set": {
         "dp_id": 11,
@@ -443,7 +417,6 @@ SELECT_TYPES = {
             "H3": "H3",
             "H4": "H4"
         },
-        "conversion": "value"
     },
     "countdown_set": {
         "dp_id": 13,
@@ -469,6 +442,5 @@ SELECT_TYPES = {
             "L7": "L7",
             "L8": "L8"
         },
-        "conversion": "value"
     },
 }

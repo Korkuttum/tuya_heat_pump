@@ -18,7 +18,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-water",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "temp_bottom": {
         "dp_id": 22,
@@ -28,7 +27,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-water",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "coiler_temp": {
         "dp_id": 23,
@@ -38,7 +36,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "venting_temp": {
         "dp_id": 24,
@@ -48,7 +45,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-alert",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "around_temp": {
         "dp_id": 26,
@@ -58,7 +54,6 @@ SENSOR_TYPES = {
         "icon": "mdi:home-thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "temp_current_f": {
         "dp_id": 35,
@@ -68,7 +63,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "top_temp_f": {
         "dp_id": 36,
@@ -78,7 +72,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "bottom_temp_f": {
         "dp_id": 37,
@@ -88,7 +81,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "around_temp_f": {
         "dp_id": 38,
@@ -98,7 +90,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-water",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "venting_temp_f": {
         "dp_id": 39,
@@ -107,7 +98,6 @@ SENSOR_TYPES = {
         "unit": "L/min",
         "icon": "mdi:water-pump",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "effluent_temp_f": {
         "dp_id": 40,
@@ -116,7 +106,6 @@ SENSOR_TYPES = {
         "unit": "Hz",
         "icon": "mdi:fan",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "coiler_temp_f": {
         "dp_id": 41,
@@ -126,7 +115,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "eviin": {
         "dp_id": 107,
@@ -136,7 +124,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "eviout": {
         "dp_id": 108,
@@ -146,7 +133,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "indoor_temp": {
         "dp_id": 117,
@@ -167,7 +153,6 @@ SENSOR_TYPES = {
         "unit": "P",
         "icon": "mdi:gauge",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "effluent_temp": {
         "dp_id": 25,
@@ -176,7 +161,6 @@ SENSOR_TYPES = {
         "unit": "P",
         "icon": "mdi:gauge",
         "state_class": "measurement",
-        "conversion": "value",
     },
     
     # ========== COMPRESSOR & PERFORMANCE ==========
@@ -187,7 +171,6 @@ SENSOR_TYPES = {
         "unit": "Hz",
         "icon": "mdi:sine-wave",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "countdown_left": {
         "dp_id": 14,
@@ -195,7 +178,6 @@ SENSOR_TYPES = {
         "name": "Mainboard Program",
         "icon": "mdi:chip",
         "state_class": "measurement",
-        "conversion": "value",
     },
     
     # ========== ENERGY & POWER ==========
@@ -331,14 +313,12 @@ SENSOR_TYPES = {
         "name": "Fault Codes",
         "icon": "mdi:alert-circle",
         "device_class": "problem",
-        "conversion": "value",
     },
     "temp_int": {
         "dp_id": 119,
         "code": "temp_int",
         "name": "Temperature Type",
         "icon": "mdi:thermometer",
-        "conversion": "value",
         "options": {
             "OFF": "Off",
             "INDOOR": "Indoor",
@@ -415,7 +395,6 @@ NUMBER_TYPES = {
         "min_value": 0.0,
         "max_value": 1.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value",
     },
     "minitemp_set": {
@@ -439,7 +418,6 @@ NUMBER_TYPES = {
         "min_value": 0.0,
         "max_value": 2.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value",
     },
     "indoor_st": {
@@ -486,7 +464,6 @@ SELECT_TYPES = {
             "heating_and_hot_water": "Heating + Hot Water",
             "floor_heatign_and_hot_water": "Floor Heating + Hot Water",
         },
-        "conversion": "value",
     },
     "work_mode": {
         "dp_id": 5,
@@ -498,7 +475,6 @@ SELECT_TYPES = {
             "Normal": "Normal",
             "Boost": "Boost",
         },
-        "conversion": "value",
     },
     "capacity_set": {
         "dp_id": 11,
@@ -512,7 +488,6 @@ SELECT_TYPES = {
             "H3": "H3",
             "H4": "H4",
         },
-        "conversion": "value",
     },
     "countdown_set": {
         "dp_id": 13,
@@ -538,7 +513,6 @@ SELECT_TYPES = {
             "L7": "L7",
             "L8": "L8",
         },
-        "conversion": "value",
     },
     "syscomp": {
         "dp_id": 113,
@@ -549,7 +523,6 @@ SELECT_TYPES = {
             "0": "System 0",
             "1": "System 1",
         },
-        "conversion": "value",
     },
     "threemode": {
         "dp_id": 114,
@@ -560,7 +533,6 @@ SELECT_TYPES = {
             "1": "Mode 1",
             "2": "Mode 2",
         },
-        "conversion": "value",
     },
     "fourmode": {
         "dp_id": 115,
@@ -573,7 +545,6 @@ SELECT_TYPES = {
             "Heat": "Heating",
             "WaterHeat": "Water + Heating",
         },
-        "conversion": "value",
     },
     "three_mode": {
         "dp_id": 118,
@@ -585,6 +556,5 @@ SELECT_TYPES = {
             "Heat": "Heating",
             "GndHeat": "Ground Heating",
         },
-        "conversion": "value",
     },
 }

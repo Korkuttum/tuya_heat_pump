@@ -13,14 +13,12 @@ SENSOR_TYPES = {
         "icon": "mdi:alert-circle",
         "device_class": "problem",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "products_id": {
         "dp_id": 180,
         "code": "products_id",
         "name": "Product ID",
         "icon": "mdi:identifier",
-        "conversion": "value",
     },
 }
 
@@ -71,7 +69,6 @@ NUMBER_TYPES = {
         "min_value": 0.0,
         "max_value": 99.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
     "heating_setting": {
@@ -83,7 +80,6 @@ NUMBER_TYPES = {
         "min_value": 0.0,
         "max_value": 99.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
     "cooling_setting": {
@@ -95,7 +91,6 @@ NUMBER_TYPES = {
         "min_value": 0.0,
         "max_value": 99.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
     "hdef": {
@@ -107,7 +102,6 @@ NUMBER_TYPES = {
         "min_value": 1.0,
         "max_value": 8.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
 }
@@ -126,7 +120,6 @@ SELECT_TYPES = {
             "strong": "Strong",
             "mute": "Mute"
         },
-        "conversion": "value"
     },
     "work_mode": {
         "dp_id": 5,
@@ -140,7 +133,6 @@ SELECT_TYPES = {
             "wth_heat": "Hot Water + Heating",
             "wth_cool": "Hot Water + Cooling"
         },
-        "conversion": "value"
     },
     "temp_unit_convert": {
         "dp_id": 6,
@@ -151,6 +143,5 @@ SELECT_TYPES = {
             "c": "Celsius",
             "f": "Fahrenheit"
         },
-        "conversion": "value"
     },
 }

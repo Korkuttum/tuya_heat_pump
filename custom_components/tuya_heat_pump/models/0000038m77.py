@@ -13,7 +13,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "AmbientTemp": {
         "dp_id": 102,
@@ -23,7 +22,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "OCT1": {
         "dp_id": 103,
@@ -33,7 +31,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "CTT": {
         "dp_id": 104,
@@ -43,7 +40,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "ReturnAirTemp": {
         "dp_id": 105,
@@ -53,7 +49,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "WaterTankTemp": {
         "dp_id": 106,
@@ -63,7 +58,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-water",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "OCT_Cool": {
         "dp_id": 107,
@@ -73,7 +67,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "WaterInTemp": {
         "dp_id": 108,
@@ -83,7 +76,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-water",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "WaterOutTemp": {
         "dp_id": 109,
@@ -93,7 +85,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-water",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "ValveFrontTemp": {
         "dp_id": 110,
@@ -103,7 +94,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "ValvePostTemp": {
         "dp_id": 111,
@@ -113,7 +103,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
 }
 
@@ -132,7 +121,6 @@ BINARY_SENSOR_TYPES = {
         "name": "Compressor",
         "icon": "mdi:engine",
         "device_class": "running",
-        "conversion": "value",
     },
     "FouValve": {
         "dp_id": 113,
@@ -140,7 +128,6 @@ BINARY_SENSOR_TYPES = {
         "name": "Four-Way Valve",
         "icon": "mdi:valve",
         "device_class": "opening",
-        "conversion": "value",
     },
     "Heat": {
         "dp_id": 114,
@@ -148,7 +135,6 @@ BINARY_SENSOR_TYPES = {
         "name": "Electric Heater",
         "icon": "mdi:heating-coil",
         "device_class": "heat",
-        "conversion": "value",
     },
     "Fan": {
         "dp_id": 115,
@@ -156,7 +142,6 @@ BINARY_SENSOR_TYPES = {
         "name": "Fan",
         "icon": "mdi:fan",
         "device_class": "running",
-        "conversion": "value",
     },
     "Pumb": {
         "dp_id": 116,
@@ -164,7 +149,6 @@ BINARY_SENSOR_TYPES = {
         "name": "Pump",
         "icon": "mdi:pump",
         "device_class": "running",
-        "conversion": "value",
     },
     "ChassisHeat": {
         "dp_id": 117,
@@ -172,7 +156,6 @@ BINARY_SENSOR_TYPES = {
         "name": "Chassis Heater",
         "icon": "mdi:heating-coil",
         "device_class": "heat",
-        "conversion": "value",
     },
     "CrankshaftHeat": {
         "dp_id": 118,
@@ -180,7 +163,6 @@ BINARY_SENSOR_TYPES = {
         "name": "Crankshaft Heater",
         "icon": "mdi:heating-coil",
         "device_class": "heat",
-        "conversion": "value",
     },
 }
 
@@ -206,7 +188,6 @@ NUMBER_TYPES = {
         "min_value": 5.0,
         "max_value": 80.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value",
     },
     "Temp_Offset": {
@@ -218,7 +199,6 @@ NUMBER_TYPES = {
         "min_value": -9.0,
         "max_value": 9.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value",
     },
 }
@@ -236,6 +216,5 @@ SELECT_TYPES = {
             "eco": "Eco",
             "auto": "Auto",
         },
-        "conversion": "value",
     },
 }

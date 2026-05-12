@@ -14,7 +14,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-water",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     # Speed Percentage
     "speedpercentage": {
@@ -24,7 +23,6 @@ SENSOR_TYPES = {
         "unit": "%",
         "icon": "mdi:speedometer",
         "state_class": "measurement",
-        "conversion": "value",
     },
     # Temperature Lower Limit
     "setdnlimit": {
@@ -35,7 +33,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-chevron-down",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     # Temperature Upper Limit
     "setuplimit": {
@@ -46,7 +43,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-chevron-up",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     # Power (with scale 3)
     "rateofwork": {
@@ -147,7 +143,6 @@ NUMBER_TYPES = {
         "min_value": -22.0,
         "max_value": 122.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value",
     },
 }
@@ -167,7 +162,6 @@ SELECT_TYPES = {
             "smart": "Smart",
             "booster": "Booster",
         },
-        "conversion": "value",
         "api_conversion": "value",
     },
     # Operation Mode 2
@@ -181,7 +175,6 @@ SELECT_TYPES = {
             "warm": "Warm",
             "cool": "Cool",
         },
-        "conversion": "value",
         "api_conversion": "value",
     },
     # Cooling Enable (read-only)
@@ -194,7 +187,6 @@ SELECT_TYPES = {
             "0": "Disabled",
             "1": "Enabled",
         },
-        "conversion": "value",
         "api_conversion": "value",
     },
     # Booster Enable (read-only)
@@ -207,7 +199,6 @@ SELECT_TYPES = {
             "0": "Disabled",
             "1": "Enabled",
         },
-        "conversion": "value",
         "api_conversion": "value",
     },
 }

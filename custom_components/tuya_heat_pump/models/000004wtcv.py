@@ -92,7 +92,6 @@ SENSOR_TYPES = {
         "unit": "Hz",
         "icon": "mdi:cosine-wave",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "m_eev": {
         "dp_id": 122,
@@ -101,7 +100,6 @@ SENSOR_TYPES = {
         "unit": "step",
         "icon": "mdi:pipe-valve",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "a_eev": {
         "dp_id": 123,
@@ -110,7 +108,6 @@ SENSOR_TYPES = {
         "unit": "step",
         "icon": "mdi:pipe-valve",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "dc_fan1": {
         "dp_id": 125,
@@ -119,7 +116,6 @@ SENSOR_TYPES = {
         "unit": "RPM",
         "icon": "mdi:fan-speed-1",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "dc_fan2": {
         "dp_id": 126,
@@ -128,7 +124,6 @@ SENSOR_TYPES = {
         "unit": "RPM",
         "icon": "mdi:fan-speed-2",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "ac_vol": {
         "dp_id": 128,
@@ -138,7 +133,6 @@ SENSOR_TYPES = {
         "icon": "mdi:lightning-bolt",
         "device_class": "voltage",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "ac_curr": {
         "dp_id": 129,
@@ -157,7 +151,6 @@ SENSOR_TYPES = {
         "icon": "mdi:flash",
         "device_class": "power",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "total_energy": {
         "code": "total_energy", 
@@ -166,7 +159,6 @@ SENSOR_TYPES = {
         "icon": "mdi:chart-line",
         "device_class": "energy",
         "state_class": "total_increasing",
-        "conversion": "value"
     },
 }
 
@@ -316,6 +308,5 @@ SELECT_TYPES = {
             "heat_hot_water": "Heat & Hot Water",
             "auto_dhw": "Auto DHW"
         },
-        "conversion": "value"
     }
 }

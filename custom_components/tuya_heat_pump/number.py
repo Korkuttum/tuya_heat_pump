@@ -10,6 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import DOMAIN
+from .conversion import Conversion
 from .coordinator import TuyaScaleDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -83,11 +84,10 @@ class TuyaHeatpumpNumber(NumberEntity):
             return None
             
         raw_value = self.coordinator.data[self._number_code]['value']
-        
-        # Conversion uygula
-        conversion = self._config.get('conversion', 'value')
+
+        conversion = Conversion(self._config.get('conversion', 'value'))
         try:
-            result = eval(conversion, {"value": raw_value, "__builtins__": {}})
+            result = conversion.convert(raw_value)
             return float(result) if isinstance(result, (int, float)) else result
         except Exception as err:
             _LOGGER.warning("Conversion failed for %s: %s", self._number_code, err)
@@ -98,11 +98,11 @@ class TuyaHeatpumpNumber(NumberEntity):
         _LOGGER.info("Attempting to set %s to %s %s", 
                     self._number_code, value, self._attr_native_unit_of_measurement)
         
-        # API conversion varsa uygula (HA value → API value)
         api_value = value
-        if 'api_conversion' in self._config:
+        if (api_conversion := self._config.get('api_conversion')) is not None:
+            conversion = Conversion(api_conversion)
             try:
-                api_value = eval(self._config['api_conversion'], {"value": value, "__builtins__": {}})
+                api_value = conversion.convert(value)
                 _LOGGER.debug("Converted HA value %s → API value %s", value, api_value)
             except Exception as err:
                 _LOGGER.warning("API conversion failed: %s", err)

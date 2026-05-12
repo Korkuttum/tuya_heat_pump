@@ -10,6 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import DOMAIN
+from .conversion import Conversion
 from .coordinator import TuyaScaleDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -78,11 +79,10 @@ class TuyaHeatpumpSwitch(SwitchEntity):
             return None
             
         raw_value = self.coordinator.data[self._switch_code]['value']
-        
-        # Conversion uygula
-        conversion = self._config.get('conversion', 'bool(value)')
+
+        conversion = Conversion(self._config.get('conversion', 'bool(value)'))
         try:
-            result = eval(conversion, {"value": raw_value, "__builtins__": {}})
+            result = conversion.convert(raw_value)
             return bool(result)
         except Exception as err:
             _LOGGER.warning("Conversion failed for %s: %s", self._switch_code, err)
@@ -100,12 +100,12 @@ class TuyaHeatpumpSwitch(SwitchEntity):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the switch on."""
         _LOGGER.info("Turning ON %s", self._switch_code)
-        
-        # API conversion varsa uygula
+
         api_value = True
-        if 'api_conversion' in self._config:
+        if (api_conversion := self._config.get('api_conversion')) is not None:
+            conversion = Conversion(api_conversion)
             try:
-                api_value = eval(self._config['api_conversion'], {"value": True, "__builtins__": {}})
+                api_value = conversion.convert(api_value)
                 _LOGGER.debug("Converted ON → API value %s", api_value)
             except Exception as err:
                 _LOGGER.warning("API conversion failed: %s", err)
@@ -127,12 +127,12 @@ class TuyaHeatpumpSwitch(SwitchEntity):
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the switch off."""
         _LOGGER.info("Turning OFF %s", self._switch_code)
-        
-        # API conversion varsa uygula
+
         api_value = False
-        if 'api_conversion' in self._config:
+        if (api_conversion := self._config.get('api_conversion')) is not None:
+            conversion = Conversion(api_conversion)
             try:
-                api_value = eval(self._config['api_conversion'], {"value": False, "__builtins__": {}})
+                api_value = conversion.convert(api_value)
                 _LOGGER.debug("Converted OFF → API value %s", api_value)
             except Exception as err:
                 _LOGGER.warning("API conversion failed: %s", err)

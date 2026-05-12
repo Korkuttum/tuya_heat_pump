@@ -9,6 +9,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.config_entries import ConfigEntry
 
 from .const import DOMAIN
+from .conversion import Conversion
 from .coordinator import TuyaScaleDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -127,11 +128,10 @@ class TuyaHeatpumpBinarySensor(BinarySensorEntity):
             return None
             
         raw_value = self.coordinator.data[self._sensor_code]['value']
-        
-        # Conversion uygula
-        conversion = self._config.get('conversion', 'bool(value)')
+
+        conversion = Conversion(self._config.get('conversion', 'bool(value)'))
         try:
-            result = eval(conversion, {"value": raw_value, "__builtins__": {}})
+            result = conversion.convert(raw_value)
             return bool(result)
         except Exception as err:
             _LOGGER.warning("Conversion failed for %s: %s", self._sensor_code, err)

@@ -13,7 +13,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-water",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "SpeedPercentage": {
         "dp_id": 104,
@@ -22,7 +21,6 @@ SENSOR_TYPES = {
         "unit": "%",
         "icon": "mdi:speedometer",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "SetDnLimit": {
         "dp_id": 107,
@@ -32,7 +30,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-chevron-down",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "SetUpLimit": {
         "dp_id": 108,
@@ -42,7 +39,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-chevron-up",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "OutPipeTemp": {
         "dp_id": 120,
@@ -52,7 +48,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "ExhaustTemp": {
         "dp_id": 122,
@@ -62,7 +57,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-alert",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "AmbTemp": {
         "dp_id": 124,
@@ -72,7 +66,6 @@ SENSOR_TYPES = {
         "icon": "mdi:home-thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "CompFreAct": {
         "dp_id": 125,
@@ -81,7 +74,6 @@ SENSOR_TYPES = {
         "unit": "Hz",
         "icon": "mdi:sine-wave",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "CompressorCurrent": {
         "dp_id": 126,
@@ -91,7 +83,6 @@ SENSOR_TYPES = {
         "icon": "mdi:current-ac",
         "device_class": "current",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "RadTemp": {
         "dp_id": 127,
@@ -101,7 +92,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "EXVPosition": {
         "dp_id": 128,
@@ -110,7 +100,6 @@ SENSOR_TYPES = {
         "unit": "P",
         "icon": "mdi:pipe-valve",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "DCFanSpeed": {
         "dp_id": 129,
@@ -119,7 +108,6 @@ SENSOR_TYPES = {
         "unit": "RPM",
         "icon": "mdi:fan",
         "state_class": "measurement",
-        "conversion": "value",
     },
     # ========== SETPOINTS (read-only for display) ==========
     "SetTemp": {
@@ -130,7 +118,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermostat",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
 }
 
@@ -250,8 +237,7 @@ NUMBER_TYPES = {
         "min_value": -22.0,
         "max_value": 104.0,
         "step": 1.0,
-        "conversion": "value",
-        "api_conversion": "value",
+        "api_conversion": "value"
     },
 }
 
@@ -269,7 +255,6 @@ SELECT_TYPES = {
             "warm": "Heating",
             "cool": "Cooling",
         },
-        "conversion": "value",
     },
     "ACFanSpeed": {
         "dp_id": 140,
@@ -281,6 +266,5 @@ SELECT_TYPES = {
             "MidSpeed": "Mid Speed",
             "HighSpeed": "High Speed",
         },
-        "conversion": "value",
     },
 }

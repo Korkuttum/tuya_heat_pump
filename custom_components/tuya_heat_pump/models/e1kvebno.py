@@ -20,7 +20,6 @@ SENSOR_TYPES = {
         "code": "machine_type",
         "name": "Machine Type",
         "icon": "mdi:information",
-        "conversion": "value",
         "options": {
             0: "Mini (eh/ec)",
             1: "4 Mode (bh/eh/ec/auto)",
@@ -36,7 +35,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-chevron-up",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "temp_low": {
         "dp_id": 103,
@@ -46,7 +44,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-chevron-down",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value",
     },
     "fault": {
         "dp_id": 20,
@@ -54,7 +51,6 @@ SENSOR_TYPES = {
         "name": "Fault Codes",
         "icon": "mdi:alert-circle",
         "device_class": "problem",
-        "conversion": "value",
         "options": {
             1: "E01 - Phase Error",
             2: "E02 - Phase Loss",
@@ -127,7 +123,6 @@ NUMBER_TYPES = {
         "min_value": 8.0,
         "max_value": 40.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
 }
@@ -150,6 +145,5 @@ SELECT_TYPES = {
             "scool": "Silent Cooling",
             "auto": "Auto"
         },
-        "conversion": "value"
     },
 }

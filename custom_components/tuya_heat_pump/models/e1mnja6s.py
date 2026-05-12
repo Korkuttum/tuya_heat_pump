@@ -13,7 +13,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "temp_current_f": {
         "dp_id": 35,
@@ -23,7 +22,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "indoor_sensor_temperature": {
         "dp_id": 101,
@@ -33,7 +31,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "odd_hot_water": {
         "dp_id": 102,
@@ -42,7 +39,6 @@ SENSOR_TYPES = {
         "unit": "",
         "icon": "mdi:water",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "out_air_sensor_temp": {
         "dp_id": 107,
@@ -52,7 +48,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "evap_temperature": {
         "dp_id": 108,
@@ -62,7 +57,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "in_air_sensor_temperature": {
         "dp_id": 109,
@@ -72,7 +66,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "fan1_speed": {
         "dp_id": 112,
@@ -81,7 +74,6 @@ SENSOR_TYPES = {
         "unit": "RPM",
         "icon": "mdi:fan",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "compressor_frequency": {
         "dp_id": 113,
@@ -90,7 +82,6 @@ SENSOR_TYPES = {
         "unit": "Hz",
         "icon": "mdi:sine-wave",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "software_v_display_board": {
         "dp_id": 114,
@@ -99,7 +90,6 @@ SENSOR_TYPES = {
         "unit": "",
         "icon": "mdi:chip",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "software_v_main_board": {
         "dp_id": 115,
@@ -108,7 +98,6 @@ SENSOR_TYPES = {
         "unit": "",
         "icon": "mdi:chip",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "cooling_temperature": {
         "dp_id": 116,
@@ -118,7 +107,6 @@ SENSOR_TYPES = {
         "icon": "mdi:snowflake",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "set_temp_lower_limit": {
         "dp_id": 121,
@@ -127,7 +115,6 @@ SENSOR_TYPES = {
         "unit": "°C",
         "icon": "mdi:thermometer-chevron-down",
         "state_class": "measurement",
-        "conversion": "value"
     },
     "set_temp_upper_limit": {
         "dp_id": 122,
@@ -136,7 +123,6 @@ SENSOR_TYPES = {
         "unit": "°C",
         "icon": "mdi:thermometer-chevron-up",
         "state_class": "measurement",
-        "conversion": "value"
     },
 }
 
@@ -291,7 +277,6 @@ NUMBER_TYPES = {
         "min_value": 0.0,
         "max_value": 176.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
     "mute_start_time": {
@@ -303,7 +288,6 @@ NUMBER_TYPES = {
         "min_value": 0.0,
         "max_value": 1440.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
     "mute_end_time": {
@@ -315,7 +299,6 @@ NUMBER_TYPES = {
         "min_value": 0.0,
         "max_value": 1440.0,
         "step": 1.0,
-        "conversion": "value",
         "api_conversion": "value"
     },
 }
@@ -335,7 +318,6 @@ SELECT_TYPES = {
             "2": "Mode 2",
             "3": "Mode 3"
         },
-        "conversion": "value"
     },
     "temp_unit": {
         "dp_id": 119,
@@ -346,6 +328,5 @@ SELECT_TYPES = {
             "0": "Celsius",
             "1": "Fahrenheit"
         },
-        "conversion": "value"
     },
 }
