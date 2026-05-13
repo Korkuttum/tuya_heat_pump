@@ -283,7 +283,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermostat",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value / 10",
     },
     "minitemp_set": {
         "dp_id": 101,
@@ -293,7 +292,6 @@ SENSOR_TYPES = {
         "icon": "mdi:water-thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value / 10",
     },
     "indoor_st": {
         "dp_id": 116,
@@ -303,7 +301,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermostat",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value / 10",
     },
     
     # ========== FAULT & STATUS ==========
