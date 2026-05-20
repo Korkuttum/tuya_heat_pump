@@ -42,11 +42,16 @@ To use this integration, you need to create a project in the Tuya IoT Platform, 
 **Steps:**
 
 1. Log in to [Tuya IoT Platform](https://iot.tuya.com/).
-2. Go to “Cloud > Project Management” and create a new project or select an existing one.
-3. In project details, go to the “API Group Authorization” tab.
-4. Authorize essential API groups such as “Device Status” and “Device Control”.
-5. In the “Link Device” section, add your heat pump device to the project.
-6. Retrieve your Access ID and Access Secret from the project panel.
+2. Go to **Cloud > Project Management** and create a new project or select an existing one.
+3. Select the **Devices** tab:
+   - If your devices are already listed, proceed to the next step.
+   - If you have no devices yet, open the **Link App Account** tab below. Click the **Add App Account** button on the right, then select **Tuya App Account Authorization**. Scan the QR code using your Tuya mobile app and grant permission. Your devices will then appear.
+4. Click on the **Service API** tab above, then click the **Go to Authorize** button and add the following APIs to your project:
+   - IoT Core
+   - Smart Home Basic Service
+   - Device Status Notification
+   - Authorization Token Management
+5. Retrieve your **Access ID** and **Access Secret** from the project panel.
 
 > ⚠️ **Important:** The integration will not work without API authorization and device linking.
 
