@@ -1,9 +1,8 @@
 """Model mapping for Weau WFI 007 Pool Heat Pump (000003p0fy)."""
 
 MODEL_NAME = "Weau WFI 007 Pool Heat Pump"
-
 # ====================================================
-# SENSOR TYPES (read-only value - accessMode: "ro")
+# W'eau WFI-007 @OdynBrouwer
 # ====================================================
 SENSOR_TYPES = {
     "temp_current": {
