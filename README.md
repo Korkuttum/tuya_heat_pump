@@ -41,17 +41,17 @@ To use this integration, you need to create a project in the Tuya IoT Platform, 
 
 **Steps:**
 
-1. Log in to [Tuya IoT Platform](https://iot.tuya.com/).
-2. Go to **Cloud > Project Management** and create a new project or select an existing one.
-3. Select the **Devices** tab:
+1. Log in to ***[Tuya IoT Platform](https://iot.tuya.com/)***.
+2. Go to ***Cloud > Project Management*** and create a new project or select an existing one.
+3. Select the ***Devices*** tab:
    - If your devices are already listed, proceed to the next step.
-   - If you have no devices yet, open the **Link App Account** tab below. Click the **Add App Account** button on the right, then select **Tuya App Account Authorization**. Scan the QR code using your Tuya mobile app and grant permission. Your devices will then appear.
-4. Click on the **Service API** tab above, then click the **Go to Authorize** button and add the following APIs to your project:
-   - IoT Core
-   - Smart Home Basic Service
-   - Device Status Notification
-   - Authorization Token Management
-5. Retrieve your **Access ID** and **Access Secret** from the project panel.
+   - If you have no devices yet, open the ***Link App Account*** tab below. Click the ***Add App Account*** button on the right, then select ***Tuya App Account Authorization***. Scan the QR code using your Tuya mobile app and grant permission. Your devices will then appear.
+4. Click on the ***Service API*** tab above, then click the ***Go to Authorize*** button and add the following APIs to your project:
+   - ***IoT Core***
+   - ***Smart Home Basic Service***
+   - ***Device Status Notification***
+   - ***Authorization Token Management***
+5. Retrieve your ***Access ID*** and ***Access Secret*** from the project panel.
 
 > ⚠️ **Important:** The integration will not work without API authorization and device linking.
 
@@ -63,25 +63,17 @@ To use this integration, you need to create a project in the Tuya IoT Platform, 
 
 ### Method 1: Installation via HACS (Recommended)
 
-1. Make sure you have HACS installed in your Home Assistant instance.
-2. Click on HACS in the sidebar.
-3. Click the three dots in the top right corner and select “Custom Repositories”.
-4. Add the following repository URL and select “Integration” as the category:  
-   ```
-   https://github.com/Korkuttum/tuya_heat_pump
-   ```
-5. Click “ADD”.
-6. Find "Tuya Heat Pump" in the integrations list and install it.
-7. Restart Home Assistant.
-
-Or, you can add it directly using the HACS badge above.
+1. Make sure you have **HACS** installed in your Home Assistant instance.
+2. Go to **HACS** → **Integrations**.
+3. Click the search icon in the top right and search for **"Tuya Heat Pump"**.
+4. Click **Download** on the integration.
+5. Restart Home Assistant.
 
 ### Method 2: Manual Installation
 
-- Upload all files to  
-  `custom_components/tuya_heat_pump` folder inside your Home Assistant configuration directory.
-- Restart Home Assistant.
-
+1. Download the latest release from the [GitHub repository](https://github.com/Korkuttum/tuya_heat_pump).
+2. Extract the files and copy the `tuya_heat_pump` folder into your Home Assistant `custom_components` directory.
+3. Restart Home Assistant.
 ---
 
 ## Configuration
