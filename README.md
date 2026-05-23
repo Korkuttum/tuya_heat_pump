@@ -15,6 +15,7 @@
 - Ecologic Ecopool
 - EnviroSun HP+  _(Still not working yet.)_
 - Evoheat 40T
+- Fairland
 - Heative Next
 - Inventor Xforce
 - Kushiro (Luqstoff)
