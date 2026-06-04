@@ -15,17 +15,26 @@ SENSOR_TYPES = {
         "device_class": "temperature",
         "state_class": "measurement",
     },
+    # Fault Code - Raw Bitmap Value (dp_id: 6)
+    "fault_code": {
+        "dp_id": 6,
+        "code": "fault_code",
+        "name": "Fault Code",
+        "icon": "mdi:alert-circle",
+        "device_class": "problem",
+        "state_class": "measurement",
+    },
 }
 
 # ====================================================
 # BINARY SENSOR TYPES (read-only bitmap - accessMode: "ro")
 # ====================================================
 BINARY_SENSOR_TYPES = {
-    # Fault Alarm - Bitmap (dp_id: 6)
+    # Fault Status - Quick view (dp_id: 6)
     "fault": {
         "dp_id": 6,
         "code": "fault",
-        "name": "Fault Alarm",
+        "name": "Fault Status",
         "device_class": "problem",
         "conversion": "value != 0",
     },
@@ -35,7 +44,6 @@ BINARY_SENSOR_TYPES = {
 # SWITCH TYPES (read-write bool - accessMode: "rw")
 # ====================================================
 SWITCH_TYPES = {
-    # Power Switch (dp_id: 1)
     "switch": {
         "dp_id": 1,
         "code": "switch",
@@ -49,7 +57,6 @@ SWITCH_TYPES = {
 # NUMBER TYPES (read-write value - accessMode: "rw")
 # ====================================================
 NUMBER_TYPES = {
-    # Target Temperature Setpoint (dp_id: 2)
     "temp_set": {
         "dp_id": 2,
         "code": "temp_set",
@@ -67,7 +74,6 @@ NUMBER_TYPES = {
 # SELECT TYPES (read-write enum - accessMode: "rw")
 # ====================================================
 SELECT_TYPES = {
-    # Operating Mode (dp_id: 4) - hot, cold, auto, eco
     "mode": {
         "dp_id": 4,
         "code": "mode",
