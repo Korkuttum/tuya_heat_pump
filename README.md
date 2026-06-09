@@ -1,6 +1,6 @@
 # Tuya Heat Pump - Home Assistant Integration
 
-<img src="images/heatpump.webp" alt="Heat Pump" width="200"/>
+<img src="https://raw.githubusercontent.com/Korkuttum/tuya_heat_pump/main-2.2.0/images/heatpump.webp" width="200">
 
  ⚠️ **Note:**  
 > This integration has only been tested with the heat pump brands listed below.  
