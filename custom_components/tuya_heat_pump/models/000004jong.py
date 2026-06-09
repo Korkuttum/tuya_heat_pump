@@ -1,6 +1,6 @@
 """Model mapping for EV DC R290 Heat Pump (000004jong)."""
 
-MODEL_NAME = "EV DC R290 Heat Pump (000004jong)"
+MODEL_NAME = "Power World PW030 Heat Pump (000004jong)"
 # ====================================================
 # Power World PW030 @HeideggerDaniel
 # ====================================================
