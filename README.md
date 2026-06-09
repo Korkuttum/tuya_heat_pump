@@ -18,16 +18,19 @@
 - Fairland
 - Heative Next
 - Inventor Xforce
+- Ivapool
 - Kushiro (Luqstoff)
 - Mitte Aerotermia
 - MyCond BeeThermic
 - Poolsana
 - Power World
+- Power World PW030
 - Pure Blue Onyx
 - SolarEast
 - Water TechniX
 - W'eau
 - W'eau WFI-007
+- Wopoltop
 ---
 
 This project allows you to control and monitor your Tuya heat pump device through Home Assistant — supports both Cloud and Local (push) connection modes.
