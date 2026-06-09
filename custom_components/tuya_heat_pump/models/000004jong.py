@@ -2,7 +2,7 @@
 
 MODEL_NAME = "EV DC R290 Heat Pump (000004jong)"
 # ====================================================
-# EV DC R290 @HeideggerDaniel
+# Power World PW030 @HeideggerDaniel
 # ====================================================
 SENSOR_TYPES = {
     # Inlet Water Temperature (dp_id: 101)
