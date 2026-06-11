@@ -4,6 +4,10 @@ MODEL_NAME = "Ivapool Heat Pump (000004kb7r)"
 # ====================================================
 # Ivapool @fehrudi87
 # ====================================================
+
+# ====================================================
+# SENSOR TYPES (read-only value - accessMode: "ro")
+# ====================================================
 SENSOR_TYPES = {
     # Current Temperature (dp_id: 108)
     "temp_current1": {
@@ -14,6 +18,7 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
+        "conversion": "(value - 32) * 5/9",
     },
     # Compressor Strength (dp_id: 109)
     "compressor_strength": {
@@ -33,6 +38,7 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-chevron-up",
         "device_class": "temperature",
         "state_class": "measurement",
+        "conversion": "(value - 32) * 5/9",
     },
     # Temperature Lower Limit (dp_id: 111)
     "temp_bottom": {
@@ -43,6 +49,7 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-chevron-down",
         "device_class": "temperature",
         "state_class": "measurement",
+        "conversion": "(value - 32) * 5/9",
     },
     # Outdoor Coil Temperature (dp_id: 112)
     "temp_coiler": {
@@ -53,6 +60,7 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
+        "conversion": "(value - 32) * 5/9",
     },
     # Exhaust / Discharge Temperature (dp_id: 113)
     "temp_venting": {
@@ -63,6 +71,7 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-alert",
         "device_class": "temperature",
         "state_class": "measurement",
+        "conversion": "(value - 32) * 5/9",
     },
     # Outlet Water Temperature (dp_id: 114)
     "temp_effluent": {
@@ -73,6 +82,7 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-water",
         "device_class": "temperature",
         "state_class": "measurement",
+        "conversion": "(value - 32) * 5/9",
     },
     # Ambient Temperature (dp_id: 115)
     "temp_around": {
@@ -83,6 +93,7 @@ SENSOR_TYPES = {
         "icon": "mdi:home-thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
+        "conversion": "(value - 32) * 5/9",
     },
     # Inlet Water Temperature (dp_id: 117)
     "temp_inflow": {
@@ -93,6 +104,7 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-water",
         "device_class": "temperature",
         "state_class": "measurement",
+        "conversion": "(value - 32) * 5/9",
     },
     # Suction / Return Gas Temperature (dp_id: 118)
     "temp_return": {
@@ -103,6 +115,7 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
+        "conversion": "(value - 32) * 5/9",
     },
     # Indoor Coil Temperature (dp_id: 119)
     "temp_coiler_inside": {
@@ -113,6 +126,7 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
+        "conversion": "(value - 32) * 5/9",
     },
     # Radiator Temperature (dp_id: 120)
     "temp_radiator": {
@@ -123,6 +137,7 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
+        "conversion": "(value - 32) * 5/9",
     },
     # Electronic Expansion Valve Opening (dp_id: 121)
     "expansion_valve": {
@@ -229,16 +244,17 @@ SWITCH_TYPES = {
 # ====================================================
 NUMBER_TYPES = {
     # Target Temperature Setpoint (dp_id: 104)
+    # Cihaz dahili olarak Fahrenheit kullanıyor, dönüşüm yapıyoruz
     "temp_set1": {
         "dp_id": 104,
         "code": "temp_set1",
         "name": "Target Temperature",
         "icon": "mdi:thermostat",
         "unit": "°C",
-        "min_value": -22.0,
-        "max_value": 104.0,
+        "min_value": -30.0,  # -22°F ≈ -30°C
+        "max_value": 40.0,   # 104°F ≈ 40°C
         "step": 1.0,
-        "api_conversion": "value",
+        "api_conversion": "(value * 9/5) + 32",  # °C → °F
     },
 }
 
