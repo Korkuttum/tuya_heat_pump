@@ -377,7 +377,8 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             result = response.json()
           
             if result.get('success', False):
-                model_info = json.loads(result['result']['model'])
+                model_str = result['result'].get('model', '{}')
+                model_info = json.loads(model_str) if model_str else {}
                 self.model_id = model_info.get('modelId')
                 _LOGGER.info("✅ Model ID alındı: %s", self.model_id)
               
