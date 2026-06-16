@@ -124,7 +124,7 @@ NUMBER_TYPES = {
         "max_value": 40.0,
         "step": 1.0,
         "api_conversion": "value",
-        "conversion": "value",        # okuma için
+        "conversion": "int(value)",        # okuma için
     },
 }
 
