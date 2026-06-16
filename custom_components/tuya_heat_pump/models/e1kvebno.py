@@ -123,7 +123,9 @@ NUMBER_TYPES = {
         "min_value": 8.0,
         "max_value": 40.0,
         "step": 1.0,
-        "api_conversion": "value"
+        "api_conversion": "value",
+        "conversion": "value",        # okuma için
+        "ha_conversion": "value"      # Home Assistant için
     },
 }
 
