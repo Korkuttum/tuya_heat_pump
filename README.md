@@ -18,6 +18,7 @@
 - Fairland
 - Heative Next
 - Inventor Xforce
+- IPS Pool Systems
 - Ivapool
 - Kushiro (Luqstoff)
 - Mitte Aerotermia
