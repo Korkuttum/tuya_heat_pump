@@ -123,7 +123,6 @@ NUMBER_TYPES = {
         "min_value": 8.0,
         "max_value": 40.0,
         "step": 1.0,
-        "api_conversion": "value",
         "conversion": "int(value)",        # okuma için
     },
 }
