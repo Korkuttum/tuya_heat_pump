@@ -2,7 +2,7 @@
 
 MODEL_NAME = "Tuya Heat Pump (000004joyp)"
 # ====================================================
-# EVOHEAT 40T @andrewboller
+# EVOHEAT 40T @andrewboller | IPS Pool Systems @KaaNee
 # ====================================================
 SENSOR_TYPES = {
     # Inlet Water Temperature
