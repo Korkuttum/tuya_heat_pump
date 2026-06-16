@@ -125,7 +125,6 @@ NUMBER_TYPES = {
         "step": 1.0,
         "api_conversion": "value",
         "conversion": "value",        # okuma için
-        "ha_conversion": "value"      # Home Assistant için
     },
 }
 
