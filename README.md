@@ -10,6 +10,7 @@
 - Arçelik (Beko, Grundig)
 - Adlar Castra
 - Aquark
+- Aquastrong 
 - Aquatech X6
 - Cordivari Vestalis
 - Ecologic Ecopool
