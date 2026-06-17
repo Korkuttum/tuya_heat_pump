@@ -2,15 +2,7 @@
 
 MODEL_NAME = "Aquastrong Pool Heat Pump (e1k1k2nw)"
 # ====================================================
-# Aquastrong Pool Heat Pump
-# Product ID: nxuflhfprft3btpt
-# Model ID: e1k1k2nw
-# Protocol: 3.5 required for local connection
-# Contributed by: @lmatter (ImpatientMaker)
-# ====================================================
-
-# ====================================================
-# SENSOR TYPES (read-only value - accessMode: "ro")
+# Aquastrong @lmatter
 # ====================================================
 SENSOR_TYPES = {
     # Inlet Water Temperature / Pool Temperature (dp_id: 21)
