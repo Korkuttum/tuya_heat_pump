@@ -198,6 +198,8 @@ NUMBER_TYPES = {
         "min_value": 41.0,
         "max_value": 104.0,
         "step": 1.0,
+        "conversion": "int(value)",
+        "api_conversion": "int(value)",
     },
 }
 
