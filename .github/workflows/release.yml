@@ -16,4 +16,4 @@ jobs:
         with:
           files: ${{ github.workspace }}/custom_components/tuya_heat_pump/tuya_heat_pump.zip
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
