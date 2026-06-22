@@ -87,7 +87,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         self.device_id = config_entry.data[CONF_DEVICE_ID]
         self.device_name = DEFAULT_NAME
         self.is_online = True
-        self._previous_online = True  # Değişim takibi için
+        self._previous_online = True
         self.model_id = None
         self.model_mapping = None
         self.dp_mapping = {}
@@ -116,7 +116,6 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         self.access_token = None
 
         if self.connection_type == "cloud":
-            # Cloud modda ekstra bir şey gerekmiyor
             pass
 
         else:
@@ -141,6 +140,23 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             except Exception as err:
                 _LOGGER.error("Failed to initialize TinyTuya device: %s", err)
                 self.local_device = None
+
+    # ============================================================================
+    # YARDIMCI METODLAR
+    # ============================================================================
+
+    def _build_dp_mapping(self):
+        """model_mapping'den dp_mapping dict'ini oluştur."""
+        self.dp_mapping = {}
+        for entity_type in ['sensors', 'binary_sensors', 'switches', 'numbers', 'selects']:
+            for code, config in self.model_mapping.get(entity_type, {}).items():
+                if 'dp_id' in config:
+                    self.dp_mapping[config['dp_id']] = code
+        _LOGGER.info("dp_mapping oluşturuldu - %d DP tanımlı", len(self.dp_mapping))
+
+    # ============================================================================
+    # LOCAL LISTENER
+    # ============================================================================
 
     async def _async_start_listener(self):
         """Start the background listener for instant updates."""
@@ -178,7 +194,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 await asyncio.sleep(5)
 
     def _apply_sent_cache(self, new_data: dict):
-        """Gelen veride eski değer varsa, son gönderilen değeri zorla uygula"""
+        """Gelen veride eski değer varsa, son gönderilen değeri zorla uygula."""
         current_time = time.time()
         for code, (sent_value, sent_time) in list(self._sent_value_cache.items()):
             if current_time - sent_time > self._cache_timeout:
@@ -217,6 +233,10 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             return updated_data
           
         return data
+
+    # ============================================================================
+    # API / İMZA
+    # ============================================================================
 
     def _calculate_sign(self, t: str, path: str, access_token: str = None, method: str = "GET", body: str = "") -> str:
         """Calculate signature for API requests."""
@@ -283,6 +303,10 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER.error("Token alma hatası: %s", str(err))
             raise UpdateFailed(f"{ERROR_CONN}: {str(err)}")
 
+    # ============================================================================
+    # CİHAZ BİLGİSİ
+    # ============================================================================
+
     async def get_device_info(self) -> dict:
         """Get device information."""
         if self.connection_type == "cloud":
@@ -347,7 +371,25 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
     async def get_device_model(self) -> dict:
         """Get device model information - local modda da cloud API kullanılır."""
         _LOGGER.info("get_device_model çağrıldı - connection_type: %s", self.connection_type)
-        
+
+        # ── CACHE KONTROLÜ ──────────────────────────────────────────────────────
+        # config_entry.data içinde daha önce kaydedilmiş model_id var mı?
+        # Anahtar olarak device_id kullanılıyor → aynı modelden 2 cihaz olsa bile
+        # her biri kendi config_entry'sine yazar, birbirini etkilemez.
+        cached_model_id = self.config_entry.data.get("cached_model_id")
+        cached_for_device = self.config_entry.data.get("cached_model_device_id")
+
+        if cached_model_id and cached_for_device == self.device_id:
+            _LOGGER.info(
+                "✅ model_id config_entry cache'den alındı: %s → buluta bağlanılmıyor",
+                cached_model_id
+            )
+            self.model_id = cached_model_id
+            self.model_mapping = await async_load_model_mapping(self.hass, self.model_id)
+            self._build_dp_mapping()
+            return {}
+        # ────────────────────────────────────────────────────────────────────────
+
         try:
             if not self.access_token:
                 _LOGGER.info("Token yok → token alınıyor...")
@@ -383,15 +425,24 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 _LOGGER.info("✅ Model ID alındı: %s", self.model_id)
               
                 self.model_mapping = await async_load_model_mapping(self.hass, self.model_id)
-              
-                self.dp_mapping = {}
-                for entity_type in ['sensors', 'binary_sensors', 'switches', 'numbers', 'selects']:
-                    for code, config in self.model_mapping.get(entity_type, {}).items():
-                        if 'dp_id' in config:
-                            dp_id = config['dp_id']
-                            self.dp_mapping[dp_id] = code
-              
-                _LOGGER.info("Model mapping yüklendi - %d DP tanımlı", len(self.dp_mapping))
+                self._build_dp_mapping()
+
+                # ── CACHE'E YAZ ─────────────────────────────────────────────────
+                # Bir sonraki HA başlatmasında buluta gerek kalmaz.
+                # "default" fallback durumunda kaydetmiyoruz — gerçek model ID
+                # geldiğinde tekrar denesin diye.
+                if self.model_id and self.model_id != "default":
+                    self.hass.config_entries.async_update_entry(
+                        self.config_entry,
+                        data={
+                            **self.config_entry.data,
+                            "cached_model_id": self.model_id,
+                            "cached_model_device_id": self.device_id,
+                        }
+                    )
+                    _LOGGER.info("✅ model_id config_entry'e kaydedildi: %s", self.model_id)
+                # ────────────────────────────────────────────────────────────────
+
                 return model_info
             else:
                 _LOGGER.warning("Model API success=false → default kullanılıyor. Msg: %s", result.get('msg', '—'))
@@ -403,18 +454,16 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
 
         # Default fallback
         self.model_mapping = load_model_mapping("default")
-        self.dp_mapping = {}
-        for entity_type in ['sensors', 'binary_sensors', 'switches', 'numbers', 'selects']:
-            for code, config in self.model_mapping.get(entity_type, {}).items():
-                if 'dp_id' in config:
-                    dp_id = config['dp_id']
-                    self.dp_mapping[dp_id] = code
-        
+        self._build_dp_mapping()
         _LOGGER.info("Default model mapping yüklendi - %d DP tanımlı", len(self.dp_mapping))
         return {}
 
+    # ============================================================================
+    # KOMUT GÖNDERME
+    # ============================================================================
+
     async def send_command(self, code: str, value: Any) -> bool:
-        """Send command to device - local için debounce ile en son değeri gönder"""
+        """Send command to device - local için debounce ile en son değeri gönder."""
         try:
             if self.connection_type == "cloud":
                 if not self.access_token:
@@ -422,8 +471,6 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 t = str(int(time.time() * 1000))
                 path = DEVICE_COMMAND_PATH.format(device_id=self.device_id)
               
-                original_value = value
-                _LOGGER.debug("Cloud → ham değer gönderiliyor: %s", value)
                 properties = {code: value}
                 properties_json = json.dumps(properties)
                 body_dict = {"properties": properties_json}
@@ -463,7 +510,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     _LOGGER.error("❌ Cloud komut başarısız: %s = %s → %s", code, value, error_msg)
                     return False
                   
-            else: # Local mod - DEBOUNCE
+            else:  # Local mod - DEBOUNCE
                 if not self.local_device:
                     _LOGGER.error("Local device not initialized")
                     return False
@@ -505,12 +552,15 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 _LOGGER.info("Local komut debounce beklemede: dp %s (%s) = %s (%.1f sn sonra gönderilecek)",
                              dp_id, code, value, self._debounce_delay)
                
-                # Kullanıcıya hemen başarılı göster
                 return True
                   
         except Exception as err:
             _LOGGER.error("Error sending command %s: %s", code, str(err))
             return False
+
+    # ============================================================================
+    # VERİ GÜNCELLEME (POLL)
+    # ============================================================================
 
     async def _async_update_data(self):
         """Fetch data from Tuya API or local device (Manual Poll)."""
@@ -560,7 +610,6 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     self.async_update_listeners()
                     raise UpdateFailed(f"API error: {msg}")
                
-                # YENİ: Eski mantık - timestamp ile online kontrolü
                 current_time = int(time.time() * 1000)
                 properties = result.get('result', {}).get('properties', [])
                
@@ -569,7 +618,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     time_diff = current_time - latest_timestamp
                    
                     scan_interval_ms = self.update_interval.total_seconds() * 1000 if self.update_interval else 180000
-                    tolerance_ms = scan_interval_ms + (60 * 1000) # +1 dakika
+                    tolerance_ms = scan_interval_ms + (60 * 1000)  # +1 dakika
                    
                     if time_diff > tolerance_ms:
                         self.is_online = False
@@ -585,9 +634,8 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     _LOGGER.info("Online status değişti: %s", "ONLINE" if self.is_online else "OFFLINE")
                     self._previous_online = self.is_online
                
-                self.async_update_listeners() # Binary sensor'ı güncelle
+                self.async_update_listeners()
                
-                # Veri işleme
                 data = {}
                 for prop in properties:
                     code = prop['code']
@@ -645,12 +693,12 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 raise UpdateFailed(f"Local error: {str(err)}")
 
     # ============================================================================
-    # TÜM ENTITY'LER İÇİN TUYA DP ve CODE BİLGİLERİ (YENİ EKLENDİ)
+    # TÜM ENTITY'LER İÇİN TUYA DP ve CODE BİLGİLERİ
     # ============================================================================
 
     @property
     def dp_mapping_dict(self) -> dict:
-        """DP ID → Code mapping (tinytuya tarzı)"""
+        """DP ID → Code mapping (tinytuya tarzı)."""
         return self.dp_mapping
 
     def get_dp_id(self, code: str) -> int | None:
