@@ -27,6 +27,7 @@
 - Poolsana
 - Power World
 - Power World PW030
+- Power World R290 Full DC
 - Pure Blue Onyx
 - SolarEast
 - Water TechniX
