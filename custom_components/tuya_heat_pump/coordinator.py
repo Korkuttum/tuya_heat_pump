@@ -17,7 +17,6 @@ from homeassistant.helpers.update_coordinator import (
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers import device_registry as dr
 from .const import (
     DOMAIN,
     DEFAULT_SCAN_INTERVAL,
@@ -100,8 +99,6 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         # Son gönderilen değer cache (geri alma sorunu için)
         self._sent_value_cache = {}  # code → (value, timestamp)
         self._cache_timeout = 8.0    # 8 saniye
-        # Socket erişimini serileştirmek için lock (local mod)
-        self._socket_lock: asyncio.Lock | None = None
 
         self.device_info = DeviceInfo(
             identifiers={(DOMAIN, self.device_id)},
@@ -136,14 +133,8 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 )
                 self.local_device.set_socketPersistent(True)
                 self.local_device.set_socketNODELAY(True)
-                # receive çağrısı uzun süre lock'u tutmasın
-                self.local_device.set_socketTimeout(1)
-                self.local_device.set_socketRetryLimit(1)
-                _LOGGER.info("Local Tuya device initialized (Persistent + NoDelay + 1s timeout): %s", self.device_id)
-
-                # Socket lock — receive / heartbeat / status / set_value hepsi bu lock arkasında
-                self._socket_lock = asyncio.Lock()
-
+                _LOGGER.info("Local Tuya device initialized (Persistent Mode + NoDelay): %s", self.device_id)
+               
                 self.hass.loop.create_task(self._async_start_listener())
                
             except Exception as err:
@@ -179,16 +170,13 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         while True:
             try:
                 await asyncio.sleep(0.05)
-                # Socket erişimini lock arkasına al — set_value ile çakışmasın
-                async with self._socket_lock:
-                    data = await self.hass.async_add_executor_job(self.local_device.receive)
+                data = await self.hass.async_add_executor_job(self.local_device.receive)
                 if data and 'dps' in data:
                     _LOGGER.debug("Instant update received: %s", data['dps'])
                     new_data = self._process_local_dps(data['dps'])
                     if new_data:
                         self._apply_sent_cache(new_data)
                         self.async_set_updated_data(new_data)
-                # Lock dışında nefes payı — set_value / heartbeat araya girebilsin
                 await asyncio.sleep(0.1)
             except Exception as err:
                 _LOGGER.error("Error in listener loop: %s. Retrying in 5s...", err)
@@ -199,8 +187,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         while True:
             try:
                 if self.local_device:
-                    async with self._socket_lock:
-                        await self.hass.async_add_executor_job(self.local_device.heartbeat)
+                    await self.hass.async_add_executor_job(self.local_device.heartbeat)
                 await asyncio.sleep(5)
             except Exception as err:
                 _LOGGER.debug("Heartbeat error: %s", err)
@@ -321,46 +308,16 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
     # ============================================================================
 
     async def get_device_info(self) -> dict:
-        """Cihaz bilgisini al — hem cloud hem local için buluttan isim çekilir.
-
-        Akış:
-        1) config_entry'de 'cached_device_name' varsa → buluta gitmeden onu kullan
-        2) Yoksa → Tuya cloud API'sinden ham ismi çek
-        3) HA Device Registry'de aynı isimden başka cihaz varsa suffix ekle (örn: "Isı Pompası 2")
-        4) Sonucu config_entry'e cache'le → bir sonraki başlatmada bulut çağrısı yapılmaz
-        """
-
-        # ── 1) CACHE KONTROLÜ ───────────────────────────────────────────────────
-        cached_name = self.config_entry.data.get("cached_device_name")
-        cached_for_device = self.config_entry.data.get("cached_name_device_id")
-        cached_model = self.config_entry.data.get("cached_product_name", DEFAULT_MODEL)
-
-        if cached_name and cached_for_device == self.device_id:
-            _LOGGER.info("✅ Cihaz adı cache'den alındı: %s → buluta bağlanılmıyor", cached_name)
-            self.device_name = cached_name
-            self.device_info = DeviceInfo(
-                identifiers={(DOMAIN, self.device_id)},
-                name=self.device_name,
-                manufacturer=DEFAULT_MANUFACTURER,
-                model=self._format_model(cached_model),
-            )
-            return {}
-        # ────────────────────────────────────────────────────────────────────────
-
-        # ── 2) BULUTTAN ÇEK (hem cloud hem local) ──────────────────────────────
-        raw_name = None
-        product_name = DEFAULT_MODEL
-        device_data: dict = {}
-
-        if self.access_id and self.access_key and self.api_endpoint:
+        """Get device information."""
+        if self.connection_type == "cloud":
             try:
                 if not self.access_token:
                     await self._get_token()
-
+                  
                 t = str(int(time.time() * 1000))
                 path = f"/v1.0/devices/{self.device_id}"
                 sign = self._calculate_sign(t, path, self.access_token)
-
+              
                 headers = {
                     'client_id': self.access_id,
                     'access_token': self.access_token,
@@ -368,126 +325,48 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     't': t,
                     'sign_method': 'HMAC-SHA256',
                 }
-
+              
                 url = f"{self.api_endpoint}{path}"
-                _LOGGER.info("Cloud API'den cihaz bilgisi alınıyor (mod: %s)", self.connection_type)
-
+                _LOGGER.info("Getting device info from API...")
+              
                 response = await self.hass.async_add_executor_job(
                     make_api_request,
                     url,
                     headers
                 )
-
+              
                 result = response.json()
-
+              
                 if result.get('success', False):
                     device_data = result['result']
-                    raw_name = device_data.get('name')
+                    self.device_name = device_data.get('name', DEFAULT_NAME)
                     product_name = device_data.get('product_name', DEFAULT_MODEL)
-                    _LOGGER.info("✅ Buluttan cihaz adı alındı: %s (model: %s)", raw_name, product_name)
+                  
+                    _LOGGER.info("Device name set to: %s", self.device_name)
+                  
+                    self.device_info = DeviceInfo(
+                        identifiers={(DOMAIN, self.device_id)},
+                        name=self.device_name,
+                        manufacturer=DEFAULT_MANUFACTURER,
+                        model=product_name,
+                    )
+                    return device_data
                 else:
-                    _LOGGER.warning("Cihaz bilgisi API başarısız: %s", result.get('msg', '—'))
-
+                    _LOGGER.warning("Failed to get device info, using default name: %s", DEFAULT_NAME)
+                    return {}
+                  
             except Exception as err:
-                _LOGGER.warning("Cihaz bilgisi alma hatası: %s", err)
+                _LOGGER.error("Error getting device info: %s", str(err))
+                return {}
         else:
-            _LOGGER.warning("Cloud credentials eksik → buluttan isim çekilemiyor")
-
-        # ── 3) FALLBACK + SUFFIX ────────────────────────────────────────────────
-        if not raw_name:
-            raw_name = DEFAULT_NAME
-            _LOGGER.info("Bulut'tan isim alınamadı → fallback: %s", raw_name)
-
-        final_name = self._get_unique_name(raw_name)
-        if final_name != raw_name:
-            _LOGGER.info("Aynı isimden başka cihaz var → suffix eklendi: '%s' → '%s'", raw_name, final_name)
-
-        self.device_name = final_name
-        self.device_info = DeviceInfo(
-            identifiers={(DOMAIN, self.device_id)},
-            name=self.device_name,
-            manufacturer=DEFAULT_MANUFACTURER,
-            model=self._format_model(product_name),
-        )
-
-        # ── 4) CACHE'E YAZ ──────────────────────────────────────────────────────
-        # Sadece bulut çağrısı gerçekten başarılı olduysa cache'le.
-        # Fallback (DEFAULT_NAME) durumunda cache'leme → gerçek isim geldiğinde
-        # tekrar denesin diye.
-        # try/except: config_flow validation aşamasında MockConfigEntry kullanılır
-        # ve onun entry_id'si yoktur. Mock durumunda cache yazımı sessizce atlanır.
-        if raw_name != DEFAULT_NAME:
-            try:
-                self.hass.config_entries.async_update_entry(
-                    self.config_entry,
-                    data={
-                        **self.config_entry.data,
-                        "cached_device_name": final_name,
-                        "cached_name_device_id": self.device_id,
-                        "cached_product_name": product_name,
-                    }
-                )
-                _LOGGER.info("✅ Cihaz adı config_entry'e cache'lendi: %s", final_name)
-            except (AttributeError, Exception) as err:
-                _LOGGER.debug(
-                    "Cihaz adı cache yazılamadı (muhtemelen validation/mock entry): %s",
-                    err
-                )
-
-        return device_data
-
-    def _format_model(self, product_name: str) -> str:
-        """Model ismine bağlantı türü suffix'i ekle.
-
-        Cache'te ham product_name tutulur, suffix runtime'da uygulanır.
-        Böylece kullanıcı entegrasyonu farklı modda yeniden kurarsa cache geçerli kalır.
-        """
-        if not product_name:
-            product_name = DEFAULT_MODEL
-        suffix = "(Local)" if self.connection_type == "local" else "(Cloud)"
-        return f"{product_name} {suffix}"
-
-    def _get_unique_name(self, base_name: str) -> str:
-        """HA Device Registry'de aynı isimde başka bir cihaz varsa otomatik suffix ekle.
-
-        Örnek: 'Isı Pompası' zaten varsa → 'Isı Pompası 2' döndürür.
-        Sadece bu domain'e (DOMAIN) ait cihazlar arasında arar.
-        Kendi cihazımızı (aynı device_id) aramaya dahil etmez.
-        """
-        try:
-            device_reg = dr.async_get(self.hass)
-        except Exception as err:
-            _LOGGER.debug("Device registry erişilemedi, suffix atlanıyor: %s", err)
-            return base_name
-
-        # Bu domain'deki diğer cihazların isimlerini topla (bizi hariç)
-        existing_names: set[str] = set()
-        for device in device_reg.devices.values():
-            # Bizim entegrasyonumuza ait mi?
-            is_ours = any(domain == DOMAIN for domain, _ in device.identifiers)
-            if not is_ours:
-                continue
-            # Bu zaten bizim cihazımız mı?
-            is_self = any(id_val == self.device_id for _, id_val in device.identifiers)
-            if is_self:
-                continue
-            # Kullanıcı override etmişse onu, yoksa device name'i al
-            name = device.name_by_user or device.name
-            if name:
-                existing_names.add(name)
-
-        if base_name not in existing_names:
-            return base_name
-
-        # 2, 3, 4 ... dene
-        for i in range(2, 100):
-            candidate = f"{base_name} {i}"
-            if candidate not in existing_names:
-                return candidate
-
-        # 100+ varsa device_id ile fallback (pratikte ulaşılmaz)
-        return f"{base_name} ({self.device_id[-4:]})"
-
+            self.device_name = f"Tuya Heat Pump (Local) {self.device_id[-6:]}"
+            self.device_info = DeviceInfo(
+                identifiers={(DOMAIN, self.device_id)},
+                name=self.device_name,
+                manufacturer=DEFAULT_MANUFACTURER,
+                model="Local Device",
+            )
+            return {}
 
     async def get_device_model(self) -> dict:
         """Get device model information - local modda da cloud API kullanılır."""
@@ -552,24 +431,16 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 # Bir sonraki HA başlatmasında buluta gerek kalmaz.
                 # "default" fallback durumunda kaydetmiyoruz — gerçek model ID
                 # geldiğinde tekrar denesin diye.
-                # try/except: config_flow validation aşamasında MockConfigEntry
-                # kullanılır ve onun entry_id'si yoktur.
                 if self.model_id and self.model_id != "default":
-                    try:
-                        self.hass.config_entries.async_update_entry(
-                            self.config_entry,
-                            data={
-                                **self.config_entry.data,
-                                "cached_model_id": self.model_id,
-                                "cached_model_device_id": self.device_id,
-                            }
-                        )
-                        _LOGGER.info("✅ model_id config_entry'e kaydedildi: %s", self.model_id)
-                    except (AttributeError, Exception) as err:
-                        _LOGGER.debug(
-                            "model_id cache yazılamadı (muhtemelen validation/mock entry): %s",
-                            err
-                        )
+                    self.hass.config_entries.async_update_entry(
+                        self.config_entry,
+                        data={
+                            **self.config_entry.data,
+                            "cached_model_id": self.model_id,
+                            "cached_model_device_id": self.device_id,
+                        }
+                    )
+                    _LOGGER.info("✅ model_id config_entry'e kaydedildi: %s", self.model_id)
                 # ────────────────────────────────────────────────────────────────
 
                 return model_info
@@ -639,7 +510,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     _LOGGER.error("❌ Cloud komut başarısız: %s = %s → %s", code, value, error_msg)
                     return False
                   
-            else:  # Local mod - DEBOUNCE + LOCK + OPTIMISTIC UPDATE
+            else:  # Local mod - DEBOUNCE
                 if not self.local_device:
                     _LOGGER.error("Local device not initialized")
                     return False
@@ -649,76 +520,33 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     _LOGGER.error("No dp_id mapping found for code: %s", code)
                     return False
                
-                # Mevcut bekleyen task varsa iptal et (henüz sleep'teyse hiç gönderilmeyecek)
+                # Mevcut bekleyen task varsa iptal et
                 if code in self._pending_commands:
-                    old_task = self._pending_commands[code][1]
-                    old_task.cancel()
+                    task = self._pending_commands[code][1]
+                    task.cancel()
                     _LOGGER.debug("Önceki debounce iptal edildi: %s", code)
                
-                # ── FLICKER ÖNLEYİCİ ──────────────────────────────────────────
-                # 1) Cache'i HEMEN yaz: debounce penceresinde gelen eski veriler
-                #    _apply_sent_cache tarafından düzeltilsin.
+                # Son gönderilen değeri cache'e yaz
                 self._sent_value_cache[code] = (value, time.time())
-
-                # 2) Coordinator data'sını da iyimser güncelle: UI listener'ı
-                #    beklemeden anında yeni değeri görsün, refresh / poll
-                #    arasındaki "geri sıçrama"yı engelleriz.
-                if self.data and isinstance(self.data, dict):
-                    updated_data = dict(self.data)
-                    now_ms = int(time.time() * 1000)
-                    existing = updated_data.get(code, {})
-                    updated_entry = dict(existing) if existing else {}
-                    updated_entry['value'] = value
-                    updated_entry['timestamp'] = now_ms
-                    updated_entry['type'] = str(type(value).__name__)
-                    updated_entry['last_update'] = datetime.fromtimestamp(now_ms / 1000).strftime('%Y-%m-%d %H:%M:%S')
-                    updated_data[code] = updated_entry
-                    self.async_set_updated_data(updated_data)
-                # ──────────────────────────────────────────────────────────────
-
-                # Yeni debounce task oluştur — task referansını closure ile yakalamak için
-                # önce None olarak hazırla, oluşturduktan sonra ata.
-                task_holder: dict = {"task": None}
-
+               
+                # Yeni debounce task oluştur
                 async def delayed_send():
+                    await asyncio.sleep(self._debounce_delay)
                     try:
-                        await asyncio.sleep(self._debounce_delay)
-                        # Socket erişimi — receive/heartbeat ile çakışmasın
-                        async with self._socket_lock:
-                            result = await self.hass.async_add_executor_job(
-                                self.local_device.set_value, dp_id, value
-                            )
+                        result = await self.hass.async_add_executor_job(
+                            self.local_device.set_value, dp_id, value
+                        )
                         if result:
-                            # Başarılı: cache'in timestamp'ini tazele (8 sn pencere
-                            # gönderim anından sayılsın, tıklama anından değil)
-                            self._sent_value_cache[code] = (value, time.time())
                             _LOGGER.info("✅ Debounce sonrası başarılı: dp %s (%s) = %s", dp_id, code, value)
                         else:
-                            _LOGGER.warning("❌ Debounce sonrası başarısız: dp %s (%s) = %s", dp_id, code, value)
-                            # Cache'i SADECE hâlâ bizim değerimiz duruyorsa temizle
-                            # (araya daha yeni bir send_command girmiş olabilir)
-                            current = self._sent_value_cache.get(code)
-                            if current and current[0] == value:
-                                self._sent_value_cache.pop(code, None)
-                    except asyncio.CancelledError:
-                        # Sleep'te iptal edildi — set_value hiç gönderilmedi.
-                        # Cache'e dokunmuyoruz: iptal eden yeni send_command zaten
-                        # cache'i kendi değeriyle güncellemiş durumda.
-                        _LOGGER.debug("Debounce iptal edildi (sleep aşaması): %s", code)
-                        raise
+                            _LOGGER.warning("❌ Debounce sonrası başarısız: dp %s", dp_id)
                     except Exception as err:
                         _LOGGER.error("Debounce gönderme hatası %s = %s: %s", code, value, err)
-                        current = self._sent_value_cache.get(code)
-                        if current and current[0] == value:
-                            self._sent_value_cache.pop(code, None)
                     finally:
-                        # Sadece bu task hâlâ kayıtlıysa sil (yeni bir komut araya girmiş olabilir)
-                        current = self._pending_commands.get(code)
-                        if current and current[1] is task_holder["task"]:
+                        if code in self._pending_commands:
                             del self._pending_commands[code]
                
                 task = self.hass.loop.create_task(delayed_send())
-                task_holder["task"] = task
                 self._pending_commands[code] = (value, task)
                
                 _LOGGER.info("Local komut debounce beklemede: dp %s (%s) = %s (%.1f sn sonra gönderilecek)",
@@ -832,15 +660,12 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 raise UpdateFailed("Local device not initialized")
           
             try:
-                # status() çağrısı da socket'e erişiyor — lock'a al
-                async with self._socket_lock:
-                    status = await self.hass.async_add_executor_job(self.local_device.status)
+                status = await self.hass.async_add_executor_job(self.local_device.status)
               
                 if not status or 'dps' not in status:
                     _LOGGER.warning("No 'dps' in status response - retrying once")
                     await asyncio.sleep(1.0)
-                    async with self._socket_lock:
-                        status = await self.hass.async_add_executor_job(self.local_device.status)
+                    status = await self.hass.async_add_executor_job(self.local_device.status)
                   
                     if not status or 'dps' not in status:
                         self.is_online = False
