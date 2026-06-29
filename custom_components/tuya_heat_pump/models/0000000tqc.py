@@ -116,6 +116,15 @@ SENSOR_TYPES = {
         "icon": "mdi:fan",
         "state_class": "measurement",
     },
+
+    # AC Fan Speed (read-only enum, exposed as text sensor)
+    "ACFanSpeed": {
+        "dp_id": 140,
+        "code": "ACFanSpeed",
+        "name": "AC Fan Speed",
+        "icon": "mdi:fan",
+        "conversion": "{'LowSpeed': 'Low', 'MidSpeed': 'Medium', 'HighSpeed': 'High', 'STOP': 'Stop'}.get(value, value)"
+    },
 }
 
 BINARY_SENSOR_TYPES = {
@@ -201,7 +210,10 @@ NUMBER_TYPES = {
         "name": "Target Temperature",
         "icon": "mdi:thermometer",
         "unit": "°C",
-        "min_value": 15.0,
+        # Device enforces narrower ranges per mode: Heat 18-40, Cool 12-30.
+        # SetDnLimit (dp 107) and SetUpLimit (dp 108) report the active mode's limits.
+        # Static range covers both; device rejects out-of-range values.
+        "min_value": 12.0,
         "max_value": 40.0,
         "step": 1.0,
         "conversion": "value",
@@ -219,17 +231,6 @@ SELECT_TYPES = {
             "smart": "Auto",
             "warm": "Heat",
             "cool": "Cool"
-        },
-    },
-    "ACFanSpeed": {
-        "dp_id": 140,
-        "code": "ACFanSpeed",
-        "name": "AC Fan Speed",
-        "icon": "mdi:fan",
-        "options": {
-            "LowSpeed": "Low",
-            "MidSpeed": "Medium",
-            "HighSpeed": "High"
         },
     },
 }
