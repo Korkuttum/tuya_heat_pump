@@ -91,6 +91,12 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         self.model_id = None
         self.model_mapping = None
         self.dp_mapping = {}
+        # Raw DP → code cache. Filled from live properties in cloud mode
+        # (every raw-type DP is registered by dp_id). Also populated from
+        # any `raw_source` fields in the model mapping for local mode.
+        # Sensor entities use this to resolve their raw source when the
+        # model file doesn't specify `raw_source` explicitly.
+        self.raw_code_by_dp_id = {}
         self._listener_task = None
         self._heartbeat_task = None
         # Debounce için (local)
@@ -157,6 +163,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 raw_source = config.get('raw_source')
                 if raw_source is not None:
                     self.dp_mapping[config['dp_id']] = raw_source
+                    self.raw_code_by_dp_id[config['dp_id']] = raw_source
                     continue
                 self.dp_mapping[config['dp_id']] = code
         _LOGGER.info("dp_mapping oluşturuldu - %d DP tanımlı", len(self.dp_mapping))
@@ -652,6 +659,13 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                         'type': prop.get('type', ''),
                         'last_update': datetime.fromtimestamp(prop.get('time', 0) / 1000).strftime('%Y-%m-%d %H:%M:%S')
                     }
+                    # Cache raw-type DPs so raw-field sensors can find
+                    # their source without an explicit `raw_source` in
+                    # the model file.
+                    if prop.get('type') == 'raw':
+                        dp_id = prop.get('dp_id')
+                        if dp_id is not None:
+                            self.raw_code_by_dp_id[dp_id] = code
                 return data
                
             except Exception as err:
