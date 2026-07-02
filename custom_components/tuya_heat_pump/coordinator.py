@@ -150,8 +150,15 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         self.dp_mapping = {}
         for entity_type in ['sensors', 'binary_sensors', 'switches', 'numbers', 'selects']:
             for code, config in self.model_mapping.get(entity_type, {}).items():
-                if 'dp_id' in config:
-                    self.dp_mapping[config['dp_id']] = code
+                if 'dp_id' not in config:
+                    continue
+                # Raw-field sensor'lar (birden fazlası aynı dp_id'yi paylaşır)
+                # coordinator.data içinde raw_source code'u ile saklanmalı.
+                raw_source = config.get('raw_source')
+                if raw_source is not None:
+                    self.dp_mapping[config['dp_id']] = raw_source
+                    continue
+                self.dp_mapping[config['dp_id']] = code
         _LOGGER.info("dp_mapping oluşturuldu - %d DP tanımlı", len(self.dp_mapping))
 
     # ============================================================================
