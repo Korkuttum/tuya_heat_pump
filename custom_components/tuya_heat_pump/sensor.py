@@ -39,6 +39,21 @@ def _decode_raw_field(b64_string: str | None, field_index: int,
         _LOGGER.debug("Raw decode failed at field_index=%s: %s", field_index, err)
         return None
 
+
+def _resolve_raw_source(coordinator, config: dict) -> str | None:
+    """Return the coordinator.data key that holds the raw payload for
+    this sensor. Uses explicit `raw_source` from the model if provided,
+    otherwise falls back to a dp_id lookup against the coordinator's
+    raw-DP cache. This lets model files omit `raw_source` when the
+    dp_id alone is enough to identify the payload."""
+    explicit = config.get("raw_source")
+    if explicit:
+        return explicit
+    dp_id = config.get("dp_id")
+    if dp_id is None:
+        return None
+    return getattr(coordinator, "raw_code_by_dp_id", {}).get(dp_id)
+
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
@@ -53,9 +68,12 @@ async def async_setup_entry(
     
     for sensor_code, sensor_config in sensor_configs.items():
         # Raw-field sensor: value comes from decoding a raw payload DP
-        raw_source = sensor_config.get("raw_source")
-        if raw_source is not None:
-            if coordinator.data and raw_source in coordinator.data:
+        if "field_index" in sensor_config:
+            raw_source = _resolve_raw_source(coordinator, sensor_config)
+            if raw_source and coordinator.data and raw_source in coordinator.data:
+                # Stash the resolved source on the config so the entity
+                # doesn't have to resolve it again.
+                sensor_config = {**sensor_config, "raw_source": raw_source}
                 sensors.append(TuyaHeatpumpSensor(coordinator, sensor_code, sensor_config))
                 _LOGGER.info(
                     "Adding raw-field sensor: %s (from %s[%s])",
@@ -65,8 +83,8 @@ async def async_setup_entry(
                 )
             else:
                 _LOGGER.debug(
-                    "Raw source %s not in device data, skipping %s",
-                    raw_source, sensor_code,
+                    "Raw source for dp %s (sensor %s) not resolvable yet, skipping",
+                    sensor_config.get('dp_id'), sensor_code,
                 )
             continue
 
@@ -122,8 +140,10 @@ class TuyaHeatpumpSensor(SensorEntity):
             return self._calculate_power()
 
         # Raw-field sensor: decode from the raw payload DP
-        raw_source = self._config.get("raw_source")
-        if raw_source is not None:
+        if "field_index" in self._config:
+            raw_source = _resolve_raw_source(self.coordinator, self._config)
+            if raw_source is None:
+                return None
             if not self.coordinator.data or raw_source not in self.coordinator.data:
                 return None
             b64_value = self.coordinator.data[raw_source].get('value')
@@ -195,9 +215,9 @@ class TuyaHeatpumpSensor(SensorEntity):
         """Tuya DP ID ve Code bilgilerini attributes'a ekle."""
         attrs: dict[str, Any] = {}
 
-        raw_source = self._config.get("raw_source")
-        if raw_source is not None:
-            attrs["tuya_code"] = raw_source
+        if "field_index" in self._config:
+            raw_source = _resolve_raw_source(self.coordinator, self._config)
+            attrs["tuya_code"] = raw_source or "<unknown>"
             attrs["tuya_dp_id"] = self._config.get("dp_id")
             attrs["raw_field_index"] = self._config.get("field_index")
             attrs["raw_encoding"] = self._config.get("encoding", "int32_be")
@@ -217,11 +237,12 @@ class TuyaHeatpumpSensor(SensorEntity):
         if self._sensor_code in ["calculated_power", "total_energy"]:
             return self.coordinator.last_update_success
 
-        raw_source = self._config.get("raw_source")
-        if raw_source is not None:
+        if "field_index" in self._config:
+            raw_source = _resolve_raw_source(self.coordinator, self._config)
             return (
                 self.coordinator.last_update_success and
                 self.coordinator.data is not None and
+                raw_source is not None and
                 raw_source in self.coordinator.data
             )
 
