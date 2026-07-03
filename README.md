@@ -23,6 +23,7 @@
 - Inventor Xforce
 - IPS Pool Systems
 - Ivapool
+- Kensol
 - Kushiro (Luqstoff)
 - Mitte Aerotermia
 - MyCond BeeThermic
