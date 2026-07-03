@@ -23,20 +23,26 @@ def _decode_raw_field(b64_string: str | None, field_index: int,
                       encoding: str = "int32_be") -> int | None:
     """Decode a single field out of a base64-encoded raw payload.
 
-    Currently supports int32_be (big-endian signed 32-bit). Additional
-    encodings can be added here if future devices need them.
+    Supports:
+        - int32_be : 4-byte big-endian signed  (default; large status blobs)
+        - int16_be : 2-byte big-endian signed  (small counters/timers)
+        - uint8    : 1-byte unsigned            (single-byte flags)
     """
     if not b64_string:
         return None
     try:
         payload = base64.b64decode(b64_string)
-        offset = field_index * 4
         if encoding == "int32_be":
-            return struct.unpack_from(">i", payload, offset)[0]
+            return struct.unpack_from(">i", payload, field_index * 4)[0]
+        if encoding == "int16_be":
+            return struct.unpack_from(">h", payload, field_index * 2)[0]
+        if encoding == "uint8":
+            return payload[field_index]
         _LOGGER.warning("Unknown raw encoding: %s", encoding)
         return None
     except Exception as err:
-        _LOGGER.debug("Raw decode failed at field_index=%s: %s", field_index, err)
+        _LOGGER.debug("Raw decode failed at field_index=%s (%s): %s",
+                      field_index, encoding, err)
         return None
 
 
