@@ -1,8 +1,6 @@
 """Sensor platform for Tuya Heatpump."""
 from __future__ import annotations
-import base64
 import logging
-import struct
 from typing import Any
 
 from homeassistant.core import HomeAssistant
@@ -18,48 +16,6 @@ from .coordinator import TuyaScaleDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-
-def _decode_raw_field(b64_string: str | None, field_index: int,
-                      encoding: str = "int32_be") -> int | None:
-    """Decode a single field out of a base64-encoded raw payload.
-
-    Supports:
-        - int32_be : 4-byte big-endian signed  (default; large status blobs)
-        - int16_be : 2-byte big-endian signed  (small counters/timers)
-        - uint8    : 1-byte unsigned            (single-byte flags)
-    """
-    if not b64_string:
-        return None
-    try:
-        payload = base64.b64decode(b64_string)
-        if encoding == "int32_be":
-            return struct.unpack_from(">i", payload, field_index * 4)[0]
-        if encoding == "int16_be":
-            return struct.unpack_from(">h", payload, field_index * 2)[0]
-        if encoding == "uint8":
-            return payload[field_index]
-        _LOGGER.warning("Unknown raw encoding: %s", encoding)
-        return None
-    except Exception as err:
-        _LOGGER.debug("Raw decode failed at field_index=%s (%s): %s",
-                      field_index, encoding, err)
-        return None
-
-
-def _resolve_raw_source(coordinator, config: dict) -> str | None:
-    """Return the coordinator.data key that holds the raw payload for
-    this sensor. Uses explicit `raw_source` from the model if provided,
-    otherwise falls back to a dp_id lookup against the coordinator's
-    raw-DP cache. This lets model files omit `raw_source` when the
-    dp_id alone is enough to identify the payload."""
-    explicit = config.get("raw_source")
-    if explicit:
-        return explicit
-    dp_id = config.get("dp_id")
-    if dp_id is None:
-        return None
-    return getattr(coordinator, "raw_code_by_dp_id", {}).get(dp_id)
-
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
@@ -73,27 +29,6 @@ async def async_setup_entry(
     sensor_configs = coordinator.model_mapping.get("sensors", {})
     
     for sensor_code, sensor_config in sensor_configs.items():
-        # Raw-field sensor: value comes from decoding a raw payload DP
-        if "field_index" in sensor_config:
-            raw_source = _resolve_raw_source(coordinator, sensor_config)
-            if raw_source and coordinator.data and raw_source in coordinator.data:
-                # Stash the resolved source on the config so the entity
-                # doesn't have to resolve it again.
-                sensor_config = {**sensor_config, "raw_source": raw_source}
-                sensors.append(TuyaHeatpumpSensor(coordinator, sensor_code, sensor_config))
-                _LOGGER.info(
-                    "Adding raw-field sensor: %s (from %s[%s])",
-                    sensor_config.get('name', sensor_code),
-                    raw_source,
-                    sensor_config.get('field_index'),
-                )
-            else:
-                _LOGGER.debug(
-                    "Raw source for dp %s (sensor %s) not resolvable yet, skipping",
-                    sensor_config.get('dp_id'), sensor_code,
-                )
-            continue
-
         if coordinator.data and sensor_code in coordinator.data:
             sensors.append(TuyaHeatpumpSensor(coordinator, sensor_code, sensor_config))
             _LOGGER.info("Adding sensor: %s (%s)", sensor_config.get('name', sensor_code), sensor_code)
@@ -144,34 +79,10 @@ class TuyaHeatpumpSensor(SensorEntity):
         """Return the state of the sensor."""
         if self._sensor_code == "calculated_power":
             return self._calculate_power()
-
-        # Raw-field sensor: decode from the raw payload DP
-        if "field_index" in self._config:
-            raw_source = _resolve_raw_source(self.coordinator, self._config)
-            if raw_source is None:
-                return None
-            if not self.coordinator.data or raw_source not in self.coordinator.data:
-                return None
-            b64_value = self.coordinator.data[raw_source].get('value')
-            raw_value = _decode_raw_field(
-                b64_value,
-                self._config['field_index'],
-                self._config.get('encoding', 'int32_be'),
-            )
-            if raw_value is None:
-                return None
-            # Optional conversion (scale/offset etc.)
-            conversion = Conversion(self._config.get('conversion', 'value'))
-            try:
-                result = conversion.convert(raw_value)
-                return float(result) if isinstance(result, (int, float)) else result
-            except Exception as err:
-                _LOGGER.warning("Conversion failed for raw %s: %s", self._sensor_code, err)
-                return raw_value
-
+            
         if not self.coordinator.data or self._sensor_code not in self.coordinator.data:
             return None
-
+            
         raw_value = self.coordinator.data[self._sensor_code]['value']
 
         conversion = Conversion(self._config.get('conversion', 'value'))
@@ -220,17 +131,10 @@ class TuyaHeatpumpSensor(SensorEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         """Tuya DP ID ve Code bilgilerini attributes'a ekle."""
         attrs: dict[str, Any] = {}
-
-        if "field_index" in self._config:
-            raw_source = _resolve_raw_source(self.coordinator, self._config)
-            attrs["tuya_code"] = raw_source or "<unknown>"
-            attrs["tuya_dp_id"] = self._config.get("dp_id")
-            attrs["raw_field_index"] = self._config.get("field_index")
-            attrs["raw_encoding"] = self._config.get("encoding", "int32_be")
-        else:
-            dp_info = self.coordinator.get_tuya_dp_info(self._sensor_code)
-            attrs["tuya_code"] = dp_info["code"]
-            attrs["tuya_dp_id"] = dp_info["dp_id"]
+        
+        dp_info = self.coordinator.get_tuya_dp_info(self._sensor_code)
+        attrs["tuya_code"] = dp_info["code"]
+        attrs["tuya_dp_id"] = dp_info["dp_id"]
 
         if self.coordinator.model_id:
             attrs["tuya_model_id"] = self.coordinator.model_id
@@ -242,16 +146,7 @@ class TuyaHeatpumpSensor(SensorEntity):
         """Return if entity is available."""
         if self._sensor_code in ["calculated_power", "total_energy"]:
             return self.coordinator.last_update_success
-
-        if "field_index" in self._config:
-            raw_source = _resolve_raw_source(self.coordinator, self._config)
-            return (
-                self.coordinator.last_update_success and
-                self.coordinator.data is not None and
-                raw_source is not None and
-                raw_source in self.coordinator.data
-            )
-
+            
         return (
             self.coordinator.last_update_success and 
             self.coordinator.data is not None and
