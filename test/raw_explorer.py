@@ -346,19 +346,21 @@ def export_snippet(path, labels, dp_code_by_id, device_id):
         dc = UNIT_TO_DEVICE_CLASS.get(unit, "")
         raw_source = dp_code_by_id.get(int(dp_id), f"dp_{dp_id}")
         scale = info.get("scale", "").strip()
+        op = info.get("op", "÷")
         lines.append(f'    "{name}": {{')
         lines.append(f'        "dp_id": {dp_id},')
         lines.append(f'        "code": "{name}",')
         lines.append(f'        "raw_source": "{raw_source}",')
         lines.append(f'        "field_index": {idx},')
         lines.append(f'        "encoding": "int32_be",')
-        # Scale: user enters just the divisor (e.g. "10"), we render it as
-        # "value / 10" for the integration's Conversion helper.
+        # Scale: user enters a divisor/multiplier; render as a Conversion
+        # expression the integration understands.
         if scale and scale not in ("1", "0"):
             try:
-                divisor = float(scale)
-                if divisor and divisor != 1:
-                    lines.append(f'        "conversion": "value / {scale}",')
+                n = float(scale)
+                if n and n != 1:
+                    operator = "*" if op == "×" else "/"
+                    lines.append(f'        "conversion": "value {operator} {scale}",')
             except ValueError:
                 pass
         lines.append(f'        "name": "{raw_name}",')
@@ -628,7 +630,7 @@ class ExplorerApp:
 
         ttk.Label(editor, text="Name:").grid(row=1, column=0, sticky="e", padx=(0, 6))
         self.name_var = tk.StringVar()
-        self.name_entry = ttk.Entry(editor, textvariable=self.name_var, width=32)
+        self.name_entry = ttk.Entry(editor, textvariable=self.name_var, width=30)
         self.name_entry.grid(row=1, column=1, sticky="w")
 
         ttk.Label(editor, text="Unit:").grid(row=1, column=2, sticky="e", padx=(18, 6))
@@ -638,12 +640,23 @@ class ExplorerApp:
         self.unit_combo.grid(row=1, column=3, sticky="w")
 
         ttk.Label(editor, text="Scale:").grid(row=1, column=4, sticky="e", padx=(18, 6))
+        scale_frame = ttk.Frame(editor)
+        scale_frame.grid(row=1, column=5, sticky="w")
+        self.op_var = tk.StringVar(value="÷")
+        self.op_combo = ttk.Combobox(scale_frame, textvariable=self.op_var,
+                                     values=["÷", "×"], width=3, state="readonly")
+        self.op_combo.pack(side="left")
         self.scale_var = tk.StringVar()
-        self.scale_combo = ttk.Combobox(editor, textvariable=self.scale_var,
-                                        values=["", "10", "100", "1000"], width=6)
-        self.scale_combo.grid(row=1, column=5, sticky="w")
+        self.scale_combo = ttk.Combobox(scale_frame, textvariable=self.scale_var,
+                                        values=["", "10", "100", "1000", "0.1", "0.01"],
+                                        width=6)
+        self.scale_combo.pack(side="left", padx=(3, 6))
+        self.preview_var = tk.StringVar(value="")
+        ttk.Label(scale_frame, textvariable=self.preview_var,
+                  foreground="#0a7", font=("TkDefaultFont", 9, "bold")
+                  ).pack(side="left")
 
-        ttk.Label(editor, text="(÷ divisor, blank = no scaling)",
+        ttk.Label(editor, text="(applied to the raw int32 value; blank = no scaling)",
                   foreground="#888").grid(row=2, column=1, columnspan=5,
                                           sticky="w", pady=(2, 6))
 
@@ -656,6 +669,9 @@ class ExplorerApp:
         self.name_entry.bind("<Return>", lambda e: self._save())
         self.unit_combo.bind("<Return>", lambda e: self._save())
         self.scale_combo.bind("<Return>", lambda e: self._save())
+        # Live preview: recompute whenever scale/op changes
+        self.scale_var.trace_add("write", lambda *a: self._update_preview())
+        self.op_var.trace_add("write", lambda *a: self._update_preview())
 
         self.status = tk.StringVar(value="Starting...")
         ttk.Label(self.root, textvariable=self.status, relief="sunken",
@@ -767,6 +783,13 @@ class ExplorerApp:
 
     def _update_tree(self, rows_flat):
         changed_count = 0
+        sel = self.tree.selection()
+        sel_key = None
+        if sel:
+            v = self.tree.item(sel[0], "values")
+            if v:
+                sel_key = f"{v[0]}:{v[3]}"
+
         for r in rows_flat:
             key = f"{r['dp_id']}:{r['field_idx']}"
             iid = self.iid_by_key.get(key)
@@ -793,6 +816,12 @@ class ExplorerApp:
 
             s_hint = self.string_hints.get((r["dp_id"], r["field_idx"]), "")
             self.tree.item(iid, tags=self._tags_for(key, new_val, s_hint))
+
+            # If this row is currently selected, refresh the live preview
+            if key == sel_key:
+                self._current_int32 = new_val
+                self._update_preview()
+
         if changed_count:
             log(f"Update: {changed_count} rows changed.")
 
@@ -825,12 +854,45 @@ class ExplorerApp:
         if s_hint:
             info += f"   |   suggested: '{s_hint}'"
         self.sel_info.set(info)
-        lbl = self.labels.get(key, {"name": "", "unit": "", "scale": ""})
+        lbl = self.labels.get(key, {"name": "", "unit": "", "scale": "", "op": "÷"})
         self.name_var.set(lbl["name"] if lbl["name"] else s_hint)
         self.unit_var.set(lbl["unit"])
         self.scale_var.set(lbl.get("scale", ""))
+        self.op_var.set(lbl.get("op", "÷"))
+        self._current_int32 = int(vals[4]) if vals[4] not in ("", None) else 0
+        self._update_preview()
         self.name_entry.focus_set()
         self.name_entry.select_range(0, tk.END)
+
+    def _update_preview(self):
+        """Compute and show the scaled value for the currently-selected row."""
+        raw = getattr(self, "_current_int32", None)
+        if raw is None:
+            self.preview_var.set("")
+            return
+        scale = self.scale_var.get().strip()
+        if not scale:
+            self.preview_var.set("")
+            return
+        try:
+            n = float(scale)
+        except ValueError:
+            self.preview_var.set("(invalid)")
+            return
+        if n == 0:
+            self.preview_var.set("")
+            return
+        op = self.op_var.get()
+        if op == "÷":
+            result = raw / n
+        else:
+            result = raw * n
+        # Nice formatting: no trailing zeros, but keep decimals when needed
+        if result == int(result):
+            text = f"→ {int(result)}"
+        else:
+            text = f"→ {result:g}"
+        self.preview_var.set(text)
 
     def _save(self):
         sel = self.tree.selection()
@@ -844,11 +906,13 @@ class ExplorerApp:
         name = self.name_var.get().strip()
         unit = self.unit_var.get().strip()
         scale = self.scale_var.get().strip()
+        op = self.op_var.get()
         if name:
-            self.labels[key] = {"name": name, "unit": unit, "scale": scale}
+            self.labels[key] = {"name": name, "unit": unit, "scale": scale, "op": op}
             self.tree.set(iid, "name", name)
             self.tree.set(iid, "unit", unit)
-            self.tree.set(iid, "scale", scale)
+            # Show scale in the table as "÷10" or "×0.1" so it's obvious
+            self.tree.set(iid, "scale", f"{op}{scale}" if scale else "")
         else:
             self.labels.pop(key, None)
             self.tree.set(iid, "name", "")
@@ -878,6 +942,8 @@ class ExplorerApp:
         self.name_var.set("")
         self.unit_var.set("")
         self.scale_var.set("")
+        self.op_var.set("÷")
+        self.preview_var.set("")
         s_hint = self.string_hints.get((int(vals[0]), int(vals[3])), "")
         self.tree.item(iid, tags=self._tags_for(key, int(vals[4]), s_hint))
 
