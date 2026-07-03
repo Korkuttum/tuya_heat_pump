@@ -345,12 +345,22 @@ def export_snippet(path, labels, dp_code_by_id, device_id):
         unit = _norm_unit(info.get("unit", ""))
         dc = UNIT_TO_DEVICE_CLASS.get(unit, "")
         raw_source = dp_code_by_id.get(int(dp_id), f"dp_{dp_id}")
+        scale = info.get("scale", "").strip()
         lines.append(f'    "{name}": {{')
         lines.append(f'        "dp_id": {dp_id},')
         lines.append(f'        "code": "{name}",')
         lines.append(f'        "raw_source": "{raw_source}",')
         lines.append(f'        "field_index": {idx},')
         lines.append(f'        "encoding": "int32_be",')
+        # Scale: user enters just the divisor (e.g. "10"), we render it as
+        # "value / 10" for the integration's Conversion helper.
+        if scale and scale not in ("1", "0"):
+            try:
+                divisor = float(scale)
+                if divisor and divisor != 1:
+                    lines.append(f'        "conversion": "value / {scale}",')
+            except ValueError:
+                pass
         lines.append(f'        "name": "{raw_name}",')
         if unit:
             lines.append(f'        "unit": "{unit}",')
@@ -574,21 +584,22 @@ class ExplorerApp:
         table_wrap.pack(fill="both", expand=True, pady=(0, 8))
 
         columns = ("dp_id", "dp_code", "access", "field_idx",
-                   "int32", "ascii", "string", "min", "max", "name", "unit")
+                   "int32", "ascii", "string", "min", "max", "name", "unit", "scale")
         self.tree = ttk.Treeview(table_wrap, columns=columns,
                                  show="headings", selectmode="browse", height=18)
         for col, text, w, anchor in [
             ("dp_id", "DP", 50, "center"),
-            ("dp_code", "Code", 160, "w"),
+            ("dp_code", "Code", 150, "w"),
             ("access", "Acc", 45, "center"),
             ("field_idx", "Idx", 45, "center"),
             ("int32", "int32", 110, "e"),
             ("ascii", "ASCII", 65, "w"),
-            ("string", "String", 150, "w"),
-            ("min", "min", 90, "e"),
-            ("max", "max", 90, "e"),
-            ("name", "Name", 200, "w"),
-            ("unit", "Unit", 60, "center"),
+            ("string", "String", 130, "w"),
+            ("min", "min", 80, "e"),
+            ("max", "max", 80, "e"),
+            ("name", "Name", 180, "w"),
+            ("unit", "Unit", 55, "center"),
+            ("scale", "÷", 45, "center"),
         ]:
             self.tree.heading(col, text=text)
             self.tree.column(col, width=w, anchor=anchor, stretch=False)
@@ -617,21 +628,34 @@ class ExplorerApp:
 
         ttk.Label(editor, text="Name:").grid(row=1, column=0, sticky="e", padx=(0, 6))
         self.name_var = tk.StringVar()
-        self.name_entry = ttk.Entry(editor, textvariable=self.name_var, width=38)
+        self.name_entry = ttk.Entry(editor, textvariable=self.name_var, width=32)
         self.name_entry.grid(row=1, column=1, sticky="w")
 
         ttk.Label(editor, text="Unit:").grid(row=1, column=2, sticky="e", padx=(18, 6))
         self.unit_var = tk.StringVar()
         self.unit_combo = ttk.Combobox(editor, textvariable=self.unit_var,
-                                       values=COMMON_UNITS, width=10)
+                                       values=COMMON_UNITS, width=8)
         self.unit_combo.grid(row=1, column=3, sticky="w")
 
+        ttk.Label(editor, text="Scale:").grid(row=1, column=4, sticky="e", padx=(18, 6))
+        self.scale_var = tk.StringVar()
+        self.scale_combo = ttk.Combobox(editor, textvariable=self.scale_var,
+                                        values=["", "10", "100", "1000"], width=6)
+        self.scale_combo.grid(row=1, column=5, sticky="w")
+
+        ttk.Label(editor, text="(÷ divisor, blank = no scaling)",
+                  foreground="#888").grid(row=2, column=1, columnspan=5,
+                                          sticky="w", pady=(2, 6))
+
         ttk.Button(editor, text="Save (Enter)",
-                   command=self._save).grid(row=1, column=4, padx=(18, 4))
-        ttk.Button(editor, text="Clear", command=self._clear).grid(row=1, column=5)
+                   command=self._save).grid(row=3, column=0, columnspan=2,
+                                            sticky="w", pady=(4, 0))
+        ttk.Button(editor, text="Clear",
+                   command=self._clear).grid(row=3, column=2, sticky="w", pady=(4, 0))
 
         self.name_entry.bind("<Return>", lambda e: self._save())
         self.unit_combo.bind("<Return>", lambda e: self._save())
+        self.scale_combo.bind("<Return>", lambda e: self._save())
 
         self.status = tk.StringVar(value="Starting...")
         ttk.Label(self.root, textvariable=self.status, relief="sunken",
@@ -724,7 +748,7 @@ class ExplorerApp:
                 "", "end",
                 values=(dp, r["dp_code"], access, idx,
                         r["value"], ascii_hint(r["value"]), s_hint,
-                        r["value"], r["value"], "", ""),
+                        r["value"], r["value"], "", "", ""),
                 tags=tags,
             )
             self.iid_by_key[key] = iid
@@ -801,9 +825,10 @@ class ExplorerApp:
         if s_hint:
             info += f"   |   suggested: '{s_hint}'"
         self.sel_info.set(info)
-        lbl = self.labels.get(key, {"name": "", "unit": ""})
+        lbl = self.labels.get(key, {"name": "", "unit": "", "scale": ""})
         self.name_var.set(lbl["name"] if lbl["name"] else s_hint)
         self.unit_var.set(lbl["unit"])
+        self.scale_var.set(lbl.get("scale", ""))
         self.name_entry.focus_set()
         self.name_entry.select_range(0, tk.END)
 
@@ -818,14 +843,17 @@ class ExplorerApp:
         key = f"{vals[0]}:{vals[3]}"
         name = self.name_var.get().strip()
         unit = self.unit_var.get().strip()
+        scale = self.scale_var.get().strip()
         if name:
-            self.labels[key] = {"name": name, "unit": unit}
+            self.labels[key] = {"name": name, "unit": unit, "scale": scale}
             self.tree.set(iid, "name", name)
             self.tree.set(iid, "unit", unit)
+            self.tree.set(iid, "scale", scale)
         else:
             self.labels.pop(key, None)
             self.tree.set(iid, "name", "")
             self.tree.set(iid, "unit", "")
+            self.tree.set(iid, "scale", "")
         s_hint = self.string_hints.get((int(vals[0]), int(vals[3])), "")
         self.tree.item(iid, tags=self._tags_for(key, int(vals[4]), s_hint))
         nxt = self.tree.next(iid)
@@ -846,8 +874,10 @@ class ExplorerApp:
         self.labels.pop(key, None)
         self.tree.set(iid, "name", "")
         self.tree.set(iid, "unit", "")
+        self.tree.set(iid, "scale", "")
         self.name_var.set("")
         self.unit_var.set("")
+        self.scale_var.set("")
         s_hint = self.string_hints.get((int(vals[0]), int(vals[3])), "")
         self.tree.item(iid, tags=self._tags_for(key, int(vals[4]), s_hint))
 
