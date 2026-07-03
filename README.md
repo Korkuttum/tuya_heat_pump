@@ -13,10 +13,12 @@
 - Aquastrong 
 - Aquatech X6
 - Cordivari Vestalis
+- Della
 - Ecologic Ecopool
 - EnviroSun HP+  _(Still not working yet.)_
 - Evoheat 40T
 - Fairland
+- Fairland Inverter Plus
 - Heative Next
 - Inventor Xforce
 - IPS Pool Systems
