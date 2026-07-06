@@ -10,6 +10,8 @@
 ### Supported Heat Pump Models
 
 > Model files have been prepared based on user feedback.
+<details>
+<summary><b>Supported Heat Pump Models (30 Models)</b></summary>
 
 |  | Brand / Model | GitHub User | Model File | Issue/PR | Published |
 |---|---------------|-------------|------------|----------|-----------|
@@ -43,8 +45,7 @@
 | 28 | W'eau | [@rznq0q](https://github.com/rznq0q) | [e1kvebno](https://github.com/Korkuttum/tuya_heat_pump/blob/main-2.3.0/custom_components/tuya_heat_pump/models/e1kvebno.py) | [#27](https://github.com/Korkuttum/tuya_heat_pump/issues/27) | * |
 | 29 | W'eau WFI-007 | [@OdynBrouwer](https://github.com/OdynBrouwer) | [000003p0fy](https://github.com/Korkuttum/tuya_heat_pump/blob/main-2.3.0/custom_components/tuya_heat_pump/models/000003p0fy.py) | [#39](https://github.com/Korkuttum/tuya_heat_pump/issues/39) | * |
 | 30 | Wopoltop | [@goofee76](https://github.com/goofee76) | [enhs6o](https://github.com/Korkuttum/tuya_heat_pump/blob/main-2.3.0/custom_components/tuya_heat_pump/models/enhs6o.py) | [#42](https://github.com/Korkuttum/tuya_heat_pump/issues/42) | * |
-
----
+</details>
 
 This project allows you to control and monitor your Tuya heat pump device through Home Assistant — supports both Cloud and Local (push) connection modes.
 
