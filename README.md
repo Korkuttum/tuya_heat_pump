@@ -23,6 +23,7 @@
 - Heative Next
 - Inventor Xforce
 - IPS Pool Systems
+- ITS
 - Ivapool
 - Kensol
 - Kushiro (Luqstoff)
