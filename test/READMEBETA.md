@@ -1,4 +1,5 @@
 # Tuya Heat Pump - Home Assistant Integration
+This project allows you to control and monitor your Tuya heat pump device through Home Assistant supports both Cloud and Local (push) connection modes.
 
 <img src="https://raw.githubusercontent.com/Korkuttum/tuya_heat_pump/main-2.2.0/images/heatpump.webp" width="200">
 
@@ -10,6 +11,8 @@
 <details>
  
 <summary><b>Supported Heat Pump Models (31 Models)</b></summary>
+
+> ⚠️ Model files have been prepared based on user feedback.
 
 |  | Brand / Model | GitHub User | Model File | Issue/PR | Published |
 |---|---------------|-------------|------------|----------|-----------|
@@ -46,10 +49,6 @@
 | 31 | Wopoltop | [@goofee76](https://github.com/goofee76) | [enhs6o](https://github.com/Korkuttum/tuya_heat_pump/blob/main-2.3.0/custom_components/tuya_heat_pump/models/enhs6o.py) | [#42](https://github.com/Korkuttum/tuya_heat_pump/issues/42) | * |
 
 </details>
-
-> Model files have been prepared based on user feedback.
-
-This project allows you to control and monitor your Tuya heat pump device through Home Assistant — supports both Cloud and Local (push) connection modes.
 
 ---
 
