@@ -214,36 +214,36 @@ SELECT_TYPES = {
 # --- merge into TEXT_TYPES (from raw_explorer.py, unchanged) ---
 TEXT_TYPES = globals().get("TEXT_TYPES", {})
 TEXT_TYPES.update({
-    "orange_username": {
+    "username_orange": {
         "dp_id": 108,
-        "code": "orange_username",
+        "code": "username_orange",
         "raw_source": "orange_username",
         "field_index": 0,
         "encoding": "utf8_string",
         "max_length": 16,
         "name": "Orange Username",
     },
-    "violet_username": {
+    "username_violet": {
         "dp_id": 109,
-        "code": "violet_username",
+        "code": "username_violet",
         "raw_source": "violet_username",
         "field_index": 0,
         "encoding": "utf8_string",
         "max_length": 16,
         "name": "Violet Username",
     },
-    "blue_username": {
+    "username_blue": {
         "dp_id": 110,
-        "code": "blue_username",
+        "code": "username_blue",
         "raw_source": "blue_username",
         "field_index": 0,
         "encoding": "utf8_string",
         "max_length": 16,
         "name": "Blue Username",
     },
-    "green_username": {
+    "username_green": {
         "dp_id": 111,
-        "code": "green_username",
+        "code": "username_green",
         "raw_source": "green_username",
         "field_index": 0,
         "encoding": "utf8_string",
