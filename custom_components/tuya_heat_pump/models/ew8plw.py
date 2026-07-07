@@ -221,7 +221,7 @@ TEXT_TYPES.update({
         "field_index": 0,
         "encoding": "utf8_string",
         "max_length": 16,
-        "name": "Orange Username",
+        "name": "Username Orange",
     },
     "username_violet": {
         "dp_id": 109,
@@ -230,7 +230,7 @@ TEXT_TYPES.update({
         "field_index": 0,
         "encoding": "utf8_string",
         "max_length": 16,
-        "name": "Violet Username",
+        "name": "Username Violet",
     },
     "username_blue": {
         "dp_id": 110,
@@ -239,7 +239,7 @@ TEXT_TYPES.update({
         "field_index": 0,
         "encoding": "utf8_string",
         "max_length": 16,
-        "name": "Blue Username",
+        "name": "Username Blue",
     },
     "username_green": {
         "dp_id": 111,
@@ -248,6 +248,6 @@ TEXT_TYPES.update({
         "field_index": 0,
         "encoding": "utf8_string",
         "max_length": 16,
-        "name": "Green Username",
+        "name": "Username Green",
     },
 })
