@@ -12,6 +12,7 @@ PLATFORMS = [
     Platform.SWITCH,
     Platform.NUMBER,
     Platform.SELECT,  # Yeni ekledik
+    Platform.TEXT,    # Raw whole-DP string fields (username vb.)
 ]
 
 DEFAULT_SCAN_INTERVAL = 3
