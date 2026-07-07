@@ -27,6 +27,7 @@
 - Ivapool
 - Kensol
 - Kushiro (Luqstoff)
+- Mango
 - Mitte Aerotermia
 - MyCond BeeThermic
 - Poolsana
