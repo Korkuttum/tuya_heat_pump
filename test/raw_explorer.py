@@ -402,6 +402,42 @@ def export_snippet(path, labels, dp_code_by_id, encoding_by_dp, device_id):
                     lines.append(f'        "conversion": "value {operator} {scale}",')
             except ValueError:
                 pass
+
+        # Writable fields (rw/wr DPs) carry an explicit entity_type chosen
+        # by the user in the GUI. Read-only fields omit it entirely — the
+        # integration defaults to a plain sensor when the key is absent.
+        entity_type = info.get("entity_type", "sensor")
+        if entity_type and entity_type != "sensor":
+            lines.append(f'        "entity_type": "{entity_type}",')
+            if entity_type == "number":
+                minv = info.get("min", "").strip()
+                maxv = info.get("max", "").strip()
+                stepv = info.get("step", "").strip()
+                if minv:
+                    lines.append(f'        "min": {minv},')
+                if maxv:
+                    lines.append(f'        "max": {maxv},')
+                if stepv:
+                    lines.append(f'        "step": {stepv},')
+            elif entity_type == "select":
+                opts_raw = info.get("options", "").strip()
+                opts = []
+                for part in opts_raw.split(","):
+                    part = part.strip()
+                    if not part:
+                        continue
+                    if ":" in part:
+                        val, opt_label = part.split(":", 1)
+                        opts.append((val.strip(), opt_label.strip()))
+                    else:
+                        opts.append((part, part))
+                if opts:
+                    lines.append('        "options": {')
+                    for val, opt_label in opts:
+                        lines.append(f'            "{val}": "{opt_label}",')
+                    lines.append('        },')
+            # switch needs no extra config — 0/1 is assumed
+
         lines.append(f'        "name": "{raw_name}",')
         if unit:
             lines.append(f'        "unit": "{unit}",')
@@ -672,41 +708,81 @@ class ExplorerApp:
 
         ttk.Label(editor, text="Name:").grid(row=1, column=0, sticky="e", padx=(0, 6))
         self.name_var = tk.StringVar()
-        self.name_entry = ttk.Entry(editor, textvariable=self.name_var, width=30)
+        self.name_entry = ttk.Entry(editor, textvariable=self.name_var, width=26)
         self.name_entry.grid(row=1, column=1, sticky="w")
 
-        ttk.Label(editor, text="Unit:").grid(row=1, column=2, sticky="e", padx=(18, 6))
-        self.unit_var = tk.StringVar()
-        self.unit_combo = ttk.Combobox(editor, textvariable=self.unit_var,
-                                       values=COMMON_UNITS, width=8)
-        self.unit_combo.grid(row=1, column=3, sticky="w")
+        # Entity type sits right next to Name, since it's the first thing
+        # you decide about a field. Read-only fields: locked to "sensor".
+        # Writable (rw/wr) fields: switch / number / select to pick from.
+        ttk.Label(editor, text="Entity type:").grid(row=1, column=2, sticky="e", padx=(18, 6))
+        self.entity_type_var = tk.StringVar(value="sensor")
+        self.entity_type_combo = ttk.Combobox(
+            editor, textvariable=self.entity_type_var,
+            values=["sensor"], width=10, state="readonly",
+        )
+        self.entity_type_combo.grid(row=1, column=3, sticky="w")
+        self.entity_type_combo.bind("<<ComboboxSelected>>",
+                                     lambda e: self._on_entity_type_change())
 
-        ttk.Label(editor, text="Scale:").grid(row=1, column=4, sticky="e", padx=(18, 6))
-        scale_frame = ttk.Frame(editor)
-        scale_frame.grid(row=1, column=5, sticky="w")
+        # Unit + Scale only make sense for sensor/number — they're a
+        # single frame so they can be hidden together (not just greyed
+        # out) when switch/select is picked, so the panel doesn't show
+        # controls that don't apply to the chosen entity type.
+        self.unit_scale_frame = ttk.Frame(editor)
+        self.unit_scale_frame.grid(row=2, column=0, columnspan=6, sticky="w", pady=(8, 0))
+        ttk.Label(self.unit_scale_frame, text="Unit:").pack(side="left")
+        self.unit_var = tk.StringVar()
+        self.unit_combo = ttk.Combobox(self.unit_scale_frame, textvariable=self.unit_var,
+                                       values=COMMON_UNITS, width=8)
+        self.unit_combo.pack(side="left", padx=(4, 20))
+
+        ttk.Label(self.unit_scale_frame, text="Scale:").pack(side="left")
         self.op_var = tk.StringVar(value="÷")
-        self.op_combo = ttk.Combobox(scale_frame, textvariable=self.op_var,
+        self.op_combo = ttk.Combobox(self.unit_scale_frame, textvariable=self.op_var,
                                      values=["÷", "×"], width=3, state="readonly")
-        self.op_combo.pack(side="left")
+        self.op_combo.pack(side="left", padx=(4, 0))
         self.scale_var = tk.StringVar()
-        self.scale_combo = ttk.Combobox(scale_frame, textvariable=self.scale_var,
+        self.scale_combo = ttk.Combobox(self.unit_scale_frame, textvariable=self.scale_var,
                                         values=["", "10", "100", "1000", "0.1", "0.01"],
                                         width=6)
         self.scale_combo.pack(side="left", padx=(3, 6))
         self.preview_var = tk.StringVar(value="")
-        ttk.Label(scale_frame, textvariable=self.preview_var,
+        ttk.Label(self.unit_scale_frame, textvariable=self.preview_var,
                   foreground="#0a7", font=("TkDefaultFont", 9, "bold")
                   ).pack(side="left")
 
-        ttk.Label(editor, text="(applied to the raw int32 value; blank = no scaling)",
-                  foreground="#888").grid(row=2, column=1, columnspan=5,
-                                          sticky="w", pady=(2, 6))
+        self.unit_scale_desc = ttk.Label(
+            editor, text="(applied to the raw int32 value; blank = no scaling)",
+            foreground="#888")
+        self.unit_scale_desc.grid(row=3, column=1, columnspan=5, sticky="w", pady=(2, 6))
+
+        self.number_frame = ttk.Frame(editor)
+        self.number_frame.grid(row=4, column=0, columnspan=6, sticky="w", pady=(0, 4))
+        ttk.Label(self.number_frame, text="Min:").pack(side="left")
+        self.min_var = tk.StringVar()
+        ttk.Entry(self.number_frame, textvariable=self.min_var, width=8).pack(side="left", padx=(2, 10))
+        ttk.Label(self.number_frame, text="Max:").pack(side="left")
+        self.max_var = tk.StringVar()
+        ttk.Entry(self.number_frame, textvariable=self.max_var, width=8).pack(side="left", padx=(2, 10))
+        ttk.Label(self.number_frame, text="Step:").pack(side="left")
+        self.step_var = tk.StringVar(value="1")
+        ttk.Entry(self.number_frame, textvariable=self.step_var, width=6).pack(side="left", padx=(2, 0))
+        ttk.Label(self.number_frame, text="(leave blank for no limit)",
+                  foreground="#888").pack(side="left", padx=(10, 0))
+
+        self.select_frame = ttk.Frame(editor)
+        self.select_frame.grid(row=4, column=0, columnspan=6, sticky="w", pady=(0, 4))
+        ttk.Label(self.select_frame, text="Values:").pack(side="left")
+        self.options_var = tk.StringVar()
+        ttk.Entry(self.select_frame, textvariable=self.options_var, width=45).pack(side="left", padx=(4, 6))
+        ttk.Label(self.select_frame, text="e.g. 0:Off,1:Low,2:High",
+                  foreground="#888").pack(side="left")
 
         ttk.Button(editor, text="Save (Enter)",
-                   command=self._save).grid(row=3, column=0, columnspan=2,
+                   command=self._save).grid(row=5, column=0, columnspan=2,
                                             sticky="w", pady=(4, 0))
         ttk.Button(editor, text="Clear",
-                   command=self._clear).grid(row=3, column=2, sticky="w", pady=(4, 0))
+                   command=self._clear).grid(row=5, column=2, sticky="w", pady=(4, 0))
 
         self.name_entry.bind("<Return>", lambda e: self._save())
         self.unit_combo.bind("<Return>", lambda e: self._save())
@@ -718,6 +794,9 @@ class ExplorerApp:
         self.status = tk.StringVar(value="Starting...")
         ttk.Label(self.root, textvariable=self.status, relief="sunken",
                   anchor="w", padding=(8, 3)).pack(fill="x", side="bottom")
+
+        self._current_access = "?"
+        self._apply_writable_ui("?")  # locks the dropdown to "sensor" until a row is selected
 
     # ------------------------- queue -------------------------
     def _drain_queue(self):
@@ -910,11 +989,21 @@ class ExplorerApp:
         if s_hint:
             info += f"   |   suggested: '{s_hint}'"
         self.sel_info.set(info)
-        lbl = self.labels.get(key, {"name": "", "unit": "", "scale": "", "op": "÷"})
+        lbl = self.labels.get(key, {
+            "name": "", "unit": "", "scale": "", "op": "÷",
+            "entity_type": "number", "min": "", "max": "", "step": "1", "options": "",
+        })
         self.name_var.set(lbl["name"] if lbl["name"] else s_hint)
         self.unit_var.set(lbl["unit"])
         self.scale_var.set(lbl.get("scale", ""))
         self.op_var.set(lbl.get("op", "÷"))
+        self.entity_type_var.set(lbl.get("entity_type", "number"))
+        self.min_var.set(lbl.get("min", ""))
+        self.max_var.set(lbl.get("max", ""))
+        self.step_var.set(lbl.get("step", "1"))
+        self.options_var.set(lbl.get("options", ""))
+        self._current_access = access
+        self._apply_writable_ui(access)
         try:
             self._current_int32 = int(int32_val) if int32_val not in ("", None) else 0
         except (ValueError, TypeError):
@@ -922,6 +1011,57 @@ class ExplorerApp:
         self._update_preview()
         self.name_entry.focus_set()
         self.name_entry.select_range(0, tk.END)
+
+    def _apply_writable_ui(self, access):
+        """Configure the entity-type dropdown for the selected field:
+        read-only fields are locked to 'sensor'; writable (rw/wr) fields
+        get the switch/number/select choices, unlocked."""
+        if access in ("rw", "wr"):
+            self.entity_type_combo.configure(
+                values=["switch", "number", "select"], state="readonly")
+            if self.entity_type_var.get() not in ("switch", "number", "select"):
+                self.entity_type_var.set("number")
+        else:
+            self.entity_type_combo.configure(values=["sensor"], state="disabled")
+            self.entity_type_var.set("sensor")
+        self._on_entity_type_change()
+
+    def _on_entity_type_change(self):
+        """Show the Number min/max/step row or the Select values row,
+        matching whichever entity type is currently picked. Both stay
+        hidden for read-only fields or when Switch is picked (needs no
+        extra config)."""
+        if self._current_access not in ("rw", "wr"):
+            self.number_frame.grid_remove()
+            self.select_frame.grid_remove()
+            self._sync_unit_scale_state()
+            return
+        et = self.entity_type_var.get()
+        if et == "number":
+            self.number_frame.grid()
+            self.select_frame.grid_remove()
+        elif et == "select":
+            self.select_frame.grid()
+            self.number_frame.grid_remove()
+        else:  # switch — no extra fields needed
+            self.number_frame.grid_remove()
+            self.select_frame.grid_remove()
+        self._sync_unit_scale_state()
+
+    def _sync_unit_scale_state(self):
+        """Unit and Scale don't apply to switch/select: a switch is
+        always plain 0/1, and select's raw value must match its
+        `options` dict keys exactly — scaling it would break that
+        mapping. Hide the whole row for those two entity types instead
+        of just greying it out, so the panel only shows what's relevant."""
+        hide = (self._current_access in ("rw", "wr")
+                and self.entity_type_var.get() in ("switch", "select"))
+        if hide:
+            self.unit_scale_frame.grid_remove()
+            self.unit_scale_desc.grid_remove()
+        else:
+            self.unit_scale_frame.grid()
+            self.unit_scale_desc.grid()
 
     def _update_preview(self):
         """Compute and show the scaled value for the currently-selected row."""
@@ -962,12 +1102,29 @@ class ExplorerApp:
         if not vals:
             return
         key = f"{vals[0]}:{vals[3]}"
+        access = vals[2]
         name = self.name_var.get().strip()
         unit = self.unit_var.get().strip()
         scale = self.scale_var.get().strip()
         op = self.op_var.get()
+        # Entity type only applies to writable (rw/wr) fields; read-only
+        # fields always stay plain sensors regardless of the picker state.
+        entity_type = self.entity_type_var.get() if access in ("rw", "wr") else "sensor"
+        # Unit/scale are meaningless for switch (always 0/1) and select
+        # (raw value must stay untouched to match the options dict keys)
+        if entity_type in ("switch", "select"):
+            unit = ""
+            scale = ""
+        min_v = self.min_var.get().strip()
+        max_v = self.max_var.get().strip()
+        step_v = self.step_var.get().strip()
+        options_v = self.options_var.get().strip()
         if name:
-            self.labels[key] = {"name": name, "unit": unit, "scale": scale, "op": op}
+            self.labels[key] = {
+                "name": name, "unit": unit, "scale": scale, "op": op,
+                "entity_type": entity_type, "min": min_v, "max": max_v,
+                "step": step_v, "options": options_v,
+            }
             self.tree.set(iid, "name", name)
             self.tree.set(iid, "unit", unit)
             # Show scale in the table as "÷10" or "×0.1" so it's obvious
@@ -1003,6 +1160,11 @@ class ExplorerApp:
         self.scale_var.set("")
         self.op_var.set("÷")
         self.preview_var.set("")
+        self.min_var.set("")
+        self.max_var.set("")
+        self.step_var.set("1")
+        self.options_var.set("")
+        self._apply_writable_ui(self._current_access)
         s_hint = self.string_hints.get((int(vals[0]), int(vals[3])), "")
         self.tree.item(iid, tags=self._tags_for(key, int(vals[5]) if vals[5] not in ("", None) else 0, s_hint))
 
