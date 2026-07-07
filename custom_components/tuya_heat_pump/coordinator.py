@@ -653,8 +653,11 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 data = {}
                 for prop in properties:
                     code = prop['code']
+                    # Some write-only command DPs (e.g. general_set_cmd on
+                    # Mango heat pumps) come without a 'value' key at all.
+                    # Use .get() so we don't KeyError during setup.
                     data[code] = {
-                        'value': prop['value'],
+                        'value': prop.get('value'),
                         'timestamp': prop.get('time', 0),
                         'type': prop.get('type', ''),
                         'last_update': datetime.fromtimestamp(prop.get('time', 0) / 1000).strftime('%Y-%m-%d %H:%M:%S')
