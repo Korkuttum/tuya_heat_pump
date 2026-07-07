@@ -7,6 +7,7 @@ import hashlib
 import requests
 import json
 import asyncio
+import threading
 from datetime import datetime, timedelta
 from typing import Any
 from homeassistant.core import HomeAssistant
@@ -138,6 +139,14 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             self.ip = config_entry.data[CONF_IP]
             self.local_key = config_entry.data[CONF_LOCAL_KEY]
             self.protocol = float(config_entry.data.get(CONF_PROTOCOL, "3.4"))
+            # tinytuya'nın kalıcı soketi thread-safe değil. status()/
+            # receive()/heartbeat()/set_value() hepsi async_add_executor_job
+            # ile ayrı thread'lerde çalışıyor (listener loop, heartbeat loop,
+            # periyodik poll, debounce'lı yazma) — bu kilit olmadan ikisi
+            # aynı anda soketi kullanırsa cevap karışıp "No dps in status
+            # response" gibi hatalara yol açıyor. Tüm local_device.* erişimi
+            # bu kilit üzerinden (_local_status/_local_receive/vb.) geçmeli.
+            self._local_socket_lock = threading.Lock()
             try:
                 self.local_device = tinytuya.Device(
                     dev_id=self.device_id,
@@ -195,6 +204,27 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
     # LOCAL LISTENER
     # ============================================================================
 
+    def _local_status(self):
+        """Locked wrapper around local_device.status() — see the lock
+        comment in __init__ for why this matters."""
+        with self._local_socket_lock:
+            return self.local_device.status()
+
+    def _local_receive(self):
+        """Locked wrapper around local_device.receive()."""
+        with self._local_socket_lock:
+            return self.local_device.receive()
+
+    def _local_heartbeat(self):
+        """Locked wrapper around local_device.heartbeat()."""
+        with self._local_socket_lock:
+            return self.local_device.heartbeat()
+
+    def _local_set_value(self, dp_id, value):
+        """Locked wrapper around local_device.set_value()."""
+        with self._local_socket_lock:
+            return self.local_device.set_value(dp_id, value)
+
     async def _async_start_listener(self):
         """Start the background listener for instant updates."""
         _LOGGER.info("Starting TinyTuya listener loop for %s", self.device_id)
@@ -207,7 +237,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         while True:
             try:
                 await asyncio.sleep(0.05)
-                data = await self.hass.async_add_executor_job(self.local_device.receive)
+                data = await self.hass.async_add_executor_job(self._local_receive)
                 if data and 'dps' in data:
                     _LOGGER.debug("Instant update received: %s", data['dps'])
                     new_data = self._process_local_dps(data['dps'])
@@ -224,7 +254,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         while True:
             try:
                 if self.local_device:
-                    await self.hass.async_add_executor_job(self.local_device.heartbeat)
+                    await self.hass.async_add_executor_job(self._local_heartbeat)
                 await asyncio.sleep(5)
             except Exception as err:
                 _LOGGER.debug("Heartbeat error: %s", err)
@@ -571,7 +601,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     await asyncio.sleep(self._debounce_delay)
                     try:
                         result = await self.hass.async_add_executor_job(
-                            self.local_device.set_value, dp_id, value
+                            self._local_set_value, dp_id, value
                         )
                         if result:
                             _LOGGER.info("✅ Debounce sonrası başarılı: dp %s (%s) = %s", dp_id, code, value)
@@ -739,12 +769,12 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 raise UpdateFailed("Local device not initialized")
           
             try:
-                status = await self.hass.async_add_executor_job(self.local_device.status)
+                status = await self.hass.async_add_executor_job(self._local_status)
               
                 if not status or 'dps' not in status:
                     _LOGGER.warning("No 'dps' in status response - retrying once")
                     await asyncio.sleep(1.0)
-                    status = await self.hass.async_add_executor_job(self.local_device.status)
+                    status = await self.hass.async_add_executor_job(self._local_status)
                   
                     if not status or 'dps' not in status:
                         self.is_online = False
