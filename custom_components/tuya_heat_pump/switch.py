@@ -12,6 +12,7 @@ from homeassistant.exceptions import HomeAssistantError
 from .const import DOMAIN
 from .conversion import Conversion
 from .coordinator import TuyaScaleDataUpdateCoordinator
+from .raw_codec import decode_raw_field, resolve_raw_source
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,6 +30,26 @@ async def async_setup_entry(
     switch_configs = coordinator.model_mapping.get("switches", {})
     
     for switch_code, switch_config in switch_configs.items():
+        # Raw-field switch: on/off comes from a single byte/int packed
+        # inside a raw payload DP, not a plain bool DP.
+        if "field_index" in switch_config:
+            raw_source = resolve_raw_source(coordinator, switch_config)
+            if raw_source and coordinator.data and raw_source in coordinator.data:
+                switch_config = {**switch_config, "raw_source": raw_source}
+                switches.append(TuyaHeatpumpSwitch(coordinator, switch_code, switch_config))
+                _LOGGER.info(
+                    "Adding raw-field switch: %s (from %s[%s])",
+                    switch_config.get('name', switch_code),
+                    raw_source,
+                    switch_config.get('field_index'),
+                )
+            else:
+                _LOGGER.debug(
+                    "Raw source for dp %s (switch %s) not resolvable yet, skipping",
+                    switch_config.get('dp_id'), switch_code,
+                )
+            continue
+
         switches.append(
             TuyaHeatpumpSwitch(coordinator, switch_code, switch_config)
         )
@@ -74,6 +95,20 @@ class TuyaHeatpumpSwitch(SwitchEntity):
     @property
     def is_on(self) -> bool | None:
         """Return true if switch is on."""
+        if "field_index" in self._config:
+            raw_source = resolve_raw_source(self.coordinator, self._config)
+            if raw_source is None or not self.coordinator.data or raw_source not in self.coordinator.data:
+                return None
+            b64_value = self.coordinator.data[raw_source].get('value')
+            raw_value = decode_raw_field(
+                b64_value,
+                self._config['field_index'],
+                self._config.get('encoding', 'uint8'),
+            )
+            if raw_value is None:
+                return None
+            return bool(raw_value)
+
         if not self.coordinator.data or self._switch_code not in self.coordinator.data:
             return None
             
@@ -100,10 +135,17 @@ class TuyaHeatpumpSwitch(SwitchEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         """Tuya DP ID ve Code bilgilerini attributes'a ekle."""
         attrs: dict[str, Any] = {}
-        
-        dp_info = self.coordinator.get_tuya_dp_info(self._switch_code)
-        attrs["tuya_code"] = dp_info["code"]
-        attrs["tuya_dp_id"] = dp_info["dp_id"]
+
+        if "field_index" in self._config:
+            raw_source = resolve_raw_source(self.coordinator, self._config)
+            attrs["tuya_code"] = raw_source or "<unknown>"
+            attrs["tuya_dp_id"] = self._config.get("dp_id")
+            attrs["raw_field_index"] = self._config.get("field_index")
+            attrs["raw_encoding"] = self._config.get("encoding", "uint8")
+        else:
+            dp_info = self.coordinator.get_tuya_dp_info(self._switch_code)
+            attrs["tuya_code"] = dp_info["code"]
+            attrs["tuya_dp_id"] = dp_info["dp_id"]
 
         if self.coordinator.model_id:
             attrs["tuya_model_id"] = self.coordinator.model_id
@@ -114,16 +156,29 @@ class TuyaHeatpumpSwitch(SwitchEntity):
         """Turn the switch on."""
         _LOGGER.info("Turning ON %s", self._switch_code)
 
-        api_value = True
-        if (api_conversion := self._config.get('api_conversion')) is not None:
-            conversion = Conversion(api_conversion)
-            try:
-                api_value = conversion.convert(api_value)
-                _LOGGER.debug("Converted ON → API value %s", api_value)
-            except Exception as err:
-                _LOGGER.warning("API conversion failed: %s", err)
-        
-        success = await self.coordinator.send_command(self._switch_code, api_value)
+        if "field_index" in self._config:
+            raw_source = resolve_raw_source(self.coordinator, self._config)
+            if raw_source is None:
+                raise HomeAssistantError(
+                    f"{self._config.get('name', self._switch_code)}: raw source not resolved yet"
+                )
+            success = await self.coordinator.send_raw_field_command(
+                raw_source,
+                self._config['field_index'],
+                self._config.get('encoding', 'uint8'),
+                1,
+            )
+        else:
+            api_value = True
+            if (api_conversion := self._config.get('api_conversion')) is not None:
+                conversion = Conversion(api_conversion)
+                try:
+                    api_value = conversion.convert(api_value)
+                    _LOGGER.debug("Converted ON → API value %s", api_value)
+                except Exception as err:
+                    _LOGGER.warning("API conversion failed: %s", err)
+
+            success = await self.coordinator.send_command(self._switch_code, api_value)
         
         if success:
             _LOGGER.info("✅ Successfully turned ON %s", self._switch_code)
@@ -138,16 +193,29 @@ class TuyaHeatpumpSwitch(SwitchEntity):
         """Turn the switch off."""
         _LOGGER.info("Turning OFF %s", self._switch_code)
 
-        api_value = False
-        if (api_conversion := self._config.get('api_conversion')) is not None:
-            conversion = Conversion(api_conversion)
-            try:
-                api_value = conversion.convert(api_value)
-                _LOGGER.debug("Converted OFF → API value %s", api_value)
-            except Exception as err:
-                _LOGGER.warning("API conversion failed: %s", err)
-        
-        success = await self.coordinator.send_command(self._switch_code, api_value)
+        if "field_index" in self._config:
+            raw_source = resolve_raw_source(self.coordinator, self._config)
+            if raw_source is None:
+                raise HomeAssistantError(
+                    f"{self._config.get('name', self._switch_code)}: raw source not resolved yet"
+                )
+            success = await self.coordinator.send_raw_field_command(
+                raw_source,
+                self._config['field_index'],
+                self._config.get('encoding', 'uint8'),
+                0,
+            )
+        else:
+            api_value = False
+            if (api_conversion := self._config.get('api_conversion')) is not None:
+                conversion = Conversion(api_conversion)
+                try:
+                    api_value = conversion.convert(api_value)
+                    _LOGGER.debug("Converted OFF → API value %s", api_value)
+                except Exception as err:
+                    _LOGGER.warning("API conversion failed: %s", err)
+
+            success = await self.coordinator.send_command(self._switch_code, api_value)
         
         if success:
             _LOGGER.info("✅ Successfully turned OFF %s", self._switch_code)
@@ -161,6 +229,15 @@ class TuyaHeatpumpSwitch(SwitchEntity):
     @property
     def available(self) -> bool:
         """Return if entity is available."""
+        if "field_index" in self._config:
+            raw_source = resolve_raw_source(self.coordinator, self._config)
+            return (
+                self.coordinator.last_update_success and
+                self.coordinator.data is not None and
+                raw_source is not None and
+                raw_source in self.coordinator.data
+            )
+
         return (
             self.coordinator.last_update_success and 
             self.coordinator.data is not None and
