@@ -41,6 +41,7 @@ from .const import (
 )
 import tinytuya
 from .model_loader import load_model_mapping, async_load_model_mapping
+from .raw_codec import encode_raw_field
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -97,6 +98,14 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         # Sensor entities use this to resolve their raw source when the
         # model file doesn't specify `raw_source` explicitly.
         self.raw_code_by_dp_id = {}
+        # Serializes raw-field writes: a read-modify-write on a raw DP
+        # (fetch current payload → patch one field → send whole payload
+        # back) must not race with another write to a different field
+        # of the SAME raw DP, or one write can clobber the other's byte
+        # patch. A single lock across all raw DPs is simpler than one
+        # per dp_id and writes are infrequent enough that the extra
+        # serialization has no practical cost.
+        self._raw_write_lock = asyncio.Lock()
         self._listener_task = None
         self._heartbeat_task = None
         # Debounce için (local)
@@ -154,7 +163,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
     def _build_dp_mapping(self):
         """model_mapping'den dp_mapping dict'ini oluştur."""
         self.dp_mapping = {}
-        for entity_type in ['sensors', 'binary_sensors', 'switches', 'numbers', 'selects']:
+        for entity_type in ['sensors', 'binary_sensors', 'switches', 'numbers', 'selects', 'texts']:
             for code, config in self.model_mapping.get(entity_type, {}).items():
                 if 'dp_id' not in config:
                     continue
@@ -571,6 +580,41 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         except Exception as err:
             _LOGGER.error("Error sending command %s: %s", code, str(err))
             return False
+
+    async def send_raw_field_command(self, raw_source: str, field_index: int,
+                                       encoding: str, value) -> bool:
+        """Write a single field inside a raw-type DP.
+
+        Tuya raw DPs are opaque byte blobs with no partial write — every
+        field write has to re-send the WHOLE payload. This does a
+        read-modify-write: takes the most recently polled payload for
+        `raw_source` from self.data, patches just this one field's bytes,
+        and sends the full patched payload back through the existing
+        send_command() path (so cloud/local dispatch, debounce, and the
+        sent-value cache all keep working exactly as before).
+
+        Returns False (does not raise) if the payload hasn't been read
+        yet — the caller should surface that as "try again after the
+        next poll" rather than a hard failure.
+        """
+        if not self.data or raw_source not in self.data:
+            _LOGGER.error(
+                "Cannot write raw field '%s': no cached payload yet — "
+                "wait for the next poll and try again", raw_source
+            )
+            return False
+
+        current_b64 = self.data[raw_source].get('value')
+        new_b64 = encode_raw_field(current_b64, field_index, encoding, value)
+        if new_b64 is None:
+            _LOGGER.error(
+                "Cannot write raw field '%s' (field_index=%s, encoding=%s): encode failed",
+                raw_source, field_index, encoding,
+            )
+            return False
+
+        async with self._raw_write_lock:
+            return await self.send_command(raw_source, new_b64)
 
     # ============================================================================
     # VERİ GÜNCELLEME (POLL)
