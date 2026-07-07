@@ -95,3 +95,49 @@ def resolve_raw_source(coordinator, config: dict) -> str | None:
     if dp_id is None:
         return None
     return getattr(coordinator, "raw_code_by_dp_id", {}).get(dp_id)
+
+
+def watch_pending_raw_entities(config_entry, coordinator, async_add_entities,
+                                 pending, entity_class, logger):
+    """Retry adding raw-field entities whose payload wasn't available yet
+    at platform setup time.
+
+    Cloud's single `/shadow/properties` call tends to return every DP in
+    one shot, but local (LAN) connections sometimes don't include large
+    "raw" DPs in the very first `.status()` poll — they arrive a bit
+    later over the persistent socket. Without this, an entity whose raw
+    source wasn't ready on the first pass would be skipped forever.
+
+    This registers a coordinator listener that re-checks the pending
+    list on every update, adds any entity whose raw_source has since
+    become resolvable, and stops watching it once added. `pending` is a
+    plain list of (code, config) tuples, mutated in place so the caller
+    doesn't need to manage its own bookkeeping. `entity_class` must have
+    the same (coordinator, code, config) constructor signature used by
+    every entity class in this integration.
+    """
+    if not pending:
+        return
+
+    def _check_pending():
+        if not pending:
+            return
+        newly_ready = []
+        still_pending = []
+        for code, config in pending:
+            raw_source = resolve_raw_source(coordinator, config)
+            if raw_source and coordinator.data and raw_source in coordinator.data:
+                resolved_config = {**config, "raw_source": raw_source}
+                newly_ready.append(entity_class(coordinator, code, resolved_config))
+                logger.info(
+                    "Raw source now available, adding delayed entity: %s (%s)",
+                    resolved_config.get('name', code), code,
+                )
+            else:
+                still_pending.append((code, config))
+        pending[:] = still_pending
+        if newly_ready:
+            async_add_entities(newly_ready)
+
+    remove_listener = coordinator.async_add_listener(_check_pending)
+    config_entry.async_on_unload(remove_listener)
