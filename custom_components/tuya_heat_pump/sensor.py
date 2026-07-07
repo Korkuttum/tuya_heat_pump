@@ -15,6 +15,7 @@ from .conversion import Conversion
 from .coordinator import TuyaScaleDataUpdateCoordinator
 from .raw_codec import decode_raw_field as _decode_raw_field
 from .raw_codec import resolve_raw_source as _resolve_raw_source
+from .raw_codec import watch_pending_raw_entities
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,6 +28,7 @@ async def async_setup_entry(
     coordinator: TuyaScaleDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
     
     sensors = []
+    pending = []
     
     sensor_configs = coordinator.model_mapping.get("sensors", {})
     
@@ -46,8 +48,12 @@ async def async_setup_entry(
                     sensor_config.get('field_index'),
                 )
             else:
+                # Not in the first poll yet — common on local/LAN
+                # connections for large raw DPs. Keep retrying on future
+                # updates instead of skipping this entity forever.
+                pending.append((sensor_code, sensor_config))
                 _LOGGER.debug(
-                    "Raw source for dp %s (sensor %s) not resolvable yet, skipping",
+                    "Raw source for dp %s (sensor %s) not resolvable yet, will retry",
                     sensor_config.get('dp_id'), sensor_code,
                 )
             continue
@@ -65,6 +71,10 @@ async def async_setup_entry(
             _LOGGER.debug("Sensor %s not found in device data, skipping", sensor_code)
     
     async_add_entities(sensors)
+    watch_pending_raw_entities(
+        config_entry, coordinator, async_add_entities,
+        pending, TuyaHeatpumpSensor, _LOGGER,
+    )
 
 
 class TuyaHeatpumpSensor(SensorEntity):
