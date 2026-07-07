@@ -12,6 +12,7 @@ from homeassistant.exceptions import HomeAssistantError
 from .const import DOMAIN
 from .conversion import Conversion
 from .coordinator import TuyaScaleDataUpdateCoordinator
+from .raw_codec import decode_raw_field, resolve_raw_source
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,6 +29,25 @@ async def async_setup_entry(
     number_configs = coordinator.model_mapping.get("numbers", {})
     
     for number_code, number_config in number_configs.items():
+        # Raw-field number: value comes from decoding a raw payload DP.
+        if "field_index" in number_config:
+            raw_source = resolve_raw_source(coordinator, number_config)
+            if raw_source and coordinator.data and raw_source in coordinator.data:
+                number_config = {**number_config, "raw_source": raw_source}
+                numbers.append(TuyaHeatpumpNumber(coordinator, number_code, number_config))
+                _LOGGER.info(
+                    "Adding raw-field number: %s (from %s[%s])",
+                    number_config.get('name', number_code),
+                    raw_source,
+                    number_config.get('field_index'),
+                )
+            else:
+                _LOGGER.debug(
+                    "Raw source for dp %s (number %s) not resolvable yet, skipping",
+                    number_config.get('dp_id'), number_code,
+                )
+            continue
+
         numbers.append(
             TuyaHeatpumpNumber(coordinator, number_code, number_config)
         )
@@ -78,6 +98,26 @@ class TuyaHeatpumpNumber(NumberEntity):
     @property
     def native_value(self) -> float | None:
         """Return the current value."""
+        if "field_index" in self._config:
+            raw_source = resolve_raw_source(self.coordinator, self._config)
+            if raw_source is None or not self.coordinator.data or raw_source not in self.coordinator.data:
+                return None
+            b64_value = self.coordinator.data[raw_source].get('value')
+            raw_value = decode_raw_field(
+                b64_value,
+                self._config['field_index'],
+                self._config.get('encoding', 'int32_be'),
+            )
+            if raw_value is None:
+                return None
+            conversion = Conversion(self._config.get('conversion', 'value'))
+            try:
+                result = conversion.convert(raw_value)
+                return float(result) if isinstance(result, (int, float)) else result
+            except Exception as err:
+                _LOGGER.warning("Conversion failed for raw %s: %s", self._number_code, err)
+                return raw_value
+
         if not self.coordinator.data or self._number_code not in self.coordinator.data:
             return None
             
@@ -104,8 +144,21 @@ class TuyaHeatpumpNumber(NumberEntity):
                 _LOGGER.debug("Converted HA value %s → API value %s", value, api_value)
             except Exception as err:
                 _LOGGER.warning("API conversion failed: %s", err)
-        
-        success = await self.coordinator.send_command(self._number_code, api_value)
+
+        if "field_index" in self._config:
+            raw_source = resolve_raw_source(self.coordinator, self._config)
+            if raw_source is None:
+                raise HomeAssistantError(
+                    f"{self._config.get('name', self._number_code)}: raw source not resolved yet"
+                )
+            success = await self.coordinator.send_raw_field_command(
+                raw_source,
+                self._config['field_index'],
+                self._config.get('encoding', 'int32_be'),
+                api_value,
+            )
+        else:
+            success = await self.coordinator.send_command(self._number_code, api_value)
         
         if success:
             _LOGGER.info("✅ Successfully set %s to %s", self._number_code, value)
@@ -124,9 +177,16 @@ class TuyaHeatpumpNumber(NumberEntity):
         """Tuya DP ID ve Code bilgilerini attributes'a ekle."""
         attrs: dict[str, Any] = {}
 
-        dp_info = self.coordinator.get_tuya_dp_info(self._number_code)
-        attrs["tuya_code"] = dp_info["code"]
-        attrs["tuya_dp_id"] = dp_info["dp_id"]
+        if "field_index" in self._config:
+            raw_source = resolve_raw_source(self.coordinator, self._config)
+            attrs["tuya_code"] = raw_source or "<unknown>"
+            attrs["tuya_dp_id"] = self._config.get("dp_id")
+            attrs["raw_field_index"] = self._config.get("field_index")
+            attrs["raw_encoding"] = self._config.get("encoding", "int32_be")
+        else:
+            dp_info = self.coordinator.get_tuya_dp_info(self._number_code)
+            attrs["tuya_code"] = dp_info["code"]
+            attrs["tuya_dp_id"] = dp_info["dp_id"]
 
         if self.coordinator.model_id:
             attrs["tuya_model_id"] = self.coordinator.model_id
@@ -140,6 +200,15 @@ class TuyaHeatpumpNumber(NumberEntity):
     @property
     def available(self) -> bool:
         """Return if entity is available."""
+        if "field_index" in self._config:
+            raw_source = resolve_raw_source(self.coordinator, self._config)
+            return (
+                self.coordinator.last_update_success and
+                self.coordinator.data is not None and
+                raw_source is not None and
+                raw_source in self.coordinator.data
+            )
+
         return (
             self.coordinator.last_update_success and 
             self.coordinator.data is not None and
