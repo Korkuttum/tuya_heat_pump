@@ -419,17 +419,27 @@ def export_snippet(path, labels, dp_code_by_id, encoding_by_dp, device_id):
                 if n and n != 1:
                     operator = "*" if op == "×" else "/"
                     entry.append(f'        "conversion": "value {operator} {scale}",')
+                    # number entities need the write-direction inverse too
+                    # (HA value → raw payload value) — the integration's
+                    # number.py applies `api_conversion` before encoding,
+                    # same convention as its existing plain-DP numbers.
+                    if entity_type == "number":
+                        inverse_operator = "/" if operator == "*" else "*"
+                        entry.append(f'        "api_conversion": "value {inverse_operator} {scale}",')
             except ValueError:
                 pass
 
         if entity_type == "number":
+            # Keys match number.py's existing config.get('min_value'/'max_value')
+            # convention used by the plain-DP NUMBER_TYPES entries, so raw
+            # and non-raw numbers behave identically once loaded.
             minv = info.get("min", "").strip()
             maxv = info.get("max", "").strip()
             stepv = info.get("step", "").strip()
             if minv:
-                entry.append(f'        "min": {minv},')
+                entry.append(f'        "min_value": {minv},')
             if maxv:
-                entry.append(f'        "max": {maxv},')
+                entry.append(f'        "max_value": {maxv},')
             if stepv:
                 entry.append(f'        "step": {stepv},')
         elif entity_type == "select":
@@ -521,7 +531,7 @@ def _icon_for_unit(unit):
 # Background poller
 # ------------------------------------------------------------------ #
 class Poller(threading.Thread):
-    def __init__(self, creds, q, interval=10.0):
+    def __init__(self, creds, q, interval=3.0):
         super().__init__(daemon=True)
         self.creds = creds
         self.q = q
@@ -687,7 +697,7 @@ class ExplorerApp:
         self._build_ui()
         log("UI built. Starting Poller.")
         self.q = queue.Queue()
-        self.poller = Poller(creds, self.q, interval=10.0)
+        self.poller = Poller(creds, self.q, interval=3.0)
         self.poller.start()
         self.root.after(150, self._drain_queue)
         log("Main loop starting.")
