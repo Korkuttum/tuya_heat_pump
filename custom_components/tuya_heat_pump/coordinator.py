@@ -177,6 +177,20 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 self.dp_mapping[config['dp_id']] = code
         _LOGGER.info("dp_mapping oluşturuldu - %d DP tanımlı", len(self.dp_mapping))
 
+    def _pending_raw_dp_ids(self) -> list[int]:
+        """Model'de tanımlı raw dp_id'lerden, henüz self.data içinde
+        karşılığı olmayanları döndürür. Local (LAN) bağlantıda bazı
+        cihazlar büyük raw DP'leri normal status() çağrısına dahil
+        etmiyor — bu liste, tinytuya'nın updatedps() ile açıkça talep
+        edilmesi gereken DP'leri belirlemek için kullanılıyor."""
+        if not self.raw_code_by_dp_id:
+            return []
+        data = self.data or {}
+        return [
+            dp_id for dp_id, code in self.raw_code_by_dp_id.items()
+            if code not in data
+        ]
+
     # ============================================================================
     # LOCAL LISTENER
     # ============================================================================
