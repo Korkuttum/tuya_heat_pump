@@ -12,7 +12,7 @@ from homeassistant.exceptions import HomeAssistantError
 from .const import DOMAIN
 from .conversion import Conversion
 from .coordinator import TuyaScaleDataUpdateCoordinator
-from .raw_codec import decode_raw_field, resolve_raw_source
+from .raw_codec import decode_raw_field, resolve_raw_source, watch_pending_raw_entities
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,6 +25,7 @@ async def async_setup_entry(
     coordinator: TuyaScaleDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
     
     selects = []
+    pending = []
     
     select_configs = coordinator.model_mapping.get("selects", {})
     
@@ -43,8 +44,12 @@ async def async_setup_entry(
                     select_config.get('field_index'),
                 )
             else:
+                # Not in the first poll yet — common on local/LAN
+                # connections for large raw DPs. Keep retrying on future
+                # updates instead of skipping this entity forever.
+                pending.append((select_code, select_config))
                 _LOGGER.debug(
-                    "Raw source for dp %s (select %s) not resolvable yet, skipping",
+                    "Raw source for dp %s (select %s) not resolvable yet, will retry",
                     select_config.get('dp_id'), select_code,
                 )
             continue
@@ -59,6 +64,10 @@ async def async_setup_entry(
         )
     
     async_add_entities(selects)
+    watch_pending_raw_entities(
+        config_entry, coordinator, async_add_entities,
+        pending, TuyaHeatpumpSelect, _LOGGER,
+    )
 
 
 class TuyaHeatpumpSelect(SelectEntity):
