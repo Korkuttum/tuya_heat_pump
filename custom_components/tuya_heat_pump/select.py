@@ -12,6 +12,7 @@ from homeassistant.exceptions import HomeAssistantError
 from .const import DOMAIN
 from .conversion import Conversion
 from .coordinator import TuyaScaleDataUpdateCoordinator
+from .raw_codec import decode_raw_field, resolve_raw_source
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,6 +29,26 @@ async def async_setup_entry(
     select_configs = coordinator.model_mapping.get("selects", {})
     
     for select_code, select_config in select_configs.items():
+        # Raw-field select: the current option comes from decoding a raw
+        # payload DP, e.g. one byte of a multi-value blob.
+        if "field_index" in select_config:
+            raw_source = resolve_raw_source(coordinator, select_config)
+            if raw_source and coordinator.data and raw_source in coordinator.data:
+                select_config = {**select_config, "raw_source": raw_source}
+                selects.append(TuyaHeatpumpSelect(coordinator, select_code, select_config))
+                _LOGGER.info(
+                    "Adding raw-field select: %s (from %s[%s])",
+                    select_config.get('name', select_code),
+                    raw_source,
+                    select_config.get('field_index'),
+                )
+            else:
+                _LOGGER.debug(
+                    "Raw source for dp %s (select %s) not resolvable yet, skipping",
+                    select_config.get('dp_id'), select_code,
+                )
+            continue
+
         selects.append(
             TuyaHeatpumpSelect(coordinator, select_code, select_config)
         )
@@ -88,6 +109,30 @@ class TuyaHeatpumpSelect(SelectEntity):
     @property
     def current_option(self) -> str | None:
         """Return the current selected option."""
+        if "field_index" in self._config:
+            raw_source = resolve_raw_source(self.coordinator, self._config)
+            if raw_source is None or not self.coordinator.data or raw_source not in self.coordinator.data:
+                return None
+            b64_value = self.coordinator.data[raw_source].get('value')
+            raw_value = decode_raw_field(
+                b64_value,
+                self._config['field_index'],
+                self._config.get('encoding', 'uint8'),
+            )
+            if raw_value is None:
+                return None
+            # Raw-field options are keyed by the field's own numeric
+            # value as a string (e.g. "0", "1", "2" — see options dict
+            # built in __init__), not by a Tuya enum string.
+            option = str(raw_value)
+            if option in self._attr_options:
+                return option
+            _LOGGER.warning(
+                "Raw value %s for %s has no matching option (expected one of %s)",
+                option, self._select_code, self._attr_options,
+            )
+            return None
+
         if not self.coordinator.data or self._select_code not in self.coordinator.data:
             return None
             
@@ -115,10 +160,17 @@ class TuyaHeatpumpSelect(SelectEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         """Tuya DP ID ve Code bilgilerini attributes'a ekle."""
         attrs: dict[str, Any] = {}
-        
-        dp_info = self.coordinator.get_tuya_dp_info(self._select_code)
-        attrs["tuya_code"] = dp_info["code"]
-        attrs["tuya_dp_id"] = dp_info["dp_id"]
+
+        if "field_index" in self._config:
+            raw_source = resolve_raw_source(self.coordinator, self._config)
+            attrs["tuya_code"] = raw_source or "<unknown>"
+            attrs["tuya_dp_id"] = self._config.get("dp_id")
+            attrs["raw_field_index"] = self._config.get("field_index")
+            attrs["raw_encoding"] = self._config.get("encoding", "uint8")
+        else:
+            dp_info = self.coordinator.get_tuya_dp_info(self._select_code)
+            attrs["tuya_code"] = dp_info["code"]
+            attrs["tuya_dp_id"] = dp_info["dp_id"]
 
         if self.coordinator.model_id:
             attrs["tuya_model_id"] = self.coordinator.model_id
@@ -133,16 +185,35 @@ class TuyaHeatpumpSelect(SelectEntity):
         """Change the selected option."""
         _LOGGER.info("Changing %s to %s", self._select_code, option)
 
-        api_value = option
-        if (api_conversion := self._config.get('api_conversion')) is not None:
-            conversion = Conversion(api_conversion)
+        if "field_index" in self._config:
+            raw_source = resolve_raw_source(self.coordinator, self._config)
+            if raw_source is None:
+                raise HomeAssistantError(
+                    f"{self._config.get('name', self._select_code)}: raw source not resolved yet"
+                )
             try:
-                api_value = conversion.convert(option)
-                _LOGGER.debug("Converted HA option %s → API value %s", option, api_value)
-            except Exception as err:
-                _LOGGER.warning("API conversion failed: %s", err)
-        
-        success = await self.coordinator.send_command(self._select_code, api_value)
+                raw_value = int(option)
+            except ValueError:
+                raise HomeAssistantError(
+                    f"Invalid option '{option}' for {self._config.get('name', self._select_code)}"
+                )
+            success = await self.coordinator.send_raw_field_command(
+                raw_source,
+                self._config['field_index'],
+                self._config.get('encoding', 'uint8'),
+                raw_value,
+            )
+        else:
+            api_value = option
+            if (api_conversion := self._config.get('api_conversion')) is not None:
+                conversion = Conversion(api_conversion)
+                try:
+                    api_value = conversion.convert(option)
+                    _LOGGER.debug("Converted HA option %s → API value %s", option, api_value)
+                except Exception as err:
+                    _LOGGER.warning("API conversion failed: %s", err)
+
+            success = await self.coordinator.send_command(self._select_code, api_value)
         
         if success:
             _LOGGER.info("✅ Successfully changed %s to %s", self._select_code, option)
@@ -157,6 +228,15 @@ class TuyaHeatpumpSelect(SelectEntity):
     @property
     def available(self) -> bool:
         """Return if entity is available."""
+        if "field_index" in self._config:
+            raw_source = resolve_raw_source(self.coordinator, self._config)
+            return (
+                self.coordinator.last_update_success and
+                self.coordinator.data is not None and
+                raw_source is not None and
+                raw_source in self.coordinator.data
+            )
+
         return (
             self.coordinator.last_update_success and 
             self.coordinator.data is not None and
