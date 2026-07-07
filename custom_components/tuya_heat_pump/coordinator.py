@@ -698,7 +698,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 for prop in properties:
                     code = prop['code']
                     data[code] = {
-                        'value': prop['value'],
+                        'value': prop.get('value'),
                         'timestamp': prop.get('time', 0),
                         'type': prop.get('type', ''),
                         'last_update': datetime.fromtimestamp(prop.get('time', 0) / 1000).strftime('%Y-%m-%d %H:%M:%S')
