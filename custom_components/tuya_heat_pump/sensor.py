@@ -1,8 +1,6 @@
 """Sensor platform for Tuya Heatpump."""
 from __future__ import annotations
-import base64
 import logging
-import struct
 from typing import Any
 
 from homeassistant.core import HomeAssistant
@@ -15,50 +13,10 @@ from homeassistant.util import dt as dt_util
 from .const import DOMAIN
 from .conversion import Conversion
 from .coordinator import TuyaScaleDataUpdateCoordinator
+from .raw_codec import decode_raw_field as _decode_raw_field
+from .raw_codec import resolve_raw_source as _resolve_raw_source
 
 _LOGGER = logging.getLogger(__name__)
-
-
-def _decode_raw_field(b64_string: str | None, field_index: int,
-                      encoding: str = "int32_be") -> int | None:
-    """Decode a single field out of a base64-encoded raw payload.
-
-    Supports:
-        - int32_be : 4-byte big-endian signed  (default; large status blobs)
-        - int16_be : 2-byte big-endian signed  (small counters/timers)
-        - uint8    : 1-byte unsigned            (single-byte flags)
-    """
-    if not b64_string:
-        return None
-    try:
-        payload = base64.b64decode(b64_string)
-        if encoding == "int32_be":
-            return struct.unpack_from(">i", payload, field_index * 4)[0]
-        if encoding == "int16_be":
-            return struct.unpack_from(">h", payload, field_index * 2)[0]
-        if encoding == "uint8":
-            return payload[field_index]
-        _LOGGER.warning("Unknown raw encoding: %s", encoding)
-        return None
-    except Exception as err:
-        _LOGGER.debug("Raw decode failed at field_index=%s (%s): %s",
-                      field_index, encoding, err)
-        return None
-
-
-def _resolve_raw_source(coordinator, config: dict) -> str | None:
-    """Return the coordinator.data key that holds the raw payload for
-    this sensor. Uses explicit `raw_source` from the model if provided,
-    otherwise falls back to a dp_id lookup against the coordinator's
-    raw-DP cache. This lets model files omit `raw_source` when the
-    dp_id alone is enough to identify the payload."""
-    explicit = config.get("raw_source")
-    if explicit:
-        return explicit
-    dp_id = config.get("dp_id")
-    if dp_id is None:
-        return None
-    return getattr(coordinator, "raw_code_by_dp_id", {}).get(dp_id)
 
 async def async_setup_entry(
     hass: HomeAssistant,
