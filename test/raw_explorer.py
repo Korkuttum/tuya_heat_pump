@@ -908,7 +908,7 @@ class ExplorerApp:
             for p in props:
                 if p.get("type") != "raw":
                     continue
-                fields, encoding = decode_raw_fields(p["value"])
+                fields, encoding = decode_raw_fields(p.get("value"))
                 if not fields:
                     continue
                 rows_by_dp[p["dp_id"]] = [(i, v) for i, v in enumerate(fields)]
