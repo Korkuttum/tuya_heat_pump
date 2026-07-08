@@ -23,6 +23,7 @@
 - Heative Next
 - Inventor Xforce
 - IPS Pool Systems
+- ACIQ
 - ITS
 - Ivapool
 - Kensol
@@ -35,6 +36,7 @@
 - Power World PW030
 - Power World R290 Full DC
 - Pure Blue Onyx
+- Rotenso
 - SolarEast
 - Water TechniX
 - W'eau
