@@ -148,15 +148,46 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             # bu kilit üzerinden (_local_status/_local_receive/vb.) geçmeli.
             self._local_socket_lock = threading.Lock()
             try:
-                self.local_device = tinytuya.Device(
-                    dev_id=self.device_id,
-                    address=self.ip,
-                    local_key=self.local_key,
-                    version=self.protocol,
-                    persist=True
-                )
+                try:
+                    self.local_device = tinytuya.Device(
+                        dev_id=self.device_id,
+                        address=self.ip,
+                        local_key=self.local_key,
+                        version=self.protocol,
+                        persist=True,
+                        # Cihaz kapalı/erişilemezken TCP bağlantı denemesi
+                        # işletim sisteminin varsayılan (genelde 20-60+
+                        # saniye) timeout'unu bekleyebiliyor — bu da HA'nın
+                        # "Waiting for integrations to complete setup" ile
+                        # uzun süre takılmasına yol açıyor. Kısa bir
+                        # bağlantı timeout'u ile cihaz kapalıyken hata
+                        # hızlı gelir, HA'nın kendi retry/backoff mekanizması
+                        # normal hızında işler.
+                        connection_timeout=3,
+                    )
+                except TypeError:
+                    # Bu tinytuya sürümü connection_timeout kwarg'ını
+                    # desteklemiyor — onsuz devam et (eski davranış).
+                    self.local_device = tinytuya.Device(
+                        dev_id=self.device_id,
+                        address=self.ip,
+                        local_key=self.local_key,
+                        version=self.protocol,
+                        persist=True,
+                    )
                 self.local_device.set_socketPersistent(True)
                 self.local_device.set_socketNODELAY(True)
+                # Kısa bir okuma timeout'u: _listen_loop sürekli receive()
+                # çağırıyor ve bunu _local_socket_lock altında yapıyor.
+                # tinytuya'nın varsayılan timeout'u birkaç saniye olabilir —
+                # veri gelmediğinde receive() o süre boyunca kilidi elinde
+                # tutar, bu da status()/set_value() çağrılarını gereksiz
+                # bekletir. Kısa timeout, kilidi sık sık bırakıp diğer
+                # çağrılara fırsat vermesini sağlıyor.
+                try:
+                    self.local_device.set_socketTimeout(1)
+                except Exception:
+                    pass  # bu tinytuya sürümünde yoksa sessizce geç
                 _LOGGER.info("Local Tuya device initialized (Persistent Mode + NoDelay): %s", self.device_id)
                
                 self.hass.loop.create_task(self._async_start_listener())
@@ -226,9 +257,19 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             return self.local_device.set_value(dp_id, value)
 
     async def _async_start_listener(self):
-        """Start the background listener for instant updates."""
+        """Start the background listener for instant updates.
+
+        Does NOT call self.async_refresh() here — __init__.py already
+        triggers the coordinator's one official first refresh via
+        async_config_entry_first_refresh(). Calling it again here raced
+        with that (create_task() gives no ordering guarantee), sending
+        two near-simultaneous status() queries to the device. The lock
+        forces them to serialize instead of literally overlapping, but
+        firing them back-to-back that fast was still enough to confuse
+        some devices' local protocol handling — hence "No 'dps' in
+        status response" showing up right after the lock was added.
+        """
         _LOGGER.info("Starting TinyTuya listener loop for %s", self.device_id)
-        await self.async_refresh()
         self._listener_task = self.hass.loop.create_task(self._listen_loop())
         self._heartbeat_task = self.hass.loop.create_task(self._heartbeat_loop())
 
@@ -243,7 +284,16 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     new_data = self._process_local_dps(data['dps'])
                     if new_data:
                         self._apply_sent_cache(new_data)
-                        self.async_set_updated_data(new_data)
+                        # Bu push muhtemelen sadece DEĞİŞEN DP'leri içeriyor
+                        # (tam bir status() snapshot'ı değil). self.data'nın
+                        # üzerine tamamen yazmak (replace) yerine mevcut
+                        # verinin üstüne merge ediyoruz — yoksa henüz bu
+                        # push'ta yer almayan tüm diğer sensör/switch/text
+                        # değerleri anında kaybolurdu. Artık periyodik
+                        # status() (ilk fetch sonrası) da çalışmadığından bu
+                        # merge, self.data'nın eksiksiz kalmasının TEK yolu.
+                        merged = {**(self.data or {}), **new_data}
+                        self.async_set_updated_data(merged)
                 await asyncio.sleep(0.1)
             except Exception as err:
                 _LOGGER.error("Error in listener loop: %s. Retrying in 5s...", err)
@@ -595,7 +645,21 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                
                 # Son gönderilen değeri cache'e yaz
                 self._sent_value_cache[code] = (value, time.time())
-               
+
+                # Optimistic update: cihazdan echo/status beklemeden
+                # entity'lere YENİ değeri hemen göster. Bunu yapmazsak
+                # entity, debounce süresi + cihazın gerçek cevap verme
+                # süresi boyunca hâlâ ESKİ değeri gösterir — arada başka
+                # bir coordinator güncellemesi UI'ı yeniden çizdirirse
+                # kullanıcı "eski değere döndü, sonra düzeldi" gibi bir
+                # titreşim görür. self.data burada hemen güncellenince bu
+                # titreşim tamamen ortadan kalkıyor; _apply_sent_cache zaten
+                # cihazdan gerçekten farklı bir echo gelirse bunu koruyor.
+                if self.data and code in self.data:
+                    self.data[code]['value'] = value
+                    self.data[code]['timestamp'] = int(time.time() * 1000)
+                    self.async_update_listeners()
+
                 # Yeni debounce task oluştur
                 async def delayed_send():
                     await asyncio.sleep(self._debounce_delay)
@@ -767,7 +831,18 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         else:
             if not self.local_device:
                 raise UpdateFailed("Local device not initialized")
-          
+
+            # Periyodik status() burada duruyor çünkü bazı DP'ler (örn.
+            # basit ayar değişiklikleri) cihaz tarafından proaktif push
+            # edilmiyor — sadece _listen_loop'a güvenirsek o DP'lerin
+            # gösterilen değeri yazdıktan sonra hiç güncellenmez, eski
+            # değerde "takılı" kalmış gibi görünür. Asıl "No dps" hatasının
+            # kaynağı bu periyodik çağrının kendisi değildi — aynı anda İKİ
+            # farklı yerden (burası + _async_start_listener'ın kendi
+            # async_refresh çağrısı) tetiklenen çakışan ilk-refresh'ti; o
+            # zaten kaldırıldı (bkz. _async_start_listener). Kilit ve kısa
+            # socket timeout'la birlikte, düzenli tek tek gelen bu
+            # sorgular artık _listen_loop ile çakışmıyor.
             try:
                 status = await self.hass.async_add_executor_job(self._local_status)
               
