@@ -146,7 +146,30 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             # aynı anda soketi kullanırsa cevap karışıp "No dps in status
             # response" gibi hatalara yol açıyor. Tüm local_device.* erişimi
             # bu kilit üzerinden (_local_status/_local_receive/vb.) geçmeli.
+            #
+            # ÖNEMLİ: kilit TIMEOUT'LU alınıyor (bkz. _LOCK_ACQUIRE_TIMEOUT).
+            # tinytuya'nın receive()/status() çağrıları, cihaz offline'dayken
+            # BAZEN kendi timeout ayarlarına rağmen sonsuza kadar takılabiliyor
+            # — bu tinytuya'nın bilinen bir davranışı (bkz. jasonacox/tinytuya
+            # ve make-all/tuya-local issue tracker'larındaki "receive() hangs
+            # when device offline" raporları; bir vakada HA core'da segfault'a
+            # bile yol açmış). Düz `with lock:` kullansaydık, _listen_loop'un
+            # donmuş bir receive() çağrısı kilidi sonsuza dek tutar, sonra
+            # status()/set_value() gibi HER ŞEY de aynı kilidi bekleyip
+            # sonsuza dek takılır — HAOS açılışının "tuya_heat_pump'ta
+            # takılması" tam olarak bu senaryo olabilir. Timeout'lu almak
+            # donmuş executor thread'ini kurtarmaz (tinytuya'nın kendi
+            # sorunu, Python'dan zorla iptal edilemez) ama YENİ çağrıların
+            # o thread'in peşine takılıp aynı kaderi paylaşmasını engeller.
             self._local_socket_lock = threading.Lock()
+            # _listen_loop / _heartbeat_loop için artan bekleme (backoff).
+            # Cihaz kapalıyken bunlar sabit ~5sn'de bir tekrar tekrar
+            # bağlanmaya çalışırdı — saatlerce sürebilen sürekli bir arka
+            # plan yükü. Art arda başarısızlık arttıkça bekleme süresi
+            # kademeli uzuyor (60sn'e kadar), tek bir başarılı denemede
+            # sıfırlanıyor.
+            self._local_listen_failures = 0
+            self._local_heartbeat_failures = 0
             try:
                 try:
                     self.local_device = tinytuya.Device(
@@ -235,26 +258,46 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
     # LOCAL LISTENER
     # ============================================================================
 
+    _LOCK_ACQUIRE_TIMEOUT = 4
+
     def _local_status(self):
-        """Locked wrapper around local_device.status() — see the lock
-        comment in __init__ for why this matters."""
-        with self._local_socket_lock:
+        """Locked wrapper around local_device.status()."""
+        if not self._local_socket_lock.acquire(timeout=self._LOCK_ACQUIRE_TIMEOUT):
+            raise TimeoutError(
+                "Local socket lock alınamadı (muhtemelen donmuş bir "
+                "receive()/status() çağrısı meşgul tutuyor)"
+            )
+        try:
             return self.local_device.status()
+        finally:
+            self._local_socket_lock.release()
 
     def _local_receive(self):
         """Locked wrapper around local_device.receive()."""
-        with self._local_socket_lock:
+        if not self._local_socket_lock.acquire(timeout=self._LOCK_ACQUIRE_TIMEOUT):
+            raise TimeoutError("Local socket lock alınamadı (receive)")
+        try:
             return self.local_device.receive()
+        finally:
+            self._local_socket_lock.release()
 
     def _local_heartbeat(self):
         """Locked wrapper around local_device.heartbeat()."""
-        with self._local_socket_lock:
+        if not self._local_socket_lock.acquire(timeout=self._LOCK_ACQUIRE_TIMEOUT):
+            raise TimeoutError("Local socket lock alınamadı (heartbeat)")
+        try:
             return self.local_device.heartbeat()
+        finally:
+            self._local_socket_lock.release()
 
     def _local_set_value(self, dp_id, value):
         """Locked wrapper around local_device.set_value()."""
-        with self._local_socket_lock:
+        if not self._local_socket_lock.acquire(timeout=self._LOCK_ACQUIRE_TIMEOUT):
+            raise TimeoutError(f"Local socket lock alınamadı (set_value dp {dp_id})")
+        try:
             return self.local_device.set_value(dp_id, value)
+        finally:
+            self._local_socket_lock.release()
 
     async def _async_start_listener(self):
         """Start the background listener for instant updates.
@@ -279,6 +322,9 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             try:
                 await asyncio.sleep(0.05)
                 data = await self.hass.async_add_executor_job(self._local_receive)
+                # Bağlantı çalıştı (veri olsun olmasın) — cihaz kapalı
+                # değil, backoff'u sıfırla.
+                self._local_listen_failures = 0
                 if data and 'dps' in data:
                     _LOGGER.debug("Instant update received: %s", data['dps'])
                     new_data = self._process_local_dps(data['dps'])
@@ -296,8 +342,16 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                         self.async_set_updated_data(merged)
                 await asyncio.sleep(0.1)
             except Exception as err:
-                _LOGGER.error("Error in listener loop: %s. Retrying in 5s...", err)
-                await asyncio.sleep(5)
+                self._local_listen_failures += 1
+                # 5sn'den başlayıp her başarısızlıkta ikiye katlanıyor,
+                # 60sn'de tavan yapıyor — cihaz kapalıyken sonsuza dek
+                # sabit hızda bağlanmaya çalışmak yerine gitgide seyrekleşiyor.
+                backoff = min(5 * (2 ** min(self._local_listen_failures - 1, 4)), 60)
+                _LOGGER.error(
+                    "Error in listener loop (%s. ardışık hata): %s. Retrying in %ss...",
+                    self._local_listen_failures, err, backoff,
+                )
+                await asyncio.sleep(backoff)
 
     async def _heartbeat_loop(self):
         """Loop to keep the connection alive."""
@@ -305,10 +359,16 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             try:
                 if self.local_device:
                     await self.hass.async_add_executor_job(self._local_heartbeat)
+                self._local_heartbeat_failures = 0
                 await asyncio.sleep(5)
             except Exception as err:
-                _LOGGER.debug("Heartbeat error: %s", err)
-                await asyncio.sleep(5)
+                self._local_heartbeat_failures += 1
+                backoff = min(5 * (2 ** min(self._local_heartbeat_failures - 1, 4)), 60)
+                _LOGGER.debug(
+                    "Heartbeat error (%s. ardışık hata): %s. Retrying in %ss...",
+                    self._local_heartbeat_failures, err, backoff,
+                )
+                await asyncio.sleep(backoff)
 
     def _apply_sent_cache(self, new_data: dict):
         """Gelen veride eski değer varsa, son gönderilen değeri zorla uygula."""
