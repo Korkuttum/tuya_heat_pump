@@ -2,7 +2,21 @@
 
 MODEL_NAME = "Rotenso Heat Pump (000004k4z6)"
 # ====================================================
-# Rotenso @tvofi
+# Rotenso Heat Pump @tvofi
+# modelId: 000004k4z6
+# Notes:
+#   - Rotenso uses its own internal sensor labeling (Tin, Tout, T3..T9, TL,
+#     Tw2, T1B). Tin/Tout are inlet/outlet water; the rest are internal
+#     probe positions that vary between models.
+#   - Tw2 (dp 114) and T1B (dp 116) return -30°C sentinel when the probe
+#     is not wired.
+#   - Temperatures use scale=0 (per device model spec, confirmed by user):
+#     values are already in °C, no conversion needed.
+#   - POWER (dp 108) spec scale=1 (W ÷ 10).
+#   - mode options confirmed from device model: cool, heat, DHW, COOLDHW,
+#     HEATDHW.
+#   - timer (dp 16) is a raw DP that comes without a value field (handled
+#     safely by the coordinator).
 # ====================================================
 
 SENSOR_TYPES = {
@@ -15,7 +29,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value / 10",
     },
     "temp_current_f": {
         "dp_id": 26,
@@ -25,7 +38,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value / 10",
     },
 
     # ---- Water loop temperatures ----
@@ -37,7 +49,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-water",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value / 10",
     },
     "Tout": {
         "dp_id": 106,
@@ -47,7 +58,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer-water",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value / 10",
     },
 
     # ---- Internal probes (Rotenso naming) ----
@@ -59,7 +69,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value / 10",
     },
     "T4": {
         "dp_id": 105,
@@ -69,7 +78,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value / 10",
     },
     "T5": {
         "dp_id": 111,
@@ -79,7 +87,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value / 10",
     },
     "T6": {
         "dp_id": 107,
@@ -89,7 +96,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value / 10",
     },
     "T9": {
         "dp_id": 113,
@@ -99,7 +105,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value / 10",
     },
     "TL": {
         "dp_id": 112,
@@ -109,7 +114,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value / 10",
     },
     "Tw2": {
         "dp_id": 114,
@@ -119,7 +123,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value / 10",
     },
     "T1B": {
         "dp_id": 116,
@@ -129,7 +132,6 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
-        "conversion": "value / 10",
     },
 
     # ---- Electrical & pump ----
@@ -217,8 +219,6 @@ SWITCH_TYPES = {
 # ====================================================
 # NUMBER TYPES
 # ====================================================
-# Range values reflect what the user sees in HA (after /10 conversion).
-# api_conversion multiplies by 10 and casts to int before sending to device.
 NUMBER_TYPES = {
     "temp_set": {
         "dp_id": 9,
@@ -226,11 +226,10 @@ NUMBER_TYPES = {
         "name": "Temperature Setpoint",
         "icon": "mdi:thermostat",
         "unit": "°C",
-        "min_value": 0.5,
+        "min_value": 5.0,
         "max_value": 65.0,
-        "step": 0.5,
-        "conversion": "value / 10",
-        "api_conversion": "int(value * 10)",
+        "step": 1.0,
+        "api_conversion": "int(value)",
     },
     "DHWSET": {
         "dp_id": 104,
@@ -238,11 +237,10 @@ NUMBER_TYPES = {
         "name": "DHW Setpoint",
         "icon": "mdi:water-thermometer",
         "unit": "°C",
-        "min_value": 4.0,
+        "min_value": 40.0,
         "max_value": 65.0,
-        "step": 0.5,
-        "conversion": "value / 10",
-        "api_conversion": "int(value * 10)",
+        "step": 1.0,
+        "api_conversion": "int(value)",
     },
 }
 
