@@ -9,6 +9,7 @@
 ### Supported Brands
 📋 **[Detailed list](https://github.com/Korkuttum/tuya_heat_pump/blob/main-2.3.0/supported_models.md)**
 - Arçelik (Beko, Grundig)
+- ACIQ
 - Adlar Castra
 - Aquark
 - Aquastrong 
@@ -23,7 +24,6 @@
 - Heative Next
 - Inventor Xforce
 - IPS Pool Systems
-- ACIQ
 - ITS
 - Ivapool
 - Kensol
