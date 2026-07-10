@@ -17,7 +17,7 @@
 - Cordivari Vestalis
 - Della
 - Ecologic Ecopool
-- EnviroSun HP+  _(Still not working yet.)_
+- EnviroSun HP+
 - Evoheat 40T
 - Fairland
 - Fairland Inverter Plus
