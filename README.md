@@ -36,6 +36,7 @@
 - Power World PW030
 - Power World R290 Full DC
 - Pure Blue Onyx
+- Reclaim Eco R290
 - Rotenso
 - SolarEast
 - Water TechniX
