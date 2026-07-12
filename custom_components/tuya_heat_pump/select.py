@@ -23,12 +23,12 @@ async def async_setup_entry(
 ) -> None:
     """Set up Tuya Heatpump selects from a config entry."""
     coordinator: TuyaScaleDataUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
-    
+
     selects = []
     pending = []
-    
+
     select_configs = coordinator.model_mapping.get("selects", {})
-    
+
     for select_code, select_config in select_configs.items():
         # Raw-field select: the current option comes from decoding a raw
         # payload DP, e.g. one byte of a multi-value blob.
@@ -62,7 +62,7 @@ async def async_setup_entry(
             select_config.get('name', select_code),
             select_code
         )
-    
+
     async_add_entities(selects)
     watch_pending_raw_entities(
         config_entry, coordinator, async_add_entities,
@@ -85,28 +85,34 @@ class TuyaHeatpumpSelect(SelectEntity):
         self.coordinator = coordinator
         self._select_code = select_code
         self._config = config
-        
+
         # Device name ile unique_id oluştur
         device_name_slug = coordinator.device_name.lower().replace(" ", "_").replace("-", "_")
         self._attr_unique_id = f"{device_name_slug}_{select_code}"
-        
+
         # Translation key varsa kullan
         if 'translation_key' in config:
             self._attr_translation_key = config['translation_key']
         else:
             self._attr_name = config.get('name', select_code)
-        
+
         self._attr_icon = config.get('icon')
-        
-        # Options'ları config'den al
+
+        # Options'ları config'den al.
+        # _attr_options / HA UI'de gösterilen değerler = dict value'ları
+        # (insan-okunur label, örn. "24 Hours").
+        # _key_by_label / _label_by_key = label <-> Tuya enum key eşlemesi,
+        # DP'ye yazarken/okurken gerçek key'e (örn. "24hours") çevirmek için.
         options_dict = config.get('options', {})
         if isinstance(options_dict, dict):
-            self._attr_options = list(options_dict.keys())
-            self._option_labels = options_dict
+            self._label_by_key = options_dict
+            self._key_by_label = {label: key for key, label in options_dict.items()}
+            self._attr_options = list(options_dict.values())
         else:
-            self._attr_options = options_dict
-            self._option_labels = {opt: opt for opt in options_dict}
-        
+            self._label_by_key = {opt: opt for opt in options_dict}
+            self._key_by_label = {opt: opt for opt in options_dict}
+            self._attr_options = list(options_dict)
+
         # Device info
         self._attr_device_info = coordinator.device_info
 
@@ -133,20 +139,21 @@ class TuyaHeatpumpSelect(SelectEntity):
             # Raw-field options are keyed by the field's own numeric
             # value as a string (e.g. "0", "1", "2" — see options dict
             # built in __init__), not by a Tuya enum string.
-            option = str(raw_value)
-            if option in self._attr_options:
-                return option
+            key = str(raw_value)
+            label = self._label_by_key.get(key, key)
+            if label in self._attr_options:
+                return label
             _LOGGER.warning(
                 "Raw value %s for %s has no matching option (expected one of %s)",
-                option, self._select_code, self._attr_options,
+                key, self._select_code, list(self._label_by_key.keys()),
             )
             return None
 
         if not self.coordinator.data or self._select_code not in self.coordinator.data:
             return None
-            
+
         raw_value = self.coordinator.data[self._select_code]['value']
-        
+
         conversion = Conversion(self._config.get('conversion', 'value'))
         try:
             value = conversion.convert(raw_value)
@@ -154,11 +161,13 @@ class TuyaHeatpumpSelect(SelectEntity):
             value = raw_value
             _LOGGER.warning("Conversion failed for %s: %s", self._select_code, err)
 
-        if isinstance(value, str):
-            return value
-        
-        _LOGGER.warning("Unexpected value type for %s: %s", self._select_code, type(value))
-        return None
+        if not isinstance(value, str):
+            _LOGGER.warning("Unexpected value type for %s: %s", self._select_code, type(value))
+            return None
+
+        # value burada Tuya enum key'i (örn. "24hours"); UI'ye label
+        # (örn. "24 Hours") döndürülür.
+        return self._label_by_key.get(value, value)
 
     @property
     def options(self) -> list[str]:
@@ -192,7 +201,10 @@ class TuyaHeatpumpSelect(SelectEntity):
 
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
-        _LOGGER.info("Changing %s to %s", self._select_code, option)
+        # option burada kullanıcının UI'de gördüğü label (örn. "24 Hours").
+        # Cihaza/koda yazmadan önce gerçek Tuya enum key'ine çeviriyoruz.
+        key = self._key_by_label.get(option, option)
+        _LOGGER.info("Changing %s to %s (key=%s)", self._select_code, option, key)
 
         if "field_index" in self._config:
             raw_source = resolve_raw_source(self.coordinator, self._config)
@@ -201,7 +213,7 @@ class TuyaHeatpumpSelect(SelectEntity):
                     f"{self._config.get('name', self._select_code)}: raw source not resolved yet"
                 )
             try:
-                raw_value = int(option)
+                raw_value = int(key)
             except ValueError:
                 raise HomeAssistantError(
                     f"Invalid option '{option}' for {self._config.get('name', self._select_code)}"
@@ -213,17 +225,17 @@ class TuyaHeatpumpSelect(SelectEntity):
                 raw_value,
             )
         else:
-            api_value = option
+            api_value = key
             if (api_conversion := self._config.get('api_conversion')) is not None:
                 conversion = Conversion(api_conversion)
                 try:
-                    api_value = conversion.convert(option)
-                    _LOGGER.debug("Converted HA option %s → API value %s", option, api_value)
+                    api_value = conversion.convert(key)
+                    _LOGGER.debug("Converted HA option %s → API value %s", key, api_value)
                 except Exception as err:
                     _LOGGER.warning("API conversion failed: %s", err)
 
             success = await self.coordinator.send_command(self._select_code, api_value)
-        
+
         if success:
             _LOGGER.info("✅ Successfully changed %s to %s", self._select_code, option)
             await self.coordinator.async_request_refresh()
@@ -247,7 +259,7 @@ class TuyaHeatpumpSelect(SelectEntity):
             )
 
         return (
-            self.coordinator.last_update_success and 
+            self.coordinator.last_update_success and
             self.coordinator.data is not None and
             self._select_code in self.coordinator.data
         )
