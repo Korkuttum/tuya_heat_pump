@@ -1,15 +1,8 @@
 """Model mapping for Heat Pump (e1kugiu4)."""
 
 MODEL_NAME = "Heat Pump (e1kugiu4)"
-# ====================================================
-# Mango @Schneider006
-# ====================================================
 
-# ====================================================
-# SENSOR TYPES (read-only value - accessMode: "ro")
-# ====================================================
 SENSOR_TYPES = {
-    # Current Temperature (dp_id: 24) - scale: 1 (value / 10)
     "temp_current": {
         "dp_id": 24,
         "code": "temp_current",
@@ -20,7 +13,6 @@ SENSOR_TYPES = {
         "state_class": "measurement",
         "conversion": "value / 10",
     },
-    # Hot Water Current Temperature (dp_id: 123) - scale: 1 (value / 10)
     "inlet_temp": {
         "dp_id": 123,
         "code": "inlet_temp",
@@ -31,7 +23,6 @@ SENSOR_TYPES = {
         "state_class": "measurement",
         "conversion": "value / 10",
     },
-    # Microcode Version (dp_id: 130) - string
     "r_130": {
         "dp_id": 130,
         "code": "r_130",
@@ -40,11 +31,7 @@ SENSOR_TYPES = {
     },
 }
 
-# ====================================================
-# SWITCH TYPES (read-write bool - accessMode: "rw")
-# ====================================================
 SWITCH_TYPES = {
-    # Power Switch (dp_id: 1)
     "switch": {
         "dp_id": 1,
         "code": "switch",
@@ -54,11 +41,7 @@ SWITCH_TYPES = {
     },
 }
 
-# ====================================================
-# NUMBER TYPES (read-write value - accessMode: "rw")
-# ====================================================
 NUMBER_TYPES = {
-    # Target Temperature Setpoint (dp_id: 16)
     "temp_set": {
         "dp_id": 16,
         "code": "temp_set",
@@ -70,7 +53,6 @@ NUMBER_TYPES = {
         "step": 1.0,
         "api_conversion": "value",
     },
-    # Hot Water Target Temperature Setpoint (dp_id: 124)
     "temp_set_1": {
         "dp_id": 124,
         "code": "temp_set_1",
@@ -84,11 +66,7 @@ NUMBER_TYPES = {
     },
 }
 
-# ====================================================
-# SELECT TYPES (read-write enum - accessMode: "rw")
-# ====================================================
 SELECT_TYPES = {
-    # Mode (dp_id: 2) - auto, cold, hot, dhw, cold_dhw, hot_dhw
     "mode": {
         "dp_id": 2,
         "code": "mode",
@@ -104,8 +82,13 @@ SELECT_TYPES = {
         },
     },
 }
-NUMBER_TYPES = globals().get("NUMBER_TYPES", {})
-NUMBER_TYPES.update({
+
+# --- merge into SENSOR_TYPES (read-only measurements living inside a
+# writable raw DP -- accessMode is per-DP not per-field, so these three
+# happen to share dp_id 135/140 with genuine setpoints but are actually
+# just telemetry readings, not something a user should "set") ---
+SENSOR_TYPES = globals().get("SENSOR_TYPES", {})
+SENSOR_TYPES.update({
     "invtttemp": {
         "dp_id": 135,
         "code": "invtttemp",
@@ -113,10 +96,8 @@ NUMBER_TYPES.update({
         "field_index": 41,
         "encoding": "int32_be",
         "conversion": "value / 10",
-        "api_conversion": "value * 10",
-        "step": 1,
         "name": "INVT Temperature",
-        "unit": "°C",
+        "unit": "\u00b0C",
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
@@ -128,8 +109,6 @@ NUMBER_TYPES.update({
         "field_index": 48,
         "encoding": "int32_be",
         "conversion": "value / 10",
-        "api_conversion": "value * 10",
-        "step": 1,
         "name": "Input Voltage (Frequency Conversion)",
         "unit": "V",
         "icon": "mdi:lightning-bolt",
@@ -143,10 +122,8 @@ NUMBER_TYPES.update({
         "field_index": 32,
         "encoding": "int32_be",
         "conversion": "value / 10000",
-        "api_conversion": "value * 10000",
-        "step": 1,
         "name": "Ambient Temperature?",
-        "unit": "°C",
+        "unit": "\u00b0C",
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
