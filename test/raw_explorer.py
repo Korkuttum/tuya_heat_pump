@@ -1112,14 +1112,18 @@ class ExplorerApp:
 
     def _apply_writable_ui(self, access, has_string=False):
         """Configure the entity-type dropdown for the selected field:
-        read-only fields are locked to 'sensor'; writable (rw/wr) fields
+        read-only fields are locked to 'sensor'. Writable (rw/wr) fields
         get switch/number/select, plus 'text' when this field is where
-        the string scanner detected a printable-string run (i.e. this
-        DP's whole payload looks like a name, e.g. a coffee machine's
-        username field) — 'text' isn't offered otherwise since a random
-        writable int field being force-read as UTF-8 is rarely useful."""
+        the string scanner detected a printable-string run — AND 'sensor'
+        is always offered too, because accessMode lives at the whole-DP
+        level, not per field. A raw DP marked "rw" often packs both real
+        setpoints AND pure telemetry (e.g. an inverter temperature or
+        voltage reading living in the same blob as writable setpoints) —
+        without 'sensor' here, there's no way to correctly mark a
+        measurement-only field as read-only just because it happens to
+        share a writable DP with actual setpoints."""
         if access in ("rw", "wr"):
-            opts = ["switch", "number", "select"]
+            opts = ["sensor", "switch", "number", "select"]
             if has_string:
                 opts.append("text")
             self.entity_type_combo.configure(values=opts, state="readonly")
