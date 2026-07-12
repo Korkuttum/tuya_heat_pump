@@ -15,6 +15,8 @@ MODEL_NAME = "Coffee Machine (ew8plw)"
 #     contributed via raw_explorer.py's "text" field type — see the
 #     TEXT_TYPES block at the bottom of this file.
 #   - work_state (dp 3) and fault (dp 4) are read-only (accessMode "ro").
+#   - mode_selection (dp 106) is a Default/ECO enum, exposed as a switch
+#     (on = ECO, off = Default).
 #   - Everything else here is accessMode "rw".
 # ====================================================
 
@@ -129,6 +131,14 @@ SWITCH_TYPES = {
         "icon": "mdi:coffee-to-go",
         "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
+    "mode_selection": {
+        "dp_id": 106,
+        "code": "mode_selection",
+        "name": "Eco Mode",
+        "icon": "mdi:leaf",
+        "conversion": "value == 'ECO'",
+        "api_conversion": "'ECO' if value else 'Default'",
+    },
 }
 
 NUMBER_TYPES = {
@@ -150,8 +160,11 @@ SELECT_TYPES = {
         "name": "Drink Selection",
         "icon": "mdi:coffee",
         "options": {
-            "Espresso": "Espresso",
             "Americano": "Americano",
+            "IcedAmericano": "Iced Americano",
+            "Hotmilk": "Hot Milk",
+            "Cappuccino": "Cappuccino",
+            "Espresso": "Espresso",
             "Lungo": "Lungo",
             "CaffeLatte": "Caffe Latte",
             "LatteMacchiato": "Latte Macchiato",
@@ -161,12 +174,9 @@ SELECT_TYPES = {
             "RistrettoBianco": "Ristretto Bianco",
             "FlatWhite": "Flat White",
             "Cortado": "Cortado",
-            "IcedAmericano": "Iced Americano",
             "IcedLatte": "Iced Latte",
-            "Hotwater": "Hot Water",
-            "Hotmilk": "Hot Milk",
+            "Hotwater": "Cold Brew",
             "TravelMug": "Travel Mug",
-            "Cappuccino": "Cappuccino",
         },
     },
     "aso_timer": {
@@ -186,27 +196,17 @@ SELECT_TYPES = {
             "24hours": "24 Hours",
         },
     },
-    "mode_selection": {
-        "dp_id": 106,
-        "code": "mode_selection",
-        "name": "Mode",
-        "icon": "mdi:leaf",
-        "options": {
-            "Default": "Default",
-            "ECO": "Eco",
-        },
-    },
     "last_profile": {
         "dp_id": 113,
         "code": "last_profile",
         "name": "Active Profile",
         "icon": "mdi:account",
         "options": {
-            "guest": "Guest",
             "orange": "Orange",
             "violet": "Violet",
             "blue": "Blue",
             "green": "Green",
+            "guest": "Guest",
         },
     },
 }
