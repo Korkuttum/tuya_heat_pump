@@ -1,13 +1,13 @@
 # Tuya Heat Pump - Home Assistant Integration
 
-<img src="https://raw.githubusercontent.com/Korkuttum/tuya_heat_pump/main-2.2.0/images/heatpump.webp" width="200">
+<img src="https://raw.githubusercontent.com/Korkuttum/tuya_heat_pump/main-2.4.0/images/heatpump.webp" width="200">
 
  ⚠️ **Note:**  
 > This integration has only been tested with the heat pump brands listed below.  
 > If your heat pump is a different brand and the integration does not work, please run the script at the following link and share the generated file with me:  
-> [tuya_api_test.py](https://github.com/Korkuttum/tuya_heat_pump/blob/7d4303902f08a66663448902a00e3fc71efc0f4b/test/tuya_api_test.py)
+> [tuya_api_test.py](https://github.com/Korkuttum/tuya_heat_pump/blob/main-2.4.0/test/tuya_api_test.py)
 ### Supported Brands
-📋 **[Detailed list](https://github.com/Korkuttum/tuya_heat_pump/blob/main-2.3.0/supported_models.md)**
+📋 **[Detailed list](https://github.com/Korkuttum/tuya_heat_pump/blob/main-2.4.0/supported_models.md)**
 - Arçelik (Beko, Grundig)
 - ACIQ
 - Adlar Castra
@@ -39,6 +39,7 @@
 - Reclaim Eco R290
 - Rotenso
 - SolarEast
+- SolarEast BLN
 - Swim&Fun Fjord
 - Water TechniX
 - W'eau
