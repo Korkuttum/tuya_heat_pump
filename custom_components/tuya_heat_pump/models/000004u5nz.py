@@ -97,7 +97,14 @@ SENSOR_TYPES = {
         "dp_id": 36,
         "code": "top_temp_f",
         "name": "Low Pressure Saturation Temp",
-        "unit": "°F",
+        # NOTE: Tuya's own device catalog declares this DP's unit as °F
+        # while every sibling temperature DP (35/37/38/41) is °C — this
+        # looks like a manufacturer catalog typo, not an intentional
+        # Fahrenheit sensor. Corrected to °C (no conversion applied) as
+        # the safer default. If real-world values look implausible
+        # compared to neighboring refrigerant temps, this may actually
+        # need a real F→C conversion instead — see GitHub issue #41.
+        "unit": "°C",
         "icon": "mdi:thermometer",
         "device_class": "temperature",
         "state_class": "measurement",
@@ -272,6 +279,15 @@ BINARY_SENSOR_TYPES = {
         "conversion": "value != 0"
     },
     "compressor_state": {
+        # Name/mapping confirmed correct against live data: this DP
+        # stays true during floor_heating (not just cooling), so it
+        # tracks the refrigeration/compressor cycle being active in
+        # general, not literally "cooling mode" despite the Chinese
+        # catalog name (制冷模式). If it appears "stuck" true for days
+        # after powering the unit off, that's very likely Tuya's cloud
+        # simply not re-pushing this DP once the device goes idle —
+        # the last known value just sits in the shadow. Not something
+        # this integration can fix on its own. See GitHub issue #41.
         "dp_id": 27,
         "code": "compressor_state",
         "name": "Compressor State",
@@ -279,6 +295,13 @@ BINARY_SENSOR_TYPES = {
         "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']"
     },
     "backwater": {
+        # This reflects whether the unit's configured *mode* includes
+        # hot water service (e.g. "heating_and_hot_water"), not a live
+        # tank-temperature reading — it can read HOT continuously while
+        # the mode stays the same, independent of actual measured water
+        # temperature. Same Tuya-cloud staleness caveat as compressor_state
+        # applies if it appears stuck after the unit is turned off.
+        # See GitHub issue #41.
         "dp_id": 31,
         "code": "backwater",
         "name": "Hot Water Mode",
@@ -323,7 +346,10 @@ NUMBER_TYPES = {
         "code": "water_set",
         "name": "Control Temperature",
         "icon": "mdi:thermometer-water",
-        "unit": "L",
+        # unit removed: Tuya's own catalog lists "L" (liters) here, which
+        # doesn't make sense for a 0-1 range field named "temperature" —
+        # looks like a leftover/wrong unit in the manufacturer's own
+        # device definition. Real meaning unconfirmed — see GitHub issue #41.
         "min_value": 0.0,
         "max_value": 1.0,
         "step": 1.0,
@@ -337,17 +363,6 @@ NUMBER_TYPES = {
         "unit": "°C",
         "min_value": 5.0,
         "max_value": 80.0,
-        "step": 1.0,
-        "api_conversion": "value"
-    },
-    "volume_set": {  # accessMode: "rw"
-        "dp_id": 106,
-        "code": "volume_set",
-        "name": "Power Detection Module",
-        "icon": "mdi:meter-electric",
-        "unit": "",
-        "min_value": 0.0,
-        "max_value": 2.0,
         "step": 1.0,
         "api_conversion": "value"
     },
@@ -418,5 +433,27 @@ SELECT_TYPES = {
             "L7": "L7",
             "L8": "L8"
         },
+    },
+    # Moved from NUMBER_TYPES: Tuya's own description field for this DP
+    # spells out exactly 3 discrete states (not a freely adjustable
+    # number) — 0=no power monitoring module installed, 1=single-phase
+    # module, 2=three-phase module. Raw values are plain "0"/"1"/"2"
+    # strings, matching this integration's select convention where the
+    # options dict keys ARE what gets sent back on write.
+    "volume_set": {
+        "dp_id": 106,
+        "code": "volume_set",
+        "name": "Power Detection Module",
+        "icon": "mdi:meter-electric",
+        "options": {
+            "0": "No Module Installed",
+            "1": "Single-Phase Module",
+            "2": "Three-Phase Module",
+        },
+        # Tuya's own typeSpec says this DP is "value" (integer), not
+        # "enum" — the cloud API expects a JSON int on write, so the
+        # selected option string ("0"/"1"/"2") needs converting back
+        # before sending, unlike a real enum DP like "mode"/"work_mode".
+        "api_conversion": "int(value)",
     },
 }
