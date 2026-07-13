@@ -2,7 +2,7 @@
 
 MODEL_NAME = "Heat Pump Model 000004u5nz"
 # ====================================================
-# Adlar Castra @rznq0q
+# Adlar Castra @rznq0q | SolarEast BLN @typxxi
 # ====================================================
 SENSOR_TYPES = {
     "temp_current": {
