@@ -39,6 +39,7 @@
 - Reclaim Eco R290
 - Rotenso
 - SolarEast
+- Swim&Fun Fjord
 - Water TechniX
 - W'eau
 - W'eau WFI-007
