@@ -31,6 +31,7 @@
 - Mango
 - Mitte Aerotermia
 - MyCond BeeThermic
+- Poolex Dreamline
 - Poolsana
 - Power World
 - Power World PW030
