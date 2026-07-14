@@ -222,7 +222,7 @@ NUMBER_TYPES = {
         "min_value": 7.0,
         "max_value": 60.0,
         "step": 1.0,
-        "api_conversion": "value",
+        "api_conversion": "int(value)",
     },
     "temp_offset": {
         "dp_id": 101,
@@ -233,7 +233,7 @@ NUMBER_TYPES = {
         "min_value": 1.0,
         "max_value": 15.0,
         "step": 1.0,
-        "api_conversion": "value",
+        "api_conversion": "int(value)",
     },
 }
 
