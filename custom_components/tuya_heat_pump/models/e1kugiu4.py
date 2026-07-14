@@ -129,3 +129,22 @@ SENSOR_TYPES.update({
         "state_class": "measurement",
     },
 })
+
+# --- merge into NUMBER_TYPES (contributed by @Schneider006 via raw_explorer.py) ---
+# r_141 (dp_id 141) real Tuya name: "03压机设置 & 04风机设置" = "03 Compressor
+# Settings & 04 Fan Settings", accessMode "rw" — confirms this is a genuine
+# writable setting living under the fan-settings half of this raw DP.
+NUMBER_TYPES = globals().get("NUMBER_TYPES", {})
+NUMBER_TYPES.update({
+    "0428_silentspeedmax": {
+        "dp_id": 141,
+        "code": "0428_silentspeedmax",
+        "raw_source": "r_141",
+        "field_index": 37,
+        "encoding": "int32_be",
+        "step": 1,
+        "name": "04.28 SilentSpeedMax",
+        "unit": "rpm",
+        "icon": "mdi:fan",
+    },
+})
