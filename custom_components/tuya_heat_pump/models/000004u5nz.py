@@ -346,10 +346,7 @@ NUMBER_TYPES = {
         "code": "water_set",
         "name": "Control Temperature",
         "icon": "mdi:thermometer-water",
-        # unit removed: Tuya's own catalog lists "L" (liters) here, which
-        # doesn't make sense for a 0-1 range field named "temperature" —
-        # looks like a leftover/wrong unit in the manufacturer's own
-        # device definition. Real meaning unconfirmed — see GitHub issue #41.
+        "unit": "L",
         "min_value": 0.0,
         "max_value": 1.0,
         "step": 1.0,
@@ -434,6 +431,13 @@ SELECT_TYPES = {
             "L8": "L8"
         },
     },
+    # Moved from NUMBER_TYPES: Tuya's own description field for this DP
+    # spells out exactly 3 discrete states (not a freely adjustable
+    # number) — 0=no power monitoring module installed, 1=single-phase
+    # module, 2=three-phase module. Raw values are plain "0"/"1"/"2"
+    # strings, matching this integration's select convention where the
+    # options dict keys ARE what gets sent back on write.
+    #
     # Moved from NUMBER_TYPES: Tuya's own description field for this DP
     # spells out exactly 3 discrete states (not a freely adjustable
     # number) — 0=no power monitoring module installed, 1=single-phase
