@@ -134,16 +134,41 @@ SENSOR_TYPES.update({
 # r_141 (dp_id 141) real Tuya name: "03压机设置 & 04风机设置" = "03 Compressor
 # Settings & 04 Fan Settings", accessMode "rw" — confirms this is a genuine
 # writable setting living under the fan-settings half of this raw DP.
+#
+# Both fields below were originally auto-detected as int32_be (r_141's
+# overall payload alignment), but each is actually a 16-bit value packed
+# inside one 32-bit slot — raw_explorer picks one encoding for the whole
+# DP, so a mixed-width field like this reads as a misleadingly large
+# number (e.g. 66036 instead of 500). Confirmed by checking the upper/
+# lower 16 bits of the two sample values Schneider006 captured: they
+# match his requested display ranges exactly (500/900 and 0/2000), so
+# encoding was corrected to int16_be with a recalculated field_index
+# (int32 byte offset ÷ 2, landing on whichever half held the real value).
 NUMBER_TYPES = globals().get("NUMBER_TYPES", {})
 NUMBER_TYPES.update({
     "0428_silentspeedmax": {
         "dp_id": 141,
         "code": "0428_silentspeedmax",
         "raw_source": "r_141",
-        "field_index": 37,
-        "encoding": "int32_be",
+        "field_index": 75,
+        "encoding": "int16_be",
+        "min_value": 500,
+        "max_value": 900,
         "step": 1,
         "name": "04.28 SilentSpeedMax",
+        "unit": "rpm",
+        "icon": "mdi:fan",
+    },
+    "0403fanmaxcool": {
+        "dp_id": 141,
+        "code": "0403fanmaxcool",
+        "raw_source": "r_141",
+        "field_index": 50,
+        "encoding": "int16_be",
+        "min_value": 0,
+        "max_value": 2000,
+        "step": 1,
+        "name": "04.03 FanMaxCool",
         "unit": "rpm",
         "icon": "mdi:fan",
     },
