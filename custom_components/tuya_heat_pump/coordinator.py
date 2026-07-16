@@ -343,10 +343,16 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 await asyncio.sleep(0.1)
             except Exception as err:
                 self._local_listen_failures += 1
-                # 5sn'den başlayıp her başarısızlıkta ikiye katlanıyor,
-                # 60sn'de tavan yapıyor — cihaz kapalıyken sonsuza dek
-                # sabit hızda bağlanmaya çalışmak yerine gitgide seyrekleşiyor.
-                backoff = min(5 * (2 ** min(self._local_listen_failures - 1, 4)), 60)
+                # İlk 5 hatada 5sn'den başlayıp katlanarak 60sn'ye çıkıyor
+                # (5,10,20,40,60). ONDAN SONRA sonsuza dek 60sn'de bir
+                # denemek yerine — cihaz gerçekten uzun süre erişilemezse
+                # gereksiz yere sık deniyor, log/thread yükü birikiyor —
+                # saatte bir denemeye geçiyoruz. Bağlantı tekrar kurulduğu
+                # an sayaç sıfırlanıp normal hıza dönüyor (bkz. try bloğu).
+                if self._local_listen_failures <= 5:
+                    backoff = min(5 * (2 ** (self._local_listen_failures - 1)), 60)
+                else:
+                    backoff = 3600  # saatte bir
                 _LOGGER.error(
                     "Error in listener loop (%s. ardışık hata): %s. Retrying in %ss...",
                     self._local_listen_failures, err, backoff,
@@ -363,7 +369,10 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 await asyncio.sleep(5)
             except Exception as err:
                 self._local_heartbeat_failures += 1
-                backoff = min(5 * (2 ** min(self._local_heartbeat_failures - 1, 4)), 60)
+                if self._local_heartbeat_failures <= 5:
+                    backoff = min(5 * (2 ** (self._local_heartbeat_failures - 1)), 60)
+                else:
+                    backoff = 3600  # saatte bir
                 _LOGGER.debug(
                     "Heartbeat error (%s. ardışık hata): %s. Retrying in %ss...",
                     self._local_heartbeat_failures, err, backoff,
