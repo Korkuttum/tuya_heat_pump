@@ -162,14 +162,6 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             # sorunu, Python'dan zorla iptal edilemez) ama YENİ çağrıların
             # o thread'in peşine takılıp aynı kaderi paylaşmasını engeller.
             self._local_socket_lock = threading.Lock()
-            # _listen_loop / _heartbeat_loop için artan bekleme (backoff).
-            # Cihaz kapalıyken bunlar sabit ~5sn'de bir tekrar tekrar
-            # bağlanmaya çalışırdı — saatlerce sürebilen sürekli bir arka
-            # plan yükü. Art arda başarısızlık arttıkça bekleme süresi
-            # kademeli uzuyor (60sn'e kadar), tek bir başarılı denemede
-            # sıfırlanıyor.
-            self._local_listen_failures = 0
-            self._local_heartbeat_failures = 0
             try:
                 try:
                     self.local_device = tinytuya.Device(
@@ -317,14 +309,21 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         self._heartbeat_task = self.hass.loop.create_task(self._heartbeat_loop())
 
     async def _listen_loop(self):
-        """Loop to receive instant data from the device."""
+        """Loop to receive instant data from the device.
+
+        Push tabanlı anlık güncelleme sadece bir OPTİMİZASYON — asıl veri
+        kaynağı ayrı bir yerde çalışan periyodik status() poll'u (birkaç
+        dakikada bir), o zaten kendi başına çalışmaya devam ediyor. Bu
+        yüzden burada tekrar tekrar backoff ile uğraşmıyoruz: bağlantı
+        BİR KERE başarısız olursa bu döngü tamamen duruyor, bir daha
+        kendiliğinden denemiyor. Veri akışı kesilmez, sadece "anlık"
+        olmaktan çıkıp normal poll hızına döner. Entegrasyon yeniden
+        yüklenirse (reload/restart) taze bir deneme başlar.
+        """
         while True:
             try:
                 await asyncio.sleep(0.05)
                 data = await self.hass.async_add_executor_job(self._local_receive)
-                # Bağlantı çalıştı (veri olsun olmasın) — cihaz kapalı
-                # değil, backoff'u sıfırla.
-                self._local_listen_failures = 0
                 if data and 'dps' in data:
                     _LOGGER.debug("Instant update received: %s", data['dps'])
                     new_data = self._process_local_dps(data['dps'])
@@ -335,49 +334,35 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                         # üzerine tamamen yazmak (replace) yerine mevcut
                         # verinin üstüne merge ediyoruz — yoksa henüz bu
                         # push'ta yer almayan tüm diğer sensör/switch/text
-                        # değerleri anında kaybolurdu. Artık periyodik
-                        # status() (ilk fetch sonrası) da çalışmadığından bu
-                        # merge, self.data'nın eksiksiz kalmasının TEK yolu.
+                        # değerleri anında kaybolurdu.
                         merged = {**(self.data or {}), **new_data}
                         self.async_set_updated_data(merged)
                 await asyncio.sleep(0.1)
             except Exception as err:
-                self._local_listen_failures += 1
-                # İlk 5 hatada 5sn'den başlayıp katlanarak 60sn'ye çıkıyor
-                # (5,10,20,40,60). ONDAN SONRA sonsuza dek 60sn'de bir
-                # denemek yerine — cihaz gerçekten uzun süre erişilemezse
-                # gereksiz yere sık deniyor, log/thread yükü birikiyor —
-                # saatte bir denemeye geçiyoruz. Bağlantı tekrar kurulduğu
-                # an sayaç sıfırlanıp normal hıza dönüyor (bkz. try bloğu).
-                if self._local_listen_failures <= 5:
-                    backoff = min(5 * (2 ** (self._local_listen_failures - 1)), 60)
-                else:
-                    backoff = 3600  # saatte bir
-                _LOGGER.error(
-                    "Error in listener loop (%s. ardışık hata): %s. Retrying in %ss...",
-                    self._local_listen_failures, err, backoff,
+                _LOGGER.warning(
+                    "Local instant-update listener stopped after an error "
+                    "(%s) — will not retry automatically. Periodic polling "
+                    "continues normally; reload the integration to try "
+                    "instant updates again.", err,
                 )
-                await asyncio.sleep(backoff)
+                return
 
     async def _heartbeat_loop(self):
-        """Loop to keep the connection alive."""
+        """Loop to keep the connection alive. _listen_loop ile aynı
+        mantık: bağlantı bir kere başarısız olursa tamamen durur, tekrar
+        denemez — periyodik status() poll'u bağımsız çalışmaya devam
+        eder, bu döngü sadece kalıcı soketi canlı tutan bir optimizasyon."""
         while True:
             try:
                 if self.local_device:
                     await self.hass.async_add_executor_job(self._local_heartbeat)
-                self._local_heartbeat_failures = 0
                 await asyncio.sleep(5)
             except Exception as err:
-                self._local_heartbeat_failures += 1
-                if self._local_heartbeat_failures <= 5:
-                    backoff = min(5 * (2 ** (self._local_heartbeat_failures - 1)), 60)
-                else:
-                    backoff = 3600  # saatte bir
                 _LOGGER.debug(
-                    "Heartbeat error (%s. ardışık hata): %s. Retrying in %ss...",
-                    self._local_heartbeat_failures, err, backoff,
+                    "Heartbeat loop stopped after an error (%s) — will not "
+                    "retry automatically.", err,
                 )
-                await asyncio.sleep(backoff)
+                return
 
     def _apply_sent_cache(self, new_data: dict):
         """Gelen veride eski değer varsa, son gönderilen değeri zorla uygula."""
