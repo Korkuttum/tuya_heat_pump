@@ -97,12 +97,21 @@ SENSOR_TYPES = {
         "dp_id": 36,
         "code": "top_temp_f",
         "name": "Low Pressure Saturation Temp",
-        # UPDATE: confirmed via real-world comparison against the
-        # neighboring Coil Temperature sensor (GitHub issue #65) — this
-        # DP genuinely reports in Fahrenheit at the hardware level, it
-        # wasn't just a manufacturer catalog typo like we first assumed.
-        # A real F→C conversion is required, not just a relabel.
-        "conversion": "(value - 32) * 5 / 9",
+        # HISTORY (see GitHub issues #41, #65): first assumed the °F
+        # label was just a manufacturer catalog typo (no conversion).
+        # Then a single high sample (61) that only made sense as
+        # Fahrenheit made us add a real (value-32)*5/9 conversion.
+        # But repeated live comparisons since (2 local + 1 cloud, all
+        # while the compressor was idle) consistently show this DP
+        # sitting right in the middle of its already-Celsius neighbors
+        # (dp35/dp37) with NO conversion needed — applying the F→C
+        # formula to those readings instead produces a physically
+        # implausible negative temperature. Removed the conversion
+        # again. Best guess: this DP may encode differently while the
+        # compressor is actively running vs idle, which no single
+        # static formula can handle correctly — if it turns out wrong
+        # again while the heat pump is actively heating/cooling,
+        # that's the scenario to investigate next.
         "unit": "°C",
         "icon": "mdi:thermometer",
         "device_class": "temperature",
