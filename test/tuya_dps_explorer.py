@@ -1,6 +1,5 @@
 import tinytuya
 import json
-from getpass import getpass
 
 def scan_tuya_devices():
     print("\n🔍 Scanning network for Tuya devices...\n")
@@ -38,7 +37,7 @@ def select_device(device_list):
 
 def read_dps(ip, dev_id, version):
     print("\n🔑 Enter Local Key for selected device:")
-    local_key = getpass("Local Key (hidden): ").strip()
+    local_key = input("Local Key: ").strip()
 
     device = tinytuya.Device(
         dev_id=dev_id,
