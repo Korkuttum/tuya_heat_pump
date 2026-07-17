@@ -173,3 +173,42 @@ NUMBER_TYPES.update({
         "icon": "mdi:fan",
     },
 })
+
+# --- merge into SENSOR_TYPES (contributed by @Schneider006 via raw_explorer.py) ---
+# raw_explorer auto-detected this as ONE int32_be field (field_index 0
+# of r_135), but Schneider006 confirmed by testing that it's actually
+# TWO packed int16 temperatures — same "mixed-width field" situation
+# as SilentSpeedMax/FanMaxCool above. Per his description: upper 16
+# bits = return temperature (Rücklauf), lower 16 bits = flow/supply
+# temperature (Vorlauf). Split into two proper int16_be fields
+# (byte offset 0-1 and 2-3 -> int16 field_index 0 and 1) instead of
+# the single misleading int32 reading.
+SENSOR_TYPES = globals().get("SENSOR_TYPES", {})
+SENSOR_TYPES.update({
+    "return_temperature": {
+        "dp_id": 135,
+        "code": "return_temperature",
+        "raw_source": "r_135",
+        "field_index": 0,
+        "encoding": "int16_be",
+        "conversion": "value / 10",
+        "name": "Return Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+    },
+    "flow_temperature": {
+        "dp_id": 135,
+        "code": "flow_temperature",
+        "raw_source": "r_135",
+        "field_index": 1,
+        "encoding": "int16_be",
+        "conversion": "value / 10",
+        "name": "Flow Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+    },
+})
