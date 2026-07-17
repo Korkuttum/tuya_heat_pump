@@ -2,7 +2,7 @@
 
 MODEL_NAME = "Heat Pump Model 000004u5nz"
 # ====================================================
-# Adlar Castra @rznq0q | SolarEast BLN @typxxi
+# Adlar Castra @rznq0q
 # ====================================================
 SENSOR_TYPES = {
     "temp_current": {
@@ -454,9 +454,18 @@ SELECT_TYPES = {
             "2": "Three-Phase Module",
         },
         # Tuya's own typeSpec says this DP is "value" (integer), not
-        # "enum" — the cloud API expects a JSON int on write, so the
-        # selected option string ("0"/"1"/"2") needs converting back
-        # before sending, unlike a real enum DP like "mode"/"work_mode".
+        # "enum" — so BOTH directions need converting, not just write:
+        # - read:  raw int (e.g. 0) -> "0" string, since select.py's
+        #   current_option requires a str to match the options dict keys
+        #   (a real enum DP like "mode" doesn't need this, Tuya already
+        #   sends those as strings) — missing this caused the entity to
+        #   permanently show "unknown" even though the DP was reporting
+        #   fine (confirmed via raw debug dump, value=0). Uses an
+        #   f-string instead of str(value) because Conversion's eval()
+        #   only whitelists bool/float/int, not str, as a builtin.
+        # - write: selected option string ("0"/"1"/"2") -> real int
+        #   before sending, since the cloud API expects a JSON int here.
+        "conversion": 'f"{value}"',
         "api_conversion": "int(value)",
     },
 }
