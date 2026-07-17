@@ -97,13 +97,12 @@ SENSOR_TYPES = {
         "dp_id": 36,
         "code": "top_temp_f",
         "name": "Low Pressure Saturation Temp",
-        # NOTE: Tuya's own device catalog declares this DP's unit as °F
-        # while every sibling temperature DP (35/37/38/41) is °C — this
-        # looks like a manufacturer catalog typo, not an intentional
-        # Fahrenheit sensor. Corrected to °C (no conversion applied) as
-        # the safer default. If real-world values look implausible
-        # compared to neighboring refrigerant temps, this may actually
-        # need a real F→C conversion instead — see GitHub issue #41.
+        # UPDATE: confirmed via real-world comparison against the
+        # neighboring Coil Temperature sensor (GitHub issue #65) — this
+        # DP genuinely reports in Fahrenheit at the hardware level, it
+        # wasn't just a manufacturer catalog typo like we first assumed.
+        # A real F→C conversion is required, not just a relabel.
+        "conversion": "(value - 32) * 5 / 9",
         "unit": "°C",
         "icon": "mdi:thermometer",
         "device_class": "temperature",
