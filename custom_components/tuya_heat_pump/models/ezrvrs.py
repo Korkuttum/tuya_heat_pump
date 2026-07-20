@@ -1,6 +1,6 @@
-"""Model mapping for Aquatech X6 Heat Pump (ezrvrs)."""
+"""Model mapping for Aquatech X6 320L Heat Pump (ezrvrs)."""
 
-MODEL_NAME = "Aquatech X6 Heat Pump (ezrvrs)"
+MODEL_NAME = "Aquatech X6 320L Heat Pump (ezrvrs)"
 # ====================================================
 # Aquatech X6 320L @whoisjamesburke110011001100
 #
