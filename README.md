@@ -14,6 +14,7 @@
 - Aquark
 - Aquastrong 
 - Aquatech X6
+- Aquatech X6 320L
 - Cordivari Vestalis
 - Della
 - Ecologic Ecopool
