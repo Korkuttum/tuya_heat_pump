@@ -6,7 +6,7 @@ MODEL_NAME = "Aquatech X6 320L Heat Pump (ezrvrs)"
 #
 # IMPORTANT: this device's Tuya `code` strings are extremely unreliable
 # — many of them describe something completely different from what the
-# DP actually is. Every entry below was named from the ACTUAL Chinese
+# DP actually is. Every entry's "name" was set from the ACTUAL Chinese
 # `name` field in Tuya's own device model, not from the (often
 # misleading) code. A few notable examples of just how wrong the codes
 # are on this device:
@@ -27,12 +27,22 @@ MODEL_NAME = "Aquatech X6 320L Heat Pump (ezrvrs)"
 #   - "backwater"            is actually 水泵状态 = Water Pump Status
 #   - "defrost_state"        is actually 高压开关 = High Pressure Switch
 #   - "lpress"               is actually 电量检测 = Power Detection
+#
+# NOTE (fixed after v2.4.1-beta11): the dict KEY below must match the
+# real Tuya `code` exactly — that's what coordinator.data is actually
+# keyed by. The very first version of this file used descriptive
+# English keys instead (e.g. "water_inlet_temp" for the "temp_top" DP)
+# which meant most entities were silently never created, since the
+# lookup key never matched anything in coordinator.data. The friendly,
+# corrected-from-Chinese name still goes in "name" — only the dict key
+# itself has to be the literal Tuya code.
+#
 # No raw-type DPs on this device — every field is a plain
 # bool/value/enum/bitmap DP.
 # ====================================================
 
 SENSOR_TYPES = {
-    "expansion_valve_position": {
+    "countdown_left": {
         "dp_id": 14,
         "code": "countdown_left",
         "name": "Expansion Valve Position",
@@ -49,7 +59,7 @@ SENSOR_TYPES = {
         "name": "Fault Alarm",
         "icon": "mdi:alert-circle",
     },
-    "phase_sequence": {
+    "work_state": {
         "dp_id": 17,
         "code": "work_state",
         "name": "Phase Sequence Module",
@@ -65,13 +75,13 @@ SENSOR_TYPES = {
         "state_class": "total_increasing",
         "conversion": "value / 100",
     },
-    "fan_status": {
+    "flow": {
         "dp_id": 19,
         "code": "flow",
         "name": "Fan Status",
         "icon": "mdi:fan",
     },
-    "return_gas_temp": {
+    "compressor_strength": {
         "dp_id": 20,
         "code": "compressor_strength",
         "name": "Return Gas Temperature",
@@ -80,16 +90,16 @@ SENSOR_TYPES = {
         "device_class": "temperature",
         "state_class": "measurement",
     },
-    "water_inlet_temp": {
+    "temp_top": {
         "dp_id": 21,
         "code": "temp_top",
-        "name": "Water Inlet Temperature",
+        "name": "Water Tank Temperature",
         "unit": "°C",
         "icon": "mdi:thermometer-water",
         "device_class": "temperature",
         "state_class": "measurement",
     },
-    "water_outlet_temp": {
+    "temp_bottom": {
         "dp_id": 22,
         "code": "temp_bottom",
         "name": "Water Outlet Temperature",
@@ -98,7 +108,7 @@ SENSOR_TYPES = {
         "device_class": "temperature",
         "state_class": "measurement",
     },
-    "coil_temp": {
+    "coiler_temp": {
         "dp_id": 23,
         "code": "coiler_temp",
         "name": "Coil Temperature",
@@ -107,7 +117,7 @@ SENSOR_TYPES = {
         "device_class": "temperature",
         "state_class": "measurement",
     },
-    "discharge_temp": {
+    "venting_temp": {
         "dp_id": 24,
         "code": "venting_temp",
         "name": "Discharge Temperature",
@@ -116,7 +126,7 @@ SENSOR_TYPES = {
         "device_class": "temperature",
         "state_class": "measurement",
     },
-    "ambient_temp": {
+    "around_temp": {
         "dp_id": 26,
         "code": "around_temp",
         "name": "Ambient Temperature",
@@ -125,13 +135,13 @@ SENSOR_TYPES = {
         "device_class": "temperature",
         "state_class": "measurement",
     },
-    "unit_assembly_number": {
+    "effluent_temp_f": {
         "dp_id": 40,
         "code": "effluent_temp_f",
         "name": "Unit Assembly Number",
         "icon": "mdi:identifier",
     },
-    "compressor_runtime_before_defrost": {
+    "coiler_temp_f": {
         "dp_id": 41,
         "code": "coiler_temp_f",
         "name": "Compressor Runtime Before Defrost",
@@ -139,7 +149,7 @@ SENSOR_TYPES = {
         "icon": "mdi:timer-sand",
         "device_class": "duration",
     },
-    "current": {
+    "cur_current": {
         "dp_id": 101,
         "code": "cur_current",
         "name": "Current",
@@ -149,7 +159,7 @@ SENSOR_TYPES = {
         "state_class": "measurement",
         "conversion": "value / 1000",
     },
-    "voltage": {
+    "cur_voltage": {
         "dp_id": 102,
         "code": "cur_voltage",
         "name": "Voltage",
@@ -159,7 +169,7 @@ SENSOR_TYPES = {
         "state_class": "measurement",
         "conversion": "value / 10",
     },
-    "power": {
+    "cur_power": {
         "dp_id": 103,
         "code": "cur_power",
         "name": "Power",
@@ -169,7 +179,7 @@ SENSOR_TYPES = {
         "state_class": "measurement",
         "conversion": "value / 10",
     },
-    "total_energy": {
+    "electric_total": {
         "dp_id": 104,
         "code": "electric_total",
         "name": "Total Power Consumption",
@@ -192,72 +202,72 @@ BINARY_SENSOR_TYPES = {
         "device_class": "running",
         "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
-    "four_way_valve": {
+    "four_valve_state": {
         "dp_id": 28,
         "code": "four_valve_state",
         "name": "Four-Way Valve",
         "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
-    "low_pressure_switch": {
+    "draught_fan_state": {
         "dp_id": 29,
         "code": "draught_fan_state",
         "name": "Low Pressure Switch",
         "device_class": "problem",
         "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
-    "circulation_mode": {
+    "pump_state": {
         "dp_id": 30,
         "code": "pump_state",
         "name": "Refrigerant/Water Circulation",
         "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
-    "water_pump": {
+    "backwater": {
         "dp_id": 31,
         "code": "backwater",
         "name": "Water Pump Status",
         "device_class": "running",
         "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
-    "electric_heating": {
+    "ele_heating_state": {
         "dp_id": 32,
         "code": "ele_heating_state",
         "name": "Electric Heating State",
         "device_class": "heat",
         "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
-    "high_pressure_switch": {
+    "defrost_state": {
         "dp_id": 33,
         "code": "defrost_state",
         "name": "High Pressure Switch",
         "device_class": "problem",
         "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
-    "power_detection": {
+    "lpress": {
         "dp_id": 105,
         "code": "lpress",
         "name": "Power Detection",
         "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
-    "linkage_switch": {
+    "link": {
         "dp_id": 106,
         "code": "link",
         "name": "Linkage Switch",
         "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
-    "water_flow_switch": {
+    "flowswitch": {
         "dp_id": 107,
         "code": "flowswitch",
         "name": "Water Flow Switch",
         "device_class": "problem",
         "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
-    "dip_switch_1": {
+    "sw1": {
         "dp_id": 108,
         "code": "sw1",
         "name": "DIP Switch 1",
         "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
-    "dip_switch_2": {
+    "sw2": {
         "dp_id": 109,
         "code": "sw2",
         "name": "DIP Switch 2",
