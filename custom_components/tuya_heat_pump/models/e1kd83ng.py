@@ -331,7 +331,7 @@ NUMBER_TYPES = {
         "max_value": 40.0,
         "step": 1.0,
         "conversion": "value / 10",
-        "api_conversion": "value * 10"
+        "api_conversion": "int(value * 10)"
     },
     "set_cold_temp": {
         "dp_id": 102,
@@ -343,7 +343,7 @@ NUMBER_TYPES = {
         "max_value": 28.0,
         "step": 1.0,
         "conversion": "value / 10",
-        "api_conversion": "value * 10"
+        "api_conversion": "int(value * 10)"
     },
     "set_auto_temp": {
         "dp_id": 104,
@@ -355,7 +355,7 @@ NUMBER_TYPES = {
         "max_value": 40.0,
         "step": 1.0,
         "conversion": "value / 10",
-        "api_conversion": "value * 10"
+        "api_conversion": "int(value * 10)"
     },
     "set_heating_temp_f": {
         "dp_id": 105,
@@ -366,7 +366,7 @@ NUMBER_TYPES = {
         "min_value": 59.0,
         "max_value": 104.0,
         "step": 1.0,
-        "api_conversion": "value"
+        "api_conversion": "int(value)"
     },
     "set_cold_temp_f": {
         "dp_id": 106,
@@ -377,7 +377,7 @@ NUMBER_TYPES = {
         "min_value": 46.0,
         "max_value": 82.0,
         "step": 1.0,
-        "api_conversion": "value"
+        "api_conversion": "int(value)"
     },
     "set_auto_temp_f": {
         "dp_id": 108,
@@ -388,7 +388,7 @@ NUMBER_TYPES = {
         "min_value": 46.0,
         "max_value": 104.0,
         "step": 1.0,
-        "api_conversion": "value"
+        "api_conversion": "int(value)"
     },
 }
 
