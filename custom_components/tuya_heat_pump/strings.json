@@ -4,13 +4,17 @@
         "step": {
             "user": {
                 "title": "Tuya Heat Pump Setup",
-                "description": "Enter your Tuya IoT Platform credentials and connection type\n\n• Cloud: Recommended for most users, works over the internet\n• Local: Faster response, no API limits, requires device on local network",
+                "description": "Enter your Tuya IoT Platform credentials and select connection type\n\n• Cloud: Recommended for most users, works over the internet\n• Local: Faster response, no API limits, requires device on local network\n\nFor MQTT (instant updates, optional): find the User Code in your Tuya app under Me → Settings → Account and Security → User Code and enter it below. How well this works varies by device — some devices get everything instantly, others are limited by Tuya's own restrictions (the integration automatically falls back to regular polling in that case). Leave it blank to skip this step entirely — everything else works exactly the same either way.",
                 "data": {
                     "access_id": "Access ID",
                     "access_key": "Access Key",
                     "device_id": "Device ID",
                     "region": "Region",
-                    "connection_type": "Connection Type"
+                    "connection_type": "Connection Type",
+                    "user_code": "User Code (optional — for MQTT)"
+                },
+                "data_description": {
+                    "user_code": "Found in the Tuya app under Me → Settings → Account and Security → User Code. If provided, you'll be asked to scan a QR code after this step to try instant (MQTT push) updates. Note: how well this works varies by device — some devices get everything instantly, others are limited by Tuya's own restrictions (in that case the integration automatically keeps using regular polling instead, nothing breaks)."
                 }
             },
             "local": {
@@ -28,12 +32,21 @@
                 "data": {
                     "scan_interval": "Sensor Refresh Interval (minutes)"
                 }
+            },
+            "cloud_qr": {
+                "title": "Scan to Enable Instant Updates",
+                "description": "Step 1: Open the Tuya Smart or Smart Life app on your phone → tap + in the top right corner → Scan → scan the QR code shown below.\n\nStep 2: Once the app confirms it worked, come back here and click Submit.\n\nNote: how well this works varies by device — some devices get all their data instantly, others are limited by Tuya's own restrictions and only get partial updates this way. Either way, the integration automatically falls back to regular polling for anything MQTT can't cover, so nothing breaks. If the QR code expires before you scan it, just click Submit to get a new one.",
+                "data": {
+                    "qr": "QR Code"
+                }
             }
         },
         "error": {
             "cannot_connect": "Failed to connect",
             "invalid_auth": "Invalid authentication",
-            "unknown": "Unexpected error"
+            "unknown": "Unexpected error",
+            "qr_not_confirmed": "QR code not scanned/confirmed yet in the app — try again, or scan it now if you haven't",
+            "qr_request_failed": "Could not request a QR code from Tuya. Check your User Code and try again."
         },
         "abort": {
             "already_configured": "Device is already configured"
