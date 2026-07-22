@@ -24,6 +24,12 @@ SENSOR_TYPES = {
         "code": "work_state",
         "name": "Work State",
         "icon": "mdi:coffee-maker",
+        "conversion": (
+            "{'standby':'Standby','power_save':'Power Save',"
+            "'warm_up':'Warming Up','brewing':'Brewing',"
+            "'auto_clean':'Auto Clean','empty_device':'Emptying',"
+            "'descaling':'Descaling','reset':'Resetting'}.get(value, value)"
+        ),
     },
     # Fault Description (dp_id: 4) — Tuya's label array for this DP is
     # already in English (unusual, most devices need Chinese
@@ -237,6 +243,19 @@ SWITCH_TYPES = {
         "icon": "mdi:coffee-to-go",
         "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
+    # Tuya's schema has this as a 2-option enum ("Default"/"ECO"), but
+    # since there are only two states, a plain on/off toggle is more
+    # convenient than a dropdown. "conversion" turns the raw string
+    # into a bool for display; "api_conversion" turns switch.py's
+    # True/False (from turn_on/turn_off) back into the right string.
+    "mode_selection": {
+        "dp_id": 106,
+        "code": "mode_selection",
+        "name": "Eco Mode",
+        "icon": "mdi:leaf",
+        "conversion": "value == 'ECO'",
+        "api_conversion": "'ECO' if value else 'Default'",
+    },
 }
 
 NUMBER_TYPES = {
@@ -294,16 +313,6 @@ SELECT_TYPES = {
             "24hours": "24 Hours",
         },
     },
-    "mode_selection": {
-        "dp_id": 106,
-        "code": "mode_selection",
-        "name": "Mode",
-        "icon": "mdi:leaf",
-        "options": {
-            "Default": "Default",
-            "ECO": "Eco",
-        },
-    },
     "last_profile": {
         "dp_id": 113,
         "code": "last_profile",
@@ -322,40 +331,44 @@ SELECT_TYPES = {
 # --- merge into TEXT_TYPES (from raw_explorer.py, unchanged) ---
 TEXT_TYPES = globals().get("TEXT_TYPES", {})
 TEXT_TYPES.update({
-    "orange_username": {
-        "dp_id": 108,
-        "code": "orange_username",
-        "raw_source": "orange_username",
-        "field_index": 0,
-        "encoding": "utf8_string",
-        "max_length": 16,
-        "name": "Orange Username",
-    },
-    "violet_username": {
-        "dp_id": 109,
-        "code": "violet_username",
-        "raw_source": "violet_username",
-        "field_index": 0,
-        "encoding": "utf8_string",
-        "max_length": 16,
-        "name": "Violet Username",
-    },
-    "blue_username": {
+    # Dict keys renamed to "username_<color>" (from "<color>_username")
+    # so they sort together alphabetically in the entity list instead
+    # of being scattered among unrelated entities. raw_source is
+    # untouched — that's still the real Tuya code used for lookup.
+    "username_blue": {
         "dp_id": 110,
         "code": "blue_username",
         "raw_source": "blue_username",
         "field_index": 0,
         "encoding": "utf8_string",
         "max_length": 16,
-        "name": "Blue Username",
+        "name": "Username Blue",
     },
-    "green_username": {
+    "username_green": {
         "dp_id": 111,
         "code": "green_username",
         "raw_source": "green_username",
         "field_index": 0,
         "encoding": "utf8_string",
         "max_length": 16,
-        "name": "Green Username",
+        "name": "Username Green",
+    },
+    "username_orange": {
+        "dp_id": 108,
+        "code": "orange_username",
+        "raw_source": "orange_username",
+        "field_index": 0,
+        "encoding": "utf8_string",
+        "max_length": 16,
+        "name": "Username Orange",
+    },
+    "username_violet": {
+        "dp_id": 109,
+        "code": "violet_username",
+        "raw_source": "violet_username",
+        "field_index": 0,
+        "encoding": "utf8_string",
+        "max_length": 16,
+        "name": "Username Violet",
     },
 })
