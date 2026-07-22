@@ -39,6 +39,7 @@ from .const import (
     DEFAULT_NAME,
     DEFAULT_MANUFACTURER,
     DEFAULT_MODEL,
+    CONF_USER_CODE,
 )
 import tinytuya
 from .model_loader import load_model_mapping, async_load_model_mapping
@@ -93,6 +94,13 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         self.model_id = None
         self.model_mapping = None
         self.dp_mapping = {}
+        # --- MQTT (tuya_sharing) — tamamen opsiyonel, bkz. sharing_mqtt.py.
+        # CONF_USER_CODE config_entry.data'da yoksa (mevcut tüm entry'ler
+        # için durum bu) aşağıdakiler hiç kullanılmaz, davranış hiç
+        # değişmez. self._pre_mqtt_update_interval, MQTT aktifken
+        # duraklatılan periyodik poll'un eski değerini saklamak için.
+        self.sharing_mqtt = None
+        self._pre_mqtt_update_interval = None
         # Raw DP → code cache. Filled from live properties in cloud mode
         # (every raw-type DP is registered by dp_id). Also populated from
         # any `raw_source` fields in the model mapping for local mode.
@@ -363,6 +371,80 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     "retry automatically.", err,
                 )
                 return
+
+    # ============================================================================
+    # MQTT (tuya_sharing) — opsiyonel, bkz. sharing_mqtt.py
+    # ============================================================================
+
+    async def _async_start_mqtt(self) -> None:
+        """CONF_USER_CODE tanımlıysa (kullanıcı kurulumda QR onayı
+        yaptıysa) MQTT'yi başlatmayı dener. __init__.py'den, ilk refresh
+        (dolayısıyla model_mapping'in dolu olması) garantilendikten
+        SONRA çağrılmalı — SharingMQTT.async_start() model_mapping'e
+        muhtaç, local moddaki _listen_loop'un aksine bu raceyi tolere
+        edemez."""
+        if self.connection_type != "cloud" or not self.config_entry.data.get(CONF_USER_CODE):
+            return
+
+        from .sharing_mqtt import SharingMQTT
+
+        self.sharing_mqtt = SharingMQTT(self.hass, self)
+        started = await self.sharing_mqtt.async_start()
+        if started and self.sharing_mqtt.sufficient:
+            # MQTT bu cihazın TÜM DP'lerini görebiliyor -> poll'a gerek yok.
+            self._mqtt_set_active(True)
+        elif started:
+            # MQTT bağlandı ama bu cihazın DP'lerinin bir kısmını/hiçbirini
+            # göremiyor (senin ısı pompan gibi — sadece 'switch' görünüyor).
+            # Poll'u KESİNLİKLE duraklatmıyoruz — aksi halde sensör gibi
+            # MQTT'de hiç görünmeyen değerler asla güncellenmez, sonsuza
+            # dek bayat kalır. Push burada sadece "bir şey oldu, hemen
+            # tazele" bonus tetikleyicisi olarak kullanılmaya devam eder
+            # (bkz. SharingMQTT._on_push / _mqtt_trigger_refresh),
+            # normal periyodik poll ise hiç değişmeden aynen sürer.
+            _LOGGER.info(
+                "MQTT bağlandı ama bu cihazın DP'lerini tam kapsamıyor — "
+                "periyodik poll (%s) duraklatılmadan devam ediyor, "
+                "push sadece ek tetikleyici olarak kullanılacak.",
+                self.update_interval,
+            )
+        else:
+            _LOGGER.info(
+                "MQTT başlatılamadı, periyodik poll (%s) ile devam ediliyor.",
+                self.update_interval,
+            )
+
+    def _mqtt_set_active(self, active: bool) -> None:
+        """MQTT bağlantısı sağlıklıyken (active=True) periyodik poll'u
+        duraklatır; koparsa (active=False) eski haline döndürüp bir
+        kerelik anlık yenileme tetikler. sharing_mqtt.py'nin hem
+        ilk bağlantı kurulumunda hem de kopma/yeniden bağlanma sağlık
+        kontrolünde çağırdığı tek yer burası."""
+        if active:
+            if self._pre_mqtt_update_interval is None:
+                self._pre_mqtt_update_interval = self.update_interval
+            self.update_interval = None
+            _LOGGER.info("MQTT aktif — periyodik poll duraklatıldı.")
+        else:
+            if self._pre_mqtt_update_interval is not None:
+                self.update_interval = self._pre_mqtt_update_interval
+            _LOGGER.info("MQTT pasif — periyodik poll (%s) devam ediyor.", self.update_interval)
+            self.hass.async_create_task(self.async_request_refresh())
+
+    def _mqtt_apply_push(self, new_data: dict) -> None:
+        """sharing_mqtt.py'den (zaten event loop thread'ine güvenli
+        şekilde geçmiş olarak, call_soon_threadsafe ile) çağrılır — bu
+        cihaz için MQTT'nin TÜM gerekli DP'leri kapsadığı doğrulanmış
+        (SharingMQTT._sufficient), yani gelen veriye doğrudan güvenilir."""
+        merged = {**(self.data or {}), **new_data}
+        self.async_set_updated_data(merged)
+
+    async def _mqtt_trigger_refresh(self) -> None:
+        """sharing_mqtt.py'den çağrılır — bu cihaz için MQTT'nin
+        gördüğü DP kümesi YETERSİZ, o yüzden push'un İÇERİĞİNE hiç
+        bakmadan, sadece "bir şey değişti" sinyali olarak alıp tam bir
+        API sorgusu tetikliyoruz."""
+        await self.async_request_refresh()
 
     def _apply_sent_cache(self, new_data: dict):
         """Gelen veride eski değer varsa, son gönderilen değeri zorla uygula."""
@@ -673,6 +755,25 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
               
                 if result.get('success', False):
                     _LOGGER.info("✅ Cloud komut başarılı: %s = %s", code, value)
+                    # Local moddaki AYNI mekanizma: son gönderilen değeri
+                    # cache'e yazıyoruz ki _apply_sent_cache (aşağıdaki
+                    # poll'da çağrılıyor) Tuya cloud'un henüz yetişmediği
+                    # bir "eski değer" döndürmesi durumunda bunu düzeltebilsin.
+                    self._sent_value_cache[code] = (value, time.time())
+                    # Optimistic update: local moddaki ile aynı sebep —
+                    # cihazdan/Tuya cloud'undan gerçek yankıyı beklemeden
+                    # entity'ye YENİ değeri hemen yansıtıyoruz. Bu olmadan
+                    # HA'nın arayüzü kendi tahmini olarak "açık" gösterirken
+                    # bizim self.data hâlâ eskiyi taşıyor — aşağıdaki 2sn
+                    # sonraki poll, Tuya'nın cloud'u henüz yetişmediyse
+                    # hâlâ eski değeri döndürebilir, bu da UI'da "kapandı,
+                    # sonra tekrar açıldı" gibi görünen bir titreşime ve
+                    # Activity geçmişinde yanlış/eksik bir olay sırasına
+                    # yol açıyordu.
+                    if self.data and code in self.data:
+                        self.data[code]['value'] = value
+                        self.data[code]['timestamp'] = int(time.time() * 1000)
+                        self.async_update_listeners()
                     await asyncio.sleep(2)
                     await self.async_request_refresh()
                     return True
@@ -872,6 +973,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                         dp_id = prop.get('dp_id')
                         if dp_id is not None:
                             self.raw_code_by_dp_id[dp_id] = code
+                self._apply_sent_cache(data)
                 return data
                
             except Exception as err:
