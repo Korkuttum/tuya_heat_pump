@@ -7,9 +7,13 @@
                     "access_key": "Access Key",
                     "device_id": "Cihaz ID",
                     "region": "Bölge",
-                    "connection_type": "Bağlantı Türü"
+                    "connection_type": "Bağlantı Türü",
+                    "user_code": "User Code (opsiyonel — MQTT için)"
                 },
-                "description": "Tuya IoT Platform bilgilerinizi girin ve bağlantı türünü seçin\n\n• Cloud: Çoğu kullanıcı için önerilir, internet üzerinden çalışır\n• Local: Daha hızlı, API limiti yok, cihaz yerel ağda olmalı",
+                "data_description": {
+                    "user_code": "Tuya uygulamasında şu yoldan bulunur: Profil → Ayarlar → Hesap ve Güvenlik → User Code. Girilirse, bu adımdan sonra bir QR kod okutmanız istenecek — anlık (MQTT push) güncellemeleri dener. Not: bu özelliğin faydası cihazdan cihaza değişir — bazı cihazlarda tüm veriler anlık gelir, bazılarında ise Tuya'nın kendi kısıtlaması yüzünden sınırlı kalır (bu durumda entegrasyon otomatik olarak normal periyodik sorgulamaya devam eder, hiçbir şey bozulmaz)."
+                },
+                "description": "Tuya IoT Platform bilgilerinizi girin ve bağlantı türünü seçin\n\n• Cloud: Çoğu kullanıcı için önerilir, internet üzerinden çalışır\n• Local: Daha hızlı, API limiti yok, cihaz yerel ağda olmalı\n\nMQTT (anlık güncelleme, opsiyonel) için: Tuya uygulamanızda Profil → Ayarlar → Hesap ve Güvenlik → User Code yoluyla kodu bulup aşağıya girin. Bu özelliğin faydası cihazdan cihaza değişir — bazı cihazlarda tüm veriler anlık gelir, bazılarında Tuya'nın kendi kısıtlaması yüzünden sınırlı kalır (böyle durumda entegrasyon otomatik olarak periyodik sorgulamaya devam eder). Boş bırakırsanız bu adım tamamen atlanır — geri kalan her şey aynen çalışır.",
                 "title": "Tuya Isı Pompası Kurulumu"
             },
             "local": {
@@ -27,12 +31,21 @@
                 },
                 "description": "Cloud bağlantısı için sensör yenileme süresini ayarlayın\n\nDüşük değerler = daha hızlı güncellemeler ama daha çok API çağrısı",
                 "title": "Cloud Yapılandırması"
+            },
+            "cloud_qr": {
+                "data": {
+                    "qr": "QR Kod"
+                },
+                "description": "1. Adım: Telefonunuzda Tuya Smart ya da Smart Life uygulamasını açın → sağ üstteki + işaretine dokunun → Scan → aşağıdaki QR kodu tarayın.\n\n2. Adım: Uygulama onayladıktan sonra buraya dönüp Gönder'e (Submit) basın.\n\nBilginize: MQTT'nin faydası cihazdan cihaza değişir — bazı cihazlarda tüm veriler anlık gelir, bazılarında Tuya'nın kendi kısıtlaması yüzünden sadece bir kısmı gelir. Böyle durumlarda entegrasyon otomatik olarak normal periyodik sorgulamaya devam eder, hiçbir şey bozulmaz. QR kod süresi dolarsa, tekrar Gönder'e basmanız yeter, yeni bir tane alırsınız.",
+                "title": "Anlık Güncelleme İçin Tarayın"
             }
         },
         "error": {
             "cannot_connect": "Bağlantı başarısız",
             "invalid_auth": "Geçersiz kimlik doğrulama",
-            "unknown": "Beklenmeyen hata"
+            "unknown": "Beklenmeyen hata",
+            "qr_not_confirmed": "QR kod henüz uygulamada taranmadı/onaylanmadı — tekrar deneyin, ya da henüz taramadıysanız şimdi tarayın",
+            "qr_request_failed": "Tuya'dan QR kod istenemedi. User Code'unuzu kontrol edip tekrar deneyin."
         },
         "abort": {
             "already_configured": "⚠️ Bu cihaz zaten eklenmiş! Lütfen Ayarlar > Cihazlar ve Servisler'den kontrol edin."
