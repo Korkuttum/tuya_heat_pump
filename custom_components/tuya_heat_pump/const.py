@@ -31,6 +31,22 @@ CONF_LOCAL_KEY = "local_key"
 CONF_PROTOCOL = "protocol"
 PROTOCOL_OPTIONS = ["3.1", "3.3", "3.4", "3.5"]
 
+# --- MQTT (tuya_sharing / Smart Life push) — tamamen opsiyonel ---
+# Bunların hiçbiri mevcut kullanıcıları etkilemez: CONF_USER_CODE
+# config_entry.data'da yoksa (ki mevcut tüm entry'lerde yok), MQTT hiç
+# devreye girmez, entegrasyon eskisi gibi (sadece periyodik poll ile)
+# çalışmaya devam eder. Sadece kurulum sırasında kullanıcı bilerek
+# User Code girip QR onaylarsa aktifleşir.
+CONF_USER_CODE = "user_code"
+CONF_SHARING_TOKEN_INFO = "sharing_token_info"
+
+# Herkese açık, home-assistant/core'un kendi resmi "tuya" entegrasyonunda
+# kullanılan paylaşılan kimlik bilgisi (bkz. homeassistant/components/
+# tuya/const.py) — Tuya'nın Home Assistant ekosistemi için ayırdığı
+# ortak client_id/schema, gizli bir şey değil.
+TUYA_SHARING_CLIENT_ID = "HA_3y9q4ak7g4ephrvke"
+TUYA_SHARING_SCHEMA = "haauthorize"
+
 # API Region
 DEFAULT_REGION = "EU"
 REGIONS = {
