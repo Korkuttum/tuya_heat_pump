@@ -196,9 +196,8 @@ class TuyaHeatpumpSensor(SensorEntity):
             attrs["raw_field_index"] = self._config.get("field_index")
             attrs["raw_encoding"] = self._config.get("encoding", "int32_be")
         else:
-            dp_info = self.coordinator.get_tuya_dp_info(self._sensor_code)
-            attrs["tuya_code"] = dp_info["code"]
-            attrs["tuya_dp_id"] = dp_info["dp_id"]
+            attrs["tuya_code"] = self._config.get("code", self._sensor_code)
+            attrs["tuya_dp_id"] = self._config.get("dp_id")
 
         if self.coordinator.model_id:
             attrs["tuya_model_id"] = self.coordinator.model_id
