@@ -11,6 +11,7 @@
 - Arçelik (Beko, Grundig)
 - ACIQ
 - Adlar Castra
+- Adlar Castra Domestic
 - Aquark
 - Aquastrong 
 - Aquatech X6
