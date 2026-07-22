@@ -25,8 +25,11 @@ from .const import (
     REGIONS,
     DEFAULT_REGION,
     PROTOCOL_OPTIONS,
+    CONF_USER_CODE,
+    CONF_SHARING_TOKEN_INFO,
 )
 from .coordinator import TuyaScaleDataUpdateCoordinator
+from .sharing_mqtt import SharingQRLogin
 import tinytuya
 
 _LOGGER = logging.getLogger(__name__)
@@ -51,6 +54,12 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
                 mode=selector.SelectSelectorMode.DROPDOWN
             )
         ),
+        # Opsiyonel — sadece Cloud modda anlamlı. Doldurulursa, kurulumun
+        # sonunda bir QR kod gösterilir; Smart Life/Tuya Smart uygulamasıyla
+        # onaylanırsa MQTT (anlık güncelleme) devreye girer. Boş bırakılırsa
+        # (varsayılan, mevcut tüm kullanıcılar dahil) hiçbir şey değişmez,
+        # entegrasyon eskisi gibi sadece periyodik sorgulamayla çalışır.
+        vol.Optional(CONF_USER_CODE): str,
     }
 )
 
@@ -254,6 +263,7 @@ class TuyaHeatpumpConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
     connection_type = None
     user_data = None  # Geçici user input sakla
+    _qr_login = None  # SharingQRLogin instance'ı — bir akış boyunca tek sefer oluşturulur
 
     async def async_step_user(
         self, user_input: dict[str, any] | None = None
@@ -277,6 +287,13 @@ class TuyaHeatpumpConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
         if user_input is not None:
             full_data = {**self.user_data, **user_input}
+            self.user_data = full_data  # scan_interval de dahil olacak sekilde guncelle
+
+            # User Code girilmisse (opsiyonel), entry'i hemen olusturmak
+            # yerine once QR onayi almamiz lazim.
+            if full_data.get(CONF_USER_CODE):
+                return await self.async_step_cloud_qr()
+
             try:
                 info = await validate_input(self.hass, full_data, "cloud")
                 await self.async_set_unique_id(full_data[CONF_DEVICE_ID])
@@ -299,6 +316,71 @@ class TuyaHeatpumpConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="cloud_options", data_schema=STEP_CLOUD_OPTIONS_SCHEMA, errors=errors
+        )
+
+    async def async_step_cloud_qr(self, user_input=None) -> FlowResult:
+        """User Code girildiyse buraya düşülür — QR gösterip onay bekler.
+        MQTT/tuya_sharing girişi, asıl Access ID/Key ile hiç ilgisi olmayan
+        AYRI bir kimlik doğrulama — burada başarısız olsa/atlanırsa bile
+        normal cloud kurulumu (periyodik sorgulama) etkilenmez, sadece
+        MQTT devreye girmez."""
+        errors = {}
+
+        if self._qr_login is None:
+            self._qr_login = SharingQRLogin(self.hass)
+
+        if user_input is not None:
+            # Kullanici "Confirm" bastiginda buraya dusuyoruz — QR'i
+            # onaylamis mi bir kere kontrol ediyoruz (polling degil).
+            success, token_info = await self._qr_login.async_check_login(
+                self.user_data[CONF_USER_CODE]
+            )
+            if success and token_info:
+                full_data = {**self.user_data, CONF_SHARING_TOKEN_INFO: token_info}
+                try:
+                    info = await validate_input(self.hass, full_data, "cloud")
+                    await self.async_set_unique_id(full_data[CONF_DEVICE_ID])
+                    try:
+                        self._abort_if_unique_id_configured()
+                    except Exception:
+                        return self.async_abort(reason="already_configured")
+                    return self.async_create_entry(title=info["title"], data=full_data)
+                except CannotConnect:
+                    errors["base"] = "cannot_connect"
+                except InvalidAuth:
+                    errors["base"] = "invalid_auth"
+                except Exception:
+                    _LOGGER.exception("Unexpected exception after QR login")
+                    errors["base"] = "unknown"
+            else:
+                errors["base"] = "qr_not_confirmed"
+
+        # Ilk gosterimde (ya da onay basarisiz olup tekrar denerken) yeni
+        # bir QR iste.
+        qr_response = await self._qr_login.async_request_qr(self.user_data[CONF_USER_CODE])
+        if not qr_response.get("success"):
+            _LOGGER.warning("QR kod istegi basarisiz: %s", qr_response)
+            errors["base"] = "qr_request_failed"
+            schema = vol.Schema({})
+        else:
+            # HA'nın yerleşik QR selector'ı — tarayıcı QR'ı ham veriden
+            # anlık üretiyor, dosya/görsel/data-URI ile uğraşmaya gerek yok.
+            schema = vol.Schema(
+                {
+                    vol.Optional("qr"): selector.QrCodeSelector(
+                        config=selector.QrCodeSelectorConfig(
+                            data=self._qr_login.qr_token,
+                            scale=5,
+                            error_correction_level=selector.QrErrorCorrectionLevel.QUARTILE,
+                        )
+                    )
+                }
+            )
+
+        return self.async_show_form(
+            step_id="cloud_qr",
+            data_schema=schema,
+            errors=errors,
         )
 
     async def async_step_local(self, user_input=None) -> FlowResult:
