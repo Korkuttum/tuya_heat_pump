@@ -15,8 +15,6 @@ MODEL_NAME = "Coffee Machine (ew8plw)"
 #     contributed via raw_explorer.py's "text" field type — see the
 #     TEXT_TYPES block at the bottom of this file.
 #   - work_state (dp 3) and fault (dp 4) are read-only (accessMode "ro").
-#   - mode_selection (dp 106) is a Default/ECO enum, exposed as a switch
-#     (on = ECO, off = Default).
 #   - Everything else here is accessMode "rw".
 # ====================================================
 
@@ -27,6 +25,32 @@ SENSOR_TYPES = {
         "name": "Work State",
         "icon": "mdi:coffee-maker",
     },
+    # Fault Description (dp_id: 4) — Tuya's label array for this DP is
+    # already in English (unusual, most devices need Chinese
+    # translation), so used as-is, just cleaned up for readability.
+    # 11-bit bitmap, decodes into readable fault name(s), lists all
+    # active faults if more than one bit is set at once.
+    "fault": {
+        "dp_id": 4,
+        "code": "fault",
+        "name": "Fault Description",
+        "icon": "mdi:alert-circle",
+        "conversion": (
+            "', '.join(n for b, n in ["
+            "(1,'Heating Fault'),"
+            "(2,'NTC Sensor Fault'),"
+            "(4,'Blocked'),"
+            "(8,'Front Door Open'),"
+            "(16,'Brew Unit Misplaced'),"
+            "(32,'Water Empty'),"
+            "(64,'Trash Can Misplaced'),"
+            "(128,'Bean Container Empty'),"
+            "(256,'Residual Container Full'),"
+            "(512,'Milk Cup Missing'),"
+            "(1024,'Water Tank Misplaced')"
+            "] if value & b) or 'OK'"
+        ),
+    },
 }
 
 BINARY_SENSOR_TYPES = {
@@ -36,6 +60,88 @@ BINARY_SENSOR_TYPES = {
         "name": "Fault Alarm",
         "device_class": "problem",
         "conversion": "value != 0",
+    },
+    # Per-bit fault binary sensors — all share the same "fault" DP
+    # (dp_id 4) via an explicit "code" override, each checking one bit
+    # with its own mask. Added alongside the readable multi-fault
+    # SENSOR_TYPES entry above so both approaches can be compared in
+    # practice — keep whichever turns out more useful, or both.
+    "fault_heating_fault": {
+        "dp_id": 4,
+        "code": "fault",
+        "name": "Heating Fault",
+        "device_class": "problem",
+        "conversion": "bool(value & 1)",
+    },
+    "fault_ntc_fault": {
+        "dp_id": 4,
+        "code": "fault",
+        "name": "NTC Sensor Fault",
+        "device_class": "problem",
+        "conversion": "bool(value & 2)",
+    },
+    "fault_blocking": {
+        "dp_id": 4,
+        "code": "fault",
+        "name": "Blocked",
+        "device_class": "problem",
+        "conversion": "bool(value & 4)",
+    },
+    "fault_frontdoor_open": {
+        "dp_id": 4,
+        "code": "fault",
+        "name": "Front Door Open",
+        "device_class": "problem",
+        "conversion": "bool(value & 8)",
+    },
+    "fault_bu_misplaced": {
+        "dp_id": 4,
+        "code": "fault",
+        "name": "Brew Unit Misplaced",
+        "device_class": "problem",
+        "conversion": "bool(value & 16)",
+    },
+    "fault_water_empty": {
+        "dp_id": 4,
+        "code": "fault",
+        "name": "Water Empty",
+        "device_class": "problem",
+        "conversion": "bool(value & 32)",
+    },
+    "fault_trashcan_misplaced": {
+        "dp_id": 4,
+        "code": "fault",
+        "name": "Trash Can Misplaced",
+        "device_class": "problem",
+        "conversion": "bool(value & 64)",
+    },
+    "fault_beancontainer_empty": {
+        "dp_id": 4,
+        "code": "fault",
+        "name": "Bean Container Empty",
+        "device_class": "problem",
+        "conversion": "bool(value & 128)",
+    },
+    "fault_residual_full": {
+        "dp_id": 4,
+        "code": "fault",
+        "name": "Residual Container Full",
+        "device_class": "problem",
+        "conversion": "bool(value & 256)",
+    },
+    "fault_milkcup_missing": {
+        "dp_id": 4,
+        "code": "fault",
+        "name": "Milk Cup Missing",
+        "device_class": "problem",
+        "conversion": "bool(value & 512)",
+    },
+    "fault_watertank_misplaced": {
+        "dp_id": 4,
+        "code": "fault",
+        "name": "Water Tank Misplaced",
+        "device_class": "problem",
+        "conversion": "bool(value & 1024)",
     },
 }
 
@@ -131,14 +237,6 @@ SWITCH_TYPES = {
         "icon": "mdi:coffee-to-go",
         "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
     },
-    "mode_selection": {
-        "dp_id": 106,
-        "code": "mode_selection",
-        "name": "Eco Mode",
-        "icon": "mdi:leaf",
-        "conversion": "value == 'ECO'",
-        "api_conversion": "'ECO' if value else 'Default'",
-    },
 }
 
 NUMBER_TYPES = {
@@ -160,11 +258,8 @@ SELECT_TYPES = {
         "name": "Drink Selection",
         "icon": "mdi:coffee",
         "options": {
-            "Americano": "Americano",
-            "IcedAmericano": "Iced Americano",
-            "Hotmilk": "Hot Milk",
-            "Cappuccino": "Cappuccino",
             "Espresso": "Espresso",
+            "Americano": "Americano",
             "Lungo": "Lungo",
             "CaffeLatte": "Caffe Latte",
             "LatteMacchiato": "Latte Macchiato",
@@ -174,9 +269,12 @@ SELECT_TYPES = {
             "RistrettoBianco": "Ristretto Bianco",
             "FlatWhite": "Flat White",
             "Cortado": "Cortado",
+            "IcedAmericano": "Iced Americano",
             "IcedLatte": "Iced Latte",
-            "Hotwater": "Cold Brew",
+            "Hotwater": "Hot Water",
+            "Hotmilk": "Hot Milk",
             "TravelMug": "Travel Mug",
+            "Cappuccino": "Cappuccino",
         },
     },
     "aso_timer": {
@@ -196,17 +294,27 @@ SELECT_TYPES = {
             "24hours": "24 Hours",
         },
     },
+    "mode_selection": {
+        "dp_id": 106,
+        "code": "mode_selection",
+        "name": "Mode",
+        "icon": "mdi:leaf",
+        "options": {
+            "Default": "Default",
+            "ECO": "Eco",
+        },
+    },
     "last_profile": {
         "dp_id": 113,
         "code": "last_profile",
         "name": "Active Profile",
         "icon": "mdi:account",
         "options": {
+            "guest": "Guest",
             "orange": "Orange",
             "violet": "Violet",
             "blue": "Blue",
             "green": "Green",
-            "guest": "Guest",
         },
     },
 }
@@ -214,40 +322,40 @@ SELECT_TYPES = {
 # --- merge into TEXT_TYPES (from raw_explorer.py, unchanged) ---
 TEXT_TYPES = globals().get("TEXT_TYPES", {})
 TEXT_TYPES.update({
-    "username_orange": {
+    "orange_username": {
         "dp_id": 108,
-        "code": "username_orange",
+        "code": "orange_username",
         "raw_source": "orange_username",
         "field_index": 0,
         "encoding": "utf8_string",
         "max_length": 16,
-        "name": "Username Orange",
+        "name": "Orange Username",
     },
-    "username_violet": {
+    "violet_username": {
         "dp_id": 109,
-        "code": "username_violet",
+        "code": "violet_username",
         "raw_source": "violet_username",
         "field_index": 0,
         "encoding": "utf8_string",
         "max_length": 16,
-        "name": "Username Violet",
+        "name": "Violet Username",
     },
-    "username_blue": {
+    "blue_username": {
         "dp_id": 110,
-        "code": "username_blue",
+        "code": "blue_username",
         "raw_source": "blue_username",
         "field_index": 0,
         "encoding": "utf8_string",
         "max_length": 16,
-        "name": "Username Blue",
+        "name": "Blue Username",
     },
-    "username_green": {
+    "green_username": {
         "dp_id": 111,
-        "code": "username_green",
+        "code": "green_username",
         "raw_source": "green_username",
         "field_index": 0,
         "encoding": "utf8_string",
         "max_length": 16,
-        "name": "Username Green",
+        "name": "Green Username",
     },
 })
