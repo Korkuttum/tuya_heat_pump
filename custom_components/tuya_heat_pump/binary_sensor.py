@@ -32,7 +32,8 @@ async def async_setup_entry(
     binary_sensor_configs = coordinator.model_mapping.get("binary_sensors", {})
     
     for sensor_code, sensor_config in binary_sensor_configs.items():
-        if coordinator.data and sensor_code in coordinator.data:
+        lookup_code = sensor_config.get("code", sensor_code)
+        if coordinator.data and lookup_code in coordinator.data:
             binary_sensors.append(TuyaHeatpumpBinarySensor(coordinator, sensor_code, sensor_config))
             _LOGGER.info("Adding binary sensor: %s (%s)", sensor_config.get('name', sensor_code), sensor_code)
         else:
@@ -116,6 +117,16 @@ class TuyaHeatpumpBinarySensor(BinarySensorEntity):
         # Device info
         self._attr_device_info = coordinator.device_info
 
+    def _lookup_code(self) -> str:
+        """The real Tuya DP code to use for coordinator.data lookups.
+        Normally identical to the dict key (sensor_code), but a model
+        file can set an explicit "code" to decouple the two — needed
+        when several entities read the same DP (e.g. multiple per-bit
+        fault binary sensors all sharing one "fault" bitmap DP): each
+        needs its own dict key for identity/uniqueness, but they all
+        point "code" at the same real Tuya DP."""
+        return self._config.get("code", self._sensor_code)
+
     @property
     def device_info(self):
         """Return device info."""
@@ -124,10 +135,11 @@ class TuyaHeatpumpBinarySensor(BinarySensorEntity):
     @property
     def is_on(self) -> bool | None:
         """Return true if the binary sensor is on."""
-        if not self.coordinator.data or self._sensor_code not in self.coordinator.data:
+        lookup_code = self._lookup_code()
+        if not self.coordinator.data or lookup_code not in self.coordinator.data:
             return None
             
-        raw_value = self.coordinator.data[self._sensor_code]['value']
+        raw_value = self.coordinator.data[lookup_code]['value']
 
         conversion = Conversion(self._config.get('conversion', 'bool(value)'))
         try:
@@ -151,7 +163,7 @@ class TuyaHeatpumpBinarySensor(BinarySensorEntity):
         """Tuya DP ID ve Code bilgilerini attributes'a ekle."""
         attrs: dict[str, Any] = {}
         
-        dp_info = self.coordinator.get_tuya_dp_info(self._sensor_code)
+        dp_info = self.coordinator.get_tuya_dp_info(self._lookup_code())
         attrs["tuya_code"] = dp_info["code"]
         attrs["tuya_dp_id"] = dp_info["dp_id"]
 
@@ -166,7 +178,7 @@ class TuyaHeatpumpBinarySensor(BinarySensorEntity):
         return (
             self.coordinator.last_update_success and
             self.coordinator.data is not None and
-            self._sensor_code in self.coordinator.data
+            self._lookup_code() in self.coordinator.data
         )
 
     async def async_added_to_hass(self) -> None:
