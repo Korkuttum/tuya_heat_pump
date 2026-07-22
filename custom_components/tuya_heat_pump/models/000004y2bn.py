@@ -16,7 +16,10 @@ SENSOR_TYPES = {
         "device_class": "temperature",
         "state_class": "measurement",
     },
-    # Fault Description (dp_id: 9)
+    # Fault Description (dp_id: 9) — bit order below matches Tuya's
+    # actual typeSpec.label array exactly (NOT the order the fault
+    # codes appear in the semicolon-separated description text, which
+    # is different and would give a wrong mapping for bits 9-14).
     "fault": {
         "dp_id": 9,
         "code": "fault",
@@ -33,12 +36,12 @@ SENSOR_TYPES = {
             "(64,'E01 - High Pressure Protection'),"
             "(128,'E02 - Low Pressure Protection'),"
             "(256,'E03 - Overheat Protection'),"
-            "(512,'P07 - Compressor Operating Limit Protection'),"
-            "(1024,'E08 - Communication Fault'),"
-            "(2048,'EA8 - MCU RAM Fault'),"
-            "(4096,'EA9 - MCU ROM Fault'),"
-            "(8192,'P08 - Reserved'),"
-            "(16384,'P09 - Reserved')"
+            "(512,'E08 - Communication Fault'),"
+            "(1024,'EA8 - MCU RAM Fault'),"
+            "(2048,'EA9 - MCU ROM Fault'),"
+            "(4096,'P08 - Reserved'),"
+            "(8192,'P09 - Reserved'),"
+            "(16384,'P07 - Compressor Operating Limit Protection')"
             "] if value & b) or 'OK'"
         ),
     },
