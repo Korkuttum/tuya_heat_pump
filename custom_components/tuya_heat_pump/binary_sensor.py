@@ -163,9 +163,9 @@ class TuyaHeatpumpBinarySensor(BinarySensorEntity):
         """Tuya DP ID ve Code bilgilerini attributes'a ekle."""
         attrs: dict[str, Any] = {}
         
-        dp_info = self.coordinator.get_tuya_dp_info(self._lookup_code())
-        attrs["tuya_code"] = dp_info["code"]
-        attrs["tuya_dp_id"] = dp_info["dp_id"]
+        lookup_code = self._lookup_code()
+        attrs["tuya_code"] = lookup_code
+        attrs["tuya_dp_id"] = self._config.get("dp_id")
 
         if self.coordinator.model_id:
             attrs["tuya_model_id"] = self.coordinator.model_id
