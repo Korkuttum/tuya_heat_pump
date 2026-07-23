@@ -56,7 +56,9 @@ class MqttReauthRepairFlow(RepairsFlow):
             # onaylamis mi kontrol ediyoruz.
             success, token_info = await self._qr_login.async_check_login(user_code)
             if success and token_info:
-                new_data = {**entry.data, CONF_SHARING_TOKEN_INFO: token_info}
+                existing = entry.data.get(CONF_SHARING_TOKEN_INFO, {}) or {}
+                merged_token_info = {**existing, **token_info}
+                new_data = {**entry.data, CONF_SHARING_TOKEN_INFO: merged_token_info}
                 self._hass.config_entries.async_update_entry(entry, data=new_data)
                 await self._hass.config_entries.async_reload(entry.entry_id)
                 return self.async_create_entry(title="", data={})
