@@ -250,6 +250,18 @@ class SharingMQTT:
                 except Exception:
                     pass
 
+            await self._hass.async_add_executor_job(self._manager.refresh_mq)
+            await asyncio.sleep(3)
+
+            # Yeterlilik kontrolünü BURAYA (refresh_mq + bekleme sonrasına)
+            # taşıdık — canlı testte gördük ki update_device_cache()'in
+            # hemen ardından device.function/status_range bazen henüz
+            # tam dolmuyor (örn. bir cihazda function'da temp_current
+            # eksikken birkaç saniye sonra status_range'de doğru şekilde
+            # görünüyordu). Cihaz nesnesini de device_map'ten TAZE
+            # tekrar çekiyoruz, ihtimal dahilinde daha guncel bir
+            # snapshot icin.
+            device = self._manager.device_map.get(self._coordinator.device_id) or device
             self._sufficient = _device_covers_codes(
                 device, _collect_required_codes(self._coordinator.model_mapping)
             )
@@ -258,9 +270,6 @@ class SharingMQTT:
                 self._coordinator.device_id,
                 "yeterli (poll duraklatılacak)" if self._sufficient else "yetersiz (poll devam edecek, push sadece tetikleyici)",
             )
-
-            await self._hass.async_add_executor_job(self._manager.refresh_mq)
-            await asyncio.sleep(3)
 
             mq = getattr(self._manager, "mq", None)
             client = getattr(mq, "client", None) if mq else None
@@ -380,18 +389,34 @@ class _PersistTokenListener:
         from tuya_sharing import SharingTokenListener
         from .const import CONF_SHARING_TOKEN_INFO
 
+        # config_entry NESNESİNİ değil, sadece sabit entry_id'sini
+        # yakalıyoruz. Eğer entegrasyon reload olursa (örn. onarım
+        # akışı sonunda), ESKİ SharingMQTT örneğinin arka plan thread'i
+        # tam durmadan bir token yenileme daha tetiklerse, bayat bir
+        # config_entry nesne referansını kullanıp güncel veriyi
+        # kaçırma riski oluyordu — canlı ortamda "terminal_id kayboldu"
+        # olarak gözlemlendi. Her yazmada HA'dan TAZE entry çekerek bu
+        # riski tamamen ortadan kaldırıyoruz.
+        entry_id = config_entry.entry_id
+
         def _persist(token_info: dict) -> None:
-            # tuya_sharing'in refresh callback'i token_info'yu TAM olarak
-            # değil, sadece DEĞİŞEN alanları (örn. sadece access_token)
-            # içeriyor olabilir. Doğrudan üzerine yazmak, terminal_id/
-            # endpoint gibi değişmeyen ama gerekli alanları kaybettirip
-            # bir sonraki başlatmada KeyError'a yol açıyordu (canlı
-            # ortamda görüldü). Mevcut kayıtlı bilgiyle BİRLEŞTİRİYORUZ,
-            # üzerine yazmıyoruz.
-            existing = config_entry.data.get(CONF_SHARING_TOKEN_INFO, {}) or {}
+            entry = hass.config_entries.async_get_entry(entry_id)
+            if entry is None:
+                _LOGGER.debug(
+                    "MQTT token yenilendi ama entry (%s) artık mevcut "
+                    "değil (muhtemelen kaldırılmış/reload olmuş) — "
+                    "atlanıyor.", entry_id,
+                )
+                return
+            existing = entry.data.get(CONF_SHARING_TOKEN_INFO, {}) or {}
             merged = {**existing, **token_info}
-            new_data = {**config_entry.data, CONF_SHARING_TOKEN_INFO: merged}
-            hass.config_entries.async_update_entry(config_entry, data=new_data)
+            _LOGGER.debug(
+                "MQTT token güncelleniyor. Gelen alanlar: %s, önceki "
+                "alanlar: %s, sonuçtaki alanlar: %s",
+                list(token_info.keys()), list(existing.keys()), list(merged.keys()),
+            )
+            new_data = {**entry.data, CONF_SHARING_TOKEN_INFO: merged}
+            hass.config_entries.async_update_entry(entry, data=new_data)
 
         class _Impl(SharingTokenListener):
             def update_token(self, token_info: dict) -> None:
