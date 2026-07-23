@@ -35,7 +35,7 @@ from typing import Any
 
 from homeassistant.core import HomeAssistant
 
-from .const import TUYA_SHARING_CLIENT_ID, TUYA_SHARING_SCHEMA
+from .const import DOMAIN, TUYA_SHARING_CLIENT_ID, TUYA_SHARING_SCHEMA
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -163,6 +163,14 @@ class SharingMQTT:
     def connected(self) -> bool:
         return self._connected
 
+    @property
+    def sufficient(self) -> bool:
+        """Bu cihaz için MQTT'nin gördüğü DP kümesi, model dosyasının
+        ihtiyaç duyduğu TÜM DP'leri kapsıyor mu? False ise periyodik
+        poll ASLA duraklatılmamalı — push sadece tetikleyici olarak
+        kullanılır, poll bağımsız çalışmaya devam etmeli."""
+        return self._sufficient
+
     async def async_start(self) -> bool:
         """Bağlantıyı kurmayı dener. Başarısız olursa False döner —
         coordinator bunu "MQTT yok, periyodik poll'a devam" olarak
@@ -176,6 +184,33 @@ class SharingMQTT:
         user_code = self._coordinator.config_entry.data.get(CONF_USER_CODE)
         if not token_info or not user_code:
             return False
+
+        if "terminal_id" not in token_info or "endpoint" not in token_info:
+            from homeassistant.helpers import issue_registry as ir
+            from .repairs import ISSUE_ID_TOKEN_INVALID
+
+            _LOGGER.warning(
+                "MQTT: kayıtlı token bilgisi eksik/bozuk (terminal_id ya "
+                "da endpoint yok). Ayarlar → Sistem → Onarımlar sayfasında "
+                "bunu düzeltmek için bir bildirim oluşturuldu."
+            )
+            ir.async_create_issue(
+                self._hass,
+                DOMAIN,
+                ISSUE_ID_TOKEN_INVALID,
+                is_fixable=True,
+                is_persistent=True,
+                severity=ir.IssueSeverity.WARNING,
+                translation_key="mqtt_token_invalid",
+                data={"entry_id": self._coordinator.config_entry.entry_id},
+            )
+            return False
+
+        # Buraya kadar geldiysek token gecerli - eger daha once bir
+        # onarim bildirimi acilmissa artik gecersiz, temizleyelim.
+        from homeassistant.helpers import issue_registry as ir
+        from .repairs import ISSUE_ID_TOKEN_INVALID
+        ir.async_delete_issue(self._hass, DOMAIN, ISSUE_ID_TOKEN_INVALID)
 
         try:
             listener = _PushDeviceListener(self)
@@ -259,7 +294,8 @@ class SharingMQTT:
             if self._connected:
                 _LOGGER.warning("MQTT bağlantısı koptu tespit edildi.")
                 self._connected = False
-                self._coordinator._mqtt_set_active(False)
+                if self._sufficient:
+                    self._coordinator._mqtt_set_active(False)
 
             if not self._reconnect_attempted:
                 self._reconnect_attempted = True
@@ -271,7 +307,8 @@ class SharingMQTT:
                     client = getattr(mq, "client", None) if mq else None
                     if client:
                         self._connected = True
-                        self._coordinator._mqtt_set_active(True)
+                        if self._sufficient:
+                            self._coordinator._mqtt_set_active(True)
                         _LOGGER.info("MQTT: yeniden bağlanma başarılı.")
                 except Exception as err:
                     _LOGGER.warning("MQTT: yeniden bağlanma denemesi başarısız (%s).", err)
@@ -344,7 +381,16 @@ class _PersistTokenListener:
         from .const import CONF_SHARING_TOKEN_INFO
 
         def _persist(token_info: dict) -> None:
-            new_data = {**config_entry.data, CONF_SHARING_TOKEN_INFO: token_info}
+            # tuya_sharing'in refresh callback'i token_info'yu TAM olarak
+            # değil, sadece DEĞİŞEN alanları (örn. sadece access_token)
+            # içeriyor olabilir. Doğrudan üzerine yazmak, terminal_id/
+            # endpoint gibi değişmeyen ama gerekli alanları kaybettirip
+            # bir sonraki başlatmada KeyError'a yol açıyordu (canlı
+            # ortamda görüldü). Mevcut kayıtlı bilgiyle BİRLEŞTİRİYORUZ,
+            # üzerine yazmıyoruz.
+            existing = config_entry.data.get(CONF_SHARING_TOKEN_INFO, {}) or {}
+            merged = {**existing, **token_info}
+            new_data = {**config_entry.data, CONF_SHARING_TOKEN_INFO: merged}
             hass.config_entries.async_update_entry(config_entry, data=new_data)
 
         class _Impl(SharingTokenListener):
