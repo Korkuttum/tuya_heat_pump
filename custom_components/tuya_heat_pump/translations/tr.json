@@ -91,5 +91,30 @@
                 }
             }
         }
+    },
+    "issues": {
+        "mqtt_token_invalid": {
+            "title": "MQTT girişi tekrar yapılmalı",
+            "description": "Bu cihaz için kayıtlı MQTT (anlık güncelleme) girişi eksik ya da süresi dolmuş. Bu sırada normal periyodik sorgulama sorunsuz çalışmaya devam ediyor — başka hiçbir şey etkilenmiyor. Anlık güncellemeleri geri getirmek için aşağıdaki Fix'e tıklayıp bir QR kod okutun, ya da MQTT'ye ihtiyacınız yoksa görmezden gelin.",
+            "fix_flow": {
+                "step": {
+                    "confirm": {
+                        "title": "Anlık Güncellemeleri Geri Getirmek İçin Tarayın",
+                        "description": "1. Adım: Telefonunuzda Tuya Smart ya da Smart Life uygulamasını açın → sağ üstteki + işaretine dokunun → Scan → aşağıdaki QR kodu tarayın.\n\n2. Adım: Uygulama onayladıktan sonra buraya dönüp Gönder'e (Submit) basın.",
+                        "data": {
+                            "qr": "QR Kod"
+                        }
+                    }
+                },
+                "error": {
+                    "qr_not_confirmed": "QR kod henüz uygulamada taranmadı/onaylanmadı — tekrar deneyin, ya da henüz taramadıysanız şimdi tarayın",
+                    "qr_request_failed": "Tuya'dan QR kod istenemedi. Birazdan tekrar deneyin."
+                },
+                "abort": {
+                    "entry_not_found": "Entegrasyon kaydı bulunamadı.",
+                    "no_user_code": "Bu cihaz için kayıtlı bir User Code yok — entegrasyonu sıfırdan yeniden yapılandırın."
+                }
+            }
+        }
     }
 }
