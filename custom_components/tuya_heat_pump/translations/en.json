@@ -95,12 +95,11 @@
     "issues": {
         "mqtt_token_invalid": {
             "title": "MQTT sign-in needs to be redone",
-            "description": "The saved MQTT (instant updates) sign-in for this device is incomplete or has expired. Regular polling is working fine in the meantime — nothing else is affected. Click Fix below to scan a QR code and restore instant updates, or ignore this if you don't need MQTT.",
             "fix_flow": {
                 "step": {
                     "confirm": {
                         "title": "Scan to Restore Instant Updates",
-                        "description": "Step 1: Open the Tuya Smart or Smart Life app on your phone → tap + in the top right corner → Scan → scan the QR code shown below.\n\nStep 2: Once the app confirms it worked, come back here and click Submit.",
+                        "description": "The saved MQTT (instant updates) sign-in for this device is incomplete or has expired. Regular polling continues working fine in the meantime.\n\nStep 1: Open the Tuya Smart or Smart Life app on your phone → tap + in the top right corner → Scan → scan the QR code shown below.\n\nStep 2: Once the app confirms it worked, come back here and click Submit.",
                         "data": {
                             "qr": "QR Code"
                         }
