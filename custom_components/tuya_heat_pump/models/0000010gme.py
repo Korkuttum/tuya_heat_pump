@@ -2,10 +2,7 @@
 
 MODEL_NAME = "Smart Thermostat (0000010gme)"
 # ====================================================
-# device_id bff12f7a933f4900f8nrcv ("Kombi Termostat")
-# MQTT sufficiency test candidate — labels/codes here are already
-# straightforward (no Chinese-name mismatches found), unlike several
-# other models in this repo.
+# Test Cihazı @korkuttum
 # ====================================================
 
 SENSOR_TYPES = {
