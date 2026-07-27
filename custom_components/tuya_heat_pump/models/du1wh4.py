@@ -19,9 +19,10 @@ MODEL_NAME = "Alps Exclusive Heat Pump (du1wh4)"
 
 SENSOR_TYPES = {
     # Fault Alarm (dp_id: 15) — bitmap, 30 possible faults. Tuya's own
-    # label array is already literal error codes (Er03, Er04, ...)
-    # with no further Chinese description text to translate — shown
-    # as-is.
+    # catalog gave no descriptions (just bare Er-codes) — meanings
+    # below provided by @simonboerstra from his unit's manual, and
+    # independently confirmed against a real Er05 (High Pressure
+    # Fault) occurrence on his own device.
     "fault": {
         "dp_id": 15,
         "code": "fault",
@@ -29,14 +30,36 @@ SENSOR_TYPES = {
         "icon": "mdi:alert-circle",
         "conversion": (
             "', '.join(n for b, n in ["
-            "(1,'Er03'),(2,'Er04'),(4,'Er05'),(8,'Er06'),(16,'Er09'),"
-            "(32,'Er10'),(64,'Er12'),(128,'Er14'),(256,'Er15'),(512,'Er16'),"
-            "(1024,'Er18'),(2048,'Er20'),(4096,'Er21'),(8192,'Er23'),"
-            "(16384,'Er26'),(32768,'Er27'),(65536,'Er29'),(131072,'Er32'),"
-            "(262144,'Er33'),(524288,'Er34'),(1048576,'Er42'),"
-            "(2097152,'Er62'),(4194304,'Er63'),(8388608,'Er64'),"
-            "(16777216,'Er66'),(33554432,'Er67'),(67108864,'Er68'),"
-            "(134217728,'Er69'),(268435456,'Er70'),(536870912,'Er73')"
+            "(1,'Er03 - Water Flow Failure'),"
+            "(2,'Er04 - Antifreeze Protection'),"
+            "(4,'Er05 - High Pressure Fault'),"
+            "(8,'Er06 - Low Pressure Fault'),"
+            "(16,'Er09 - Communication Failure'),"
+            "(32,'Er10 - Frequency Conversion Module Communication Failure'),"
+            "(64,'Er12 - Exhaust Temperature Too High Protection'),"
+            "(128,'Er14 - Water Tank Temperature Sensor Fault'),"
+            "(256,'Er15 - Water Inlet Temperature Sensor Fault'),"
+            "(512,'Er16 - Evaporator Coil Temperature Sensor Fault'),"
+            "(1024,'Er18 - Exhaust Temperature Sensor Fault'),"
+            "(2048,'Er20 - Frequency Conversion Module Abnormal Protection'),"
+            "(4096,'Er21 - Ambient Temperature Sensor Fault'),"
+            "(8192,'Er23 - Cooling Outlet Water Temperature Supercooling Protection'),"
+            "(16384,'Er26 - Heat Sink Temperature Sensor Fault'),"
+            "(32768,'Er27 - Outlet Water Temperature Sensor Fault'),"
+            "(65536,'Er29 - Return Gas Temperature Sensor Fault'),"
+            "(131072,'Er32 - Heating Outlet Water Temperature Too High Protection'),"
+            "(262144,'Er33 - Coil Temperature Too High'),"
+            "(524288,'Er34 - Frequency Conversion Module Temperature Too High'),"
+            "(1048576,'Er42 - Cooling Coil Temperature Sensor Failure'),"
+            "(2097152,'Er62 - Economizer Inlet Temperature Sensor Fault'),"
+            "(4194304,'Er63 - Economizer Outlet Temperature Sensor Fault'),"
+            "(8388608,'Er64 - DC Fan 1 Fault'),"
+            "(16777216,'Er66 - DC Fan 2 Fault'),"
+            "(33554432,'Er67 - Low Pressure Switch Failure'),"
+            "(67108864,'Er68 - High Pressure Switch Failure'),"
+            "(134217728,'Er69 - Low Pressure Protection'),"
+            "(268435456,'Er70 - High Pressure Protection'),"
+            "(536870912,'Er73 - Compressor Discharge Overcurrent Protection')"
             "] if value & b) or 'OK'"
         ),
     },
