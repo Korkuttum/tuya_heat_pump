@@ -9,10 +9,10 @@ issue.
 
 | Script | What it's for |
 |---|---|
-| [`tuya_api_test.py`](#1-tuya_api_testpy) | **Start here for a new device.** Dumps everything Tuya's cloud API knows about your device. |
-| [`lokal_key_extractor.py`](#2-lokal_key_extractorpy) | Tries to find your device's Local Key, needed for local (LAN) mode. |
-| [`tuya_dps_explorer.py`](#3-tuya_dps_explorerpy) | Reads raw values directly from the device over your local network (no cloud/no Access ID needed). |
-| [`raw_explorer.py`](#4-raw_explorerpy) | Live GUI for decoding `raw` type data-points (hidden settings like target temperature). |
+| [`tuya_api_test.py`](https://github.com/Korkuttum/tuya_heat_pump/blob/main/test/tuya_api_test.py) | **Start here for a new device.** Dumps everything Tuya's cloud API knows about your device. |
+| [`lokal_key_extractor.py`](https://github.com/Korkuttum/tuya_heat_pump/blob/main/test/lokal_key_extractor.py) | Tries to find your device's Local Key, needed for local (LAN) mode. |
+| [`tuya_dps_explorer.py`](https://github.com/Korkuttum/tuya_heat_pump/blob/main/test/tuya_dps_explorer.py) | Reads raw values directly from the device over your local network (no cloud/no Access ID needed). |
+| [`raw_explorer.py`](https://github.com/Korkuttum/tuya_heat_pump/blob/main/test/raw_explorer.py) | Live GUI for decoding `raw` type data-points (hidden settings like target temperature). |
 
 ---
 
