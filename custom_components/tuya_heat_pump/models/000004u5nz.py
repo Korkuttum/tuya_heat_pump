@@ -2,7 +2,7 @@
 
 MODEL_NAME = "Heat Pump Model 000004u5nz"
 # ====================================================
-# Adlar Castra @rznq0q
+# Adlar Castra @rznq0q / SolarEast BLN @typxxi
 # ====================================================
 SENSOR_TYPES = {
     "temp_current": {
@@ -97,21 +97,20 @@ SENSOR_TYPES = {
         "dp_id": 36,
         "code": "top_temp_f",
         "name": "Low Pressure Saturation Temp",
-        # HISTORY (see GitHub issues #41, #65): first assumed the °F
-        # label was just a manufacturer catalog typo (no conversion).
-        # Then a single high sample (61) that only made sense as
-        # Fahrenheit made us add a real (value-32)*5/9 conversion.
-        # But repeated live comparisons since (2 local + 1 cloud, all
-        # while the compressor was idle) consistently show this DP
-        # sitting right in the middle of its already-Celsius neighbors
-        # (dp35/dp37) with NO conversion needed — applying the F→C
-        # formula to those readings instead produces a physically
-        # implausible negative temperature. Removed the conversion
-        # again. Best guess: this DP may encode differently while the
-        # compressor is actively running vs idle, which no single
-        # static formula can handle correctly — if it turns out wrong
-        # again while the heat pump is actively heating/cooling,
-        # that's the scenario to investigate next.
+        # HISTORY (see GitHub issues #41, #65, #66, #69): this has gone
+        # back and forth multiple times — label-only fix, then a real
+        # F→C formula (single high sample only made sense as °F), then
+        # removed again (later live comparisons sat consistently in
+        # line with neighbors, no conversion needed). Re-added per
+        # @typxxi's request after his own week-long history graph
+        # showed the same "jumps to 60-80 range" pattern recurring
+        # repeatedly even BEFORE this round of changes, and he reports
+        # the conversion is what keeps this DP correct on his 3
+        # SolarEast BLN units specifically. Going with the conversion
+        # as the standing default for this model per his data — if this
+        # turns out wrong again for a different installation, that's
+        # the next data point to weigh against this one.
+        "conversion": "(value - 32) * 5 / 9",
         "unit": "°C",
         "icon": "mdi:thermometer",
         "device_class": "temperature",
