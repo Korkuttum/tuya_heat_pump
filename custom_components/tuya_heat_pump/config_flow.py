@@ -14,6 +14,7 @@ from .const import (
     DOMAIN,
     CONF_ACCESS_ID,
     CONF_ACCESS_KEY,
+    CONF_API_KEY,
     CONF_DEVICE_ID,
     CONF_REGION,
     CONF_SCAN_INTERVAL,
@@ -27,6 +28,9 @@ from .const import (
     PROTOCOL_OPTIONS,
     CONF_USER_CODE,
     CONF_SHARING_TOKEN_INFO,
+    CONNECTION_CLOUD,
+    CONNECTION_CLOUD_END_USER,
+    CONNECTION_LOCAL,
 )
 from .coordinator import TuyaScaleDataUpdateCoordinator
 from .sharing_mqtt import SharingQRLogin
@@ -36,20 +40,33 @@ _LOGGER = logging.getLogger(__name__)
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_ACCESS_ID): str,
-        vol.Required(CONF_ACCESS_KEY): str,
+        vol.Optional(CONF_ACCESS_ID): str,
+        vol.Optional(CONF_ACCESS_KEY): str,
+        vol.Optional(CONF_API_KEY): str,
         vol.Required(CONF_DEVICE_ID): str,
-        vol.Required(CONF_REGION, default=DEFAULT_REGION): selector.SelectSelector(
+        vol.Optional(CONF_REGION, default=DEFAULT_REGION): selector.SelectSelector(
             selector.SelectSelectorConfig(
                 options=list(REGIONS.keys()),
                 mode=selector.SelectSelectorMode.DROPDOWN
             )
         ),
-        vol.Required(CONF_CONNECTION_TYPE, default="cloud"): selector.SelectSelector(
+        vol.Required(
+            CONF_CONNECTION_TYPE, default=CONNECTION_CLOUD_END_USER
+        ): selector.SelectSelector(
             selector.SelectSelectorConfig(
                 options=[
-                    selector.SelectOptionDict(value="cloud", label="Cloud (Recommended for most users)"),
-                    selector.SelectOptionDict(value="local", label="Local (Faster, no API limits)")
+                    selector.SelectOptionDict(
+                        value=CONNECTION_CLOUD_END_USER,
+                        label="Cloud End-user API (sk- API key)",
+                    ),
+                    selector.SelectOptionDict(
+                        value=CONNECTION_CLOUD,
+                        label="Cloud IoT Platform (Access ID / Secret)",
+                    ),
+                    selector.SelectOptionDict(
+                        value=CONNECTION_LOCAL,
+                        label="Local (Faster, no API limits)",
+                    ),
                 ],
                 mode=selector.SelectSelectorMode.DROPDOWN
             )
@@ -119,13 +136,22 @@ async def validate_input(hass: HomeAssistant, data: dict, connection_type: str) 
         },
     )()
 
-    if connection_type == "cloud":
+    if connection_type in (CONNECTION_CLOUD, CONNECTION_CLOUD_END_USER):
+        if connection_type == CONNECTION_CLOUD_END_USER:
+            api_key = data.get(CONF_API_KEY, "")
+            if not api_key.startswith("sk-"):
+                raise InvalidAuth("A Tuya API key beginning with sk- is required")
+        elif not data.get(CONF_ACCESS_ID) or not data.get(CONF_ACCESS_KEY):
+            raise InvalidAuth("Access ID and Access Secret are required")
+
         coordinator = TuyaScaleDataUpdateCoordinator(hass, mock_config)
         try:
             # Token ve device info almayı dene
-            if not coordinator.access_token:
+            if connection_type == CONNECTION_CLOUD and not coordinator.access_token:
                 await coordinator._get_token()
-            await coordinator.get_device_info()
+            device_info = await coordinator.get_device_info()
+            if not device_info:
+                raise CannotConnect("Device was not found or is not accessible")
         except Exception as err:
             _LOGGER.error("Cloud validation error: %s", err)
             if "token" in str(err).lower() or "auth" in str(err).lower():
@@ -163,7 +189,7 @@ class TuyaHeatpumpOptionsFlow(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
-        if self.connection_type == "cloud":
+        if self.connection_type in (CONNECTION_CLOUD, CONNECTION_CLOUD_END_USER):
             return await self.async_step_cloud_options()
         else:
             return await self.async_step_local_options()
@@ -274,7 +300,7 @@ class TuyaHeatpumpConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self.user_data = user_input
             self.connection_type = user_input[CONF_CONNECTION_TYPE]
-            if self.connection_type == "cloud":
+            if self.connection_type in (CONNECTION_CLOUD, CONNECTION_CLOUD_END_USER):
                 return await self.async_step_cloud_options()
             else:
                 return await self.async_step_local()
@@ -295,7 +321,9 @@ class TuyaHeatpumpConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return await self.async_step_cloud_qr()
 
             try:
-                info = await validate_input(self.hass, full_data, "cloud")
+                info = await validate_input(
+                    self.hass, full_data, self.connection_type
+                )
                 await self.async_set_unique_id(full_data[CONF_DEVICE_ID])
                 
                 # Check if device is already configured
@@ -338,7 +366,9 @@ class TuyaHeatpumpConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if success and token_info:
                 full_data = {**self.user_data, CONF_SHARING_TOKEN_INFO: token_info}
                 try:
-                    info = await validate_input(self.hass, full_data, "cloud")
+                    info = await validate_input(
+                        self.hass, full_data, self.connection_type
+                    )
                     await self.async_set_unique_id(full_data[CONF_DEVICE_ID])
                     try:
                         self._abort_if_unique_id_configured()

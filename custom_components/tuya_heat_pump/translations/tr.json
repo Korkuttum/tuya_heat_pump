@@ -5,6 +5,7 @@
                 "data": {
                     "access_id": "Access ID",
                     "access_key": "Access Key",
+                    "api_key": "Son kullanıcı API anahtarı (sk-...)",
                     "device_id": "Cihaz ID",
                     "region": "Bölge",
                     "connection_type": "Bağlantı Türü",

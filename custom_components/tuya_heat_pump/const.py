@@ -21,11 +21,15 @@ CONF_SCAN_INTERVAL = "scan_interval"
 # Configuration
 CONF_ACCESS_ID = "access_id"
 CONF_ACCESS_KEY = "access_key"
+CONF_API_KEY = "api_key"
 CONF_DEVICE_ID = "device_id"
 CONF_REGION = "region"
 
 # Yeni
 CONF_CONNECTION_TYPE = "connection_type"
+CONNECTION_CLOUD = "cloud"
+CONNECTION_CLOUD_END_USER = "cloud_end_user"
+CONNECTION_LOCAL = "local"
 CONF_IP = "ip"
 CONF_LOCAL_KEY = "local_key"
 CONF_PROTOCOL = "protocol"
@@ -60,6 +64,19 @@ REGIONS = {
 TOKEN_PATH = "/v1.0/token?grant_type=1"
 DEVICE_DATA_PATH = "/v2.0/cloud/thing/{device_id}/shadow/properties"
 DEVICE_COMMAND_PATH = "/v2.0/cloud/thing/{device_id}/shadow/properties/issue"  # ← Değişiklik: v2.0 komut gönderme endpoint'i
+END_USER_DEVICE_DETAIL_PATH = "/v1.0/end-user/devices/{device_id}/detail"
+END_USER_DEVICE_MODEL_PATH = "/v1.0/end-user/devices/{device_id}/model"
+END_USER_DEVICE_COMMAND_PATH = "/v1.0/end-user/devices/{device_id}/shadow/properties/issue"
+
+API_KEY_REGIONS = {
+    "AY": "https://openapi.tuyacn.com",
+    "AZ": "https://openapi.tuyaus.com",
+    "EU": "https://openapi.tuyaeu.com",
+    "IN": "https://openapi.tuyain.com",
+    "UE": "https://openapi-ueaz.tuyaus.com",
+    "WE": "https://openapi-weaz.tuyaeu.com",
+    "SG": "https://openapi-sg.iotbing.com",
+}
 
 # Device Info
 DEFAULT_NAME = "Tuya Heat Pump"

@@ -8,6 +8,7 @@
 > [tuya_api_test.py](https://github.com/Korkuttum/tuya_heat_pump/blob/main/test/tuya_api_test.py)
 ### Supported Brands
 📋 **[Detailed list](https://github.com/Korkuttum/tuya_heat_pump/blob/main/supported_models.md)**
+- AMT-Pool Mini
 - Arçelik (Beko, Grundig)
 - ACIQ
 - Adlar Castra
@@ -51,11 +52,20 @@
 - Wopoltop
 ---
 
-This project allows you to control and monitor your Tuya heat pump device through Home Assistant — supports both Cloud and Local (push) connection modes.
+This project allows you to control and monitor your Tuya heat pump device
+through Home Assistant. It supports the Tuya End-user API, the legacy Tuya IoT
+Cloud API, and local LAN connections.
 
 ---
 
 ## Prerequisites
+
+### Tuya End-user API (recommended)
+
+1. Obtain an `sk-...` API key from [tuya.ai](https://tuya.ai/).
+2. Select **Cloud End-user API** during integration setup.
+3. Enter the API key and Device ID. The data center is detected from the
+   API-key prefix automatically.
 
 ### Enabling Tuya IoT Cloud Service
 
@@ -105,11 +115,14 @@ After installation, restart Home Assistant and follow these steps:
 1. Go to “Settings > Devices & Services”.
 2. Click “Add Integration”.
 3. Search for and select “Tuya Heat Pump”.
-4. For Cloud mode: enter your Tuya IoT Platform credentials:
+4. For Cloud End-user API mode, enter:
+    - API Key (`sk-...`)
+    - Device ID
+5. For legacy Cloud mode, enter your Tuya IoT Platform credentials:
     - Access ID
     - Access Secret
     - Device ID
-5. For Local mode: switch the Connection Type to “Local” and enter:
+6. For Local mode, switch the Connection Type to “Local” and enter:
     - Device IP
     - Local Key
     - Protocol (e.g. 3.3 / 3.4)

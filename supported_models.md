@@ -4,6 +4,7 @@
 
 |  | Brand / Model | GitHub User | Model File | Issue/PR | Published |
 |---|---------------|-------------|------------|----------|-----------|
+| 41 | AMT-Pool Mini | [@sysam68](https://github.com/sysam68) | [e4ets8](https://github.com/sysam68/tuya_heat_pump/blob/agent/end-user-api-e4ets8/custom_components/tuya_heat_pump/models/e4ets8.py) | — |  |
 | 1 | Arçelik (Beko, Grundig) | [@korkuttum](https://github.com/korkuttum) | [000004wtcv](https://github.com/Korkuttum/tuya_heat_pump/blob/main/custom_components/tuya_heat_pump/models/000004wtcv.py) | — | * |
 | 2 | ACIQ | [@wlatic](https://github.com/wlatic) | [e1kynud8](https://github.com/Korkuttum/tuya_heat_pump/blob/main/custom_components/tuya_heat_pump/models/e1kynud8.py) | [#59](https://github.com/Korkuttum/tuya_heat_pump/issues/59) | * |
 | 3 | Adlar Castra | [@rznq0q](https://github.com/rznq0q) | [000004u5nz](https://github.com/Korkuttum/tuya_heat_pump/blob/main/custom_components/tuya_heat_pump/models/000004u5nz.py) | [#4](https://github.com/Korkuttum/tuya_heat_pump/issues/4) | * |
