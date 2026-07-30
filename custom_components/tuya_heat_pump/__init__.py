@@ -59,7 +59,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 async def async_update_options(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Update options."""
+    """Update options.
+
+    Not: bu listener entry.options KADAR entry.data değişimlerinde de
+    tetikleniyor (HA'nın add_update_listener davranışı ikisini de
+    kapsıyor). sharing_mqtt.py token'ı persist ederken (~2 saatte bir,
+    otomatik yenileme) entry.data'yı güncelliyor — bu bir kullanıcı
+    ayar değişikliği DEĞİL, o yüzden reload gerektirmiyor. Coordinator
+    bu durumda skip_next_reload'u önceden True yapıyor.
+    """
+    coordinator = hass.data.get(DOMAIN, {}).get(entry.entry_id)
+    if coordinator is not None and coordinator.skip_next_reload:
+        coordinator.skip_next_reload = False
+        _LOGGER.debug(
+            "entry.data güncellendi ama skip_next_reload aktifti "
+            "(token-only yazım) — reload atlanıyor."
+        )
+        return
     await hass.config_entries.async_reload(entry.entry_id)
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
