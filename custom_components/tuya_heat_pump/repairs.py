@@ -19,7 +19,7 @@ from homeassistant.components.repairs import RepairsFlow
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import selector
 
-from .const import CONF_SHARING_TOKEN_INFO, CONF_USER_CODE
+from .const import CONF_SHARING_TOKEN_INFO, CONF_USER_CODE, DOMAIN
 from .sharing_mqtt import SharingQRLogin
 
 _LOGGER = logging.getLogger(__name__)
@@ -59,6 +59,12 @@ class MqttReauthRepairFlow(RepairsFlow):
                 existing = entry.data.get(CONF_SHARING_TOKEN_INFO, {}) or {}
                 merged_token_info = {**existing, **token_info}
                 new_data = {**entry.data, CONF_SHARING_TOKEN_INFO: merged_token_info}
+                # Reload'u zaten burada elle tetikleyeceğiz — listener'ın
+                # bunu ikinci kez (çakışarak) tetiklemesini önlemek için
+                # bayrağı önceden set ediyoruz.
+                coordinator = self._hass.data.get(DOMAIN, {}).get(self._entry_id)
+                if coordinator is not None:
+                    coordinator.skip_next_reload = True
                 self._hass.config_entries.async_update_entry(entry, data=new_data)
                 await self._hass.config_entries.async_reload(entry.entry_id)
                 return self.async_create_entry(title="", data={})
