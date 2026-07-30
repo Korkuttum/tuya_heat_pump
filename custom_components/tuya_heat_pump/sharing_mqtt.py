@@ -214,7 +214,7 @@ class SharingMQTT:
 
         try:
             listener = _PushDeviceListener(self)
-            token_listener = _PersistTokenListener(self._hass, self._coordinator.config_entry)
+            token_listener = _PersistTokenListener(self._hass, self._coordinator)
 
             def _build_manager():
                 return Manager(
@@ -385,7 +385,7 @@ class _PersistTokenListener:
     config_entry.data'ya kalıcı olarak yazar — yoksa HA her restart'ta
     kullanıcı tekrar QR okutmak zorunda kalır."""
 
-    def __new__(cls, hass: HomeAssistant, config_entry):
+    def __new__(cls, hass: HomeAssistant, coordinator):
         from tuya_sharing import SharingTokenListener
         from .const import CONF_SHARING_TOKEN_INFO
 
@@ -397,7 +397,7 @@ class _PersistTokenListener:
         # kaçırma riski oluyordu — canlı ortamda "terminal_id kayboldu"
         # olarak gözlemlendi. Her yazmada HA'dan TAZE entry çekerek bu
         # riski tamamen ortadan kaldırıyoruz.
-        entry_id = config_entry.entry_id
+        entry_id = coordinator.config_entry.entry_id
 
         def _persist(token_info: dict) -> None:
             entry = hass.config_entries.async_get_entry(entry_id)
@@ -416,6 +416,11 @@ class _PersistTokenListener:
                 list(token_info.keys()), list(existing.keys()), list(merged.keys()),
             )
             new_data = {**entry.data, CONF_SHARING_TOKEN_INFO: merged}
+            # Bu sadece token persist'i — kullanıcı ayarı değişmedi,
+            # entegrasyonun reload olmasına gerek yok. __init__.py'deki
+            # add_update_listener'ın bunu tetiklememesi için bayrağı
+            # önceden set ediyoruz (bkz. coordinator.skip_next_reload).
+            coordinator.skip_next_reload = True
             hass.config_entries.async_update_entry(entry, data=new_data)
 
         class _Impl(SharingTokenListener):
