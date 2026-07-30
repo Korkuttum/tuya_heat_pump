@@ -101,6 +101,14 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         # duraklatılan periyodik poll'un eski değerini saklamak için.
         self.sharing_mqtt = None
         self._pre_mqtt_update_interval = None
+        # entry.data'ya sadece token/cache yazmak için async_update_entry
+        # çağrıldığında (örn. sharing_mqtt.py'nin token yenilemesi ~2
+        # saatte bir), __init__.py'deki add_update_listener bunu gerçek
+        # bir kullanıcı ayar değişikliği sanıp async_reload tetikliyordu
+        # — bu da MQTT'nin (ve tüm entegrasyonun) gereksiz yere anlık
+        # kopup yeniden kurulmasına sebep oluyordu. Bu bayrak True iken
+        # __init__.py'deki listener reload'u bir kereliğine atlar.
+        self.skip_next_reload = False
         # Raw DP → code cache. Filled from live properties in cloud mode
         # (every raw-type DP is registered by dp_id). Also populated from
         # any `raw_source` fields in the model mapping for local mode.
@@ -138,6 +146,19 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         self.api_endpoint = REGIONS.get(self.region)
 
         self.access_token = None
+        # Tuya access_token ~2 saatte bir expire oluyor (tipik olarak
+        # 7200sn). Önceden sadece periyodik poll'daki 401/"token invalid"
+        # hatası yakalanınca access_token = None yapılıp yenileniyordu —
+        # bu da token'ın SADECE poll çalışırken kendini iyileştirmesi
+        # anlamına geliyordu. MQTT-sufficient cihazlarda poll tamamen
+        # duraklatıldığı için (bkz. _mqtt_set_active) token 2 saat sonra
+        # sessizce bayatlıyor ve send_command() (ki bu poll'dan bağımsız,
+        # ne zaman kullanıcı bir switch/number değiştirse çalışır) bunu
+        # hiç fark etmeden başarısız oluyordu. Artık expiry'yi burada,
+        # tek yerde takip ediyoruz — hem poll hem send_command hem de
+        # her ikisi de aynı _get_token()'ı çağırdığı için otomatik
+        # düzeliyor.
+        self._token_expires_at = 0.0
 
         if self.connection_type == "cloud":
             pass
@@ -515,8 +536,10 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
 
     async def _get_token(self) -> bool:
         """Get access token from Tuya API - hem cloud hem local için kullanılır."""
-        if self.access_token:
-            _LOGGER.debug("Token already exists, not re-fetching")
+        import time as _time
+        if self.access_token and _time.time() < self._token_expires_at:
+            _LOGGER.debug("Token hâlâ geçerli (%.0f sn kaldı), yeniden alınmıyor",
+                          self._token_expires_at - _time.time())
             return True
 
         try:
@@ -549,9 +572,20 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 raise ConfigEntryAuthFailed(f"{ERROR_AUTH}: {error_msg}")
           
             self.access_token = result['result']['access_token']
-            _LOGGER.info("Access token başarıyla alındı")
+            # Tuya "expire_time" alanını saniye cinsinden döndürüyor
+            # (tipik 7200sn = 2 saat). Alan yoksa güvenli tarafta kalıp
+            # 2 saat varsayıyoruz. 5 dakikalık güvenlik payıyla erken
+            # yeniliyoruz ki tam sınırda bir yarış durumu yaşanmasın.
+            expire_seconds = result['result'].get('expire_time', 7200)
+            self._token_expires_at = time.time() + max(expire_seconds - 300, 60)
+            _LOGGER.info(
+                "Access token başarıyla alındı (yaklaşık %.0f dakika sonra yenilenecek)",
+                (self._token_expires_at - time.time()) / 60,
+            )
             return True
           
+        except ConfigEntryAuthFailed:
+            raise
         except Exception as err:
             _LOGGER.error("Token alma hatası: %s", str(err))
             raise UpdateFailed(f"{ERROR_CONN}: {str(err)}")
@@ -564,8 +598,10 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         """Get device information."""
         if self.connection_type == "cloud":
             try:
-                if not self.access_token:
-                    await self._get_token()
+                # _get_token() artık expiry'yi kendi içinde kontrol ediyor,
+                # bu yüzden koşulsuz çağırmak güvenli (token hâlâ geçerliyse
+                # network isteği bile atmıyor).
+                await self._get_token()
                   
                 t = str(int(time.time() * 1000))
                 path = f"/v1.0/devices/{self.device_id}"
@@ -644,9 +680,9 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         # ────────────────────────────────────────────────────────────────────────
 
         try:
-            if not self.access_token:
-                _LOGGER.info("Token yok → token alınıyor...")
-                await self._get_token()
+            # _get_token() artık expiry'yi kendi içinde kontrol ediyor,
+            # bu yüzden koşulsuz çağırmak güvenli.
+            await self._get_token()
             
             t = str(int(time.time() * 1000))
             path = f"/v2.0/cloud/thing/{self.device_id}/model"
@@ -715,12 +751,22 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
     # KOMUT GÖNDERME
     # ============================================================================
 
-    async def send_command(self, code: str, value: Any) -> bool:
-        """Send command to device - local için debounce ile en son değeri gönder."""
+    async def send_command(self, code: str, value: Any, _retry: bool = True) -> bool:
+        """Send command to device - local için debounce ile en son değeri gönder.
+
+        _retry: dahili kullanım için. Cloud modda "token invalid" hatası
+        alınırsa (kök neden artık _get_token()'daki expiry takibiyle
+        düzeltildi, ama sunucu tarafında erken/manuel bir invalidation
+        ihtimaline karşı savunma amaçlı), access_token'ı temizleyip TEK
+        seferliğine tekrar dener — poll'daki (_async_update_data) aynı
+        self-healing davranışın komut gönderme tarafındaki karşılığı.
+        """
         try:
             if self.connection_type == "cloud":
-                if not self.access_token:
-                    await self._get_token()
+                # _get_token() artık expiry'yi kendi içinde kontrol ediyor,
+                # bu yüzden koşulsuz çağırmak güvenli (token hâlâ geçerliyse
+                # network isteği bile atmıyor).
+                await self._get_token()
                 t = str(int(time.time() * 1000))
                 path = DEVICE_COMMAND_PATH.format(device_id=self.device_id)
               
@@ -779,6 +825,15 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     return True
                 else:
                     error_msg = result.get('msg', 'Bilinmeyen hata')
+                    if _retry and 'token' in error_msg.lower():
+                        _LOGGER.warning(
+                            "Cloud komut token hatasıyla başarısız oldu (%s) — "
+                            "token temizlenip bir kez daha deneniyor: %s = %s",
+                            error_msg, code, value,
+                        )
+                        self.access_token = None
+                        self._token_expires_at = 0.0
+                        return await self.send_command(code, value, _retry=False)
                     _LOGGER.error("❌ Cloud komut başarısız: %s = %s → %s", code, value, error_msg)
                     return False
                   
@@ -887,8 +942,10 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         """Fetch data from Tuya API or local device (Manual Poll)."""
         if self.connection_type == "cloud":
             try:
-                if not self.access_token:
-                    await self._get_token()
+                # _get_token() artık expiry'yi kendi içinde kontrol ediyor,
+                # bu yüzden koşulsuz çağırmak güvenli (token hâlâ geçerliyse
+                # network isteği bile atmıyor).
+                await self._get_token()
                 t = str(int(time.time() * 1000))
                 path = DEVICE_DATA_PATH.format(device_id=self.device_id)
                 sign = self._calculate_sign(t, path, self.access_token)
@@ -912,6 +969,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 if response.status_code == 401:
                     _LOGGER.warning("401 Unauthorized - token yenileniyor")
                     self.access_token = None
+                    self._token_expires_at = 0.0
                     return await self._async_update_data()
                
                 if response.status_code != 200:
@@ -925,6 +983,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     msg = result.get('msg', '')
                     if 'token' in msg.lower():
                         self.access_token = None
+                        self._token_expires_at = 0.0
                         return await self._async_update_data()
                     self.is_online = False
                     _LOGGER.info("Online status değişti: OFFLINE (API error: %s)", msg)
