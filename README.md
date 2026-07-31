@@ -51,7 +51,7 @@
 - Wopoltop
 ---
 
-This project allows you to control and monitor your Tuya heat pump device through Home Assistant — supports both Cloud and Local (push) connection modes.
+This project allows you to control and monitor your Tuya heat pump device through Home Assistant — supports Cloud, Local (LAN push), and optional real-time MQTT push on top of Cloud mode.
 
 ---
 
@@ -98,6 +98,16 @@ To use this integration, you need to create a project in the Tuya IoT Platform, 
 3. Restart Home Assistant.
 ---
 
+## Connection Types Compared
+
+| Connection Type | Tuya IoT Account | Local Key | Internet (after setup) | Data Updates | Cloud API Load | Extra Setup |
+|---|:---:|:---:|:---:|---|---|---|
+| **Local** | ✅ | ✅ | ❌ Not required | Real-time push | None | Device IP + Local Key |
+| **Cloud** | ✅ | ❌ | ✅ Required | Poll interval | Regular polling | — |
+| **Cloud + MQTT** | ✅ | ❌ | ✅ Required | Real-time push | Minimal | User Code + QR scan |
+
+---
+
 ## Configuration
 
 After installation, restart Home Assistant and follow these steps:
@@ -115,12 +125,31 @@ After installation, restart Home Assistant and follow these steps:
     - Protocol (e.g. 3.3 / 3.4)
     - Device ID
 
+### Optional: Enabling MQTT (Real-time Push)
+
+On top of Cloud mode, you can optionally enable real-time MQTT push via the Tuya Sharing (Smart Life app) broker — instant state updates instead of waiting on the poll interval, and less load on the Tuya cloud API.
+
+- During setup (Cloud mode), enter your **User Code** and complete the **QR scan** with the Smart Life / Tuya app when prompted.
+- This step is entirely optional — skip it and the integration works exactly as before.
+- If the push token ever becomes invalid, you'll see a clickable **Repair** notification under *Settings > System > Repairs* to reconnect.
+
 ---
 
 ## Notes
 
 - You can monitor and control features like temperature, operation mode, and fan speed.
 - Easily use in automations and dashboards.
+
+---
+
+## Diagnostic & Setup Scripts
+
+Standalone scripts for onboarding new devices and debugging — run manually on your own computer, outside Home Assistant. 📖 **[Full guide →](https://github.com/Korkuttum/tuya_heat_pump/blob/main/test/README.md)**
+
+- [`tuya_api_test.py`](https://github.com/Korkuttum/tuya_heat_pump/blob/main/test/tuya_api_test.py) — pulls your device's full cloud schema and live values, start here for any new device.
+- [`lokal_key_extractor.py`](https://github.com/Korkuttum/tuya_heat_pump/blob/main/test/lokal_key_extractor.py) — tries to recover your device's Local Key for LAN mode.
+- [`tuya_dps_explorer.py`](https://github.com/Korkuttum/tuya_heat_pump/blob/main/test/tuya_dps_explorer.py) — reads raw DP values directly over your local network.
+- [`raw_explorer.py`](https://github.com/Korkuttum/tuya_heat_pump/blob/main/test/raw_explorer.py) — live GUI for decoding hidden raw data-points, like a missing target temperature setting.
 
 ---
 
