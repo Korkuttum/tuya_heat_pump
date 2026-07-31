@@ -6,49 +6,33 @@
 > This integration has only been tested with the heat pump brands listed below.  
 > If your heat pump is a different brand and the integration does not work, please run the script at the following link and share the generated file with me:  
 > [tuya_api_test.py](https://github.com/Korkuttum/tuya_heat_pump/blob/main/test/tuya_api_test.py)
+
 ### Supported Brands
 📋 **[Detailed list](https://github.com/Korkuttum/tuya_heat_pump/blob/main/supported_models.md)**
-- Arçelik (Beko, Grundig)
-- ACIQ
-- Adlar Castra
-- Adlar Castra Domestic
-- Alps Exclusive
-- Aquark
-- Aquastrong 
-- Aquatech X6
-- Aquatech X6 320L
-- Cordivari Vestalis
-- Della
-- Ecologic Ecopool
-- EnviroSun HP+
-- Evoheat 40T
-- Fairland
-- Fairland Inverter Plus
-- Heative Next
-- Inventor Xforce
-- IPS Pool Systems
-- ITS
-- Ivapool
-- Kensol
-- Kushiro (Luqstoff)
-- Mango
-- Mitte Aerotermia
-- MyCond BeeThermic
-- Poolex Dreamline
-- Poolsana
-- Power World
-- Power World PW030
-- Power World R290 Full DC
-- Pure Blue Onyx
-- Reclaim Eco R290
-- Rotenso
-- SolarEast
-- SolarEast BLN
-- Swim&Fun Fjord
-- Water TechniX
-- W'eau
-- W'eau WFI-007
-- Wopoltop
+
+| No | Brand | | No | Brand | | No | Brand |
+|---|---|---|---|---|---|---|---|
+| 1 | Arçelik (Beko, Grundig) | | 21 | Ivapool | | 41 | Wopoltop |
+| 2 | ACIQ | | 22 | Kensol | | | |
+| 3 | Adlar Castra | | 23 | Kushiro (Luqstoff) | | | |
+| 4 | Adlar Castra Domestic | | 24 | Mango | | | |
+| 5 | Alps Exclusive | | 25 | Mitte Aerotermia | | | |
+| 6 | Aquark | | 26 | MyCond BeeThermic | | | |
+| 7 | Aquastrong | | 27 | Poolex Dreamline | | | |
+| 8 | Aquatech X6 | | 28 | Poolsana | | | |
+| 9 | Aquatech X6 320L | | 29 | Power World | | | |
+| 10 | Cordivari Vestalis | | 30 | Power World PW030 | | | |
+| 11 | Della | | 31 | Power World R290 Full DC | | | |
+| 12 | Ecologic Ecopool | | 32 | Pure Blue Onyx | | | |
+| 13 | EnviroSun HP+ | | 33 | Reclaim Eco R290 | | | |
+| 14 | Evoheat 40T | | 34 | Rotenso | | | |
+| 15 | Fairland | | 35 | SolarEast | | | |
+| 16 | Fairland Inverter Plus | | 36 | SolarEast BLN | | | |
+| 17 | Heative Next | | 37 | Swim&Fun Fjord | | | |
+| 18 | Inventor Xforce | | 38 | Water TechniX | | | |
+| 19 | IPS Pool Systems | | 39 | W'eau | | | |
+| 20 | ITS | | 40 | W'eau WFI-007 | | | |
+
 ---
 
 This project allows you to control and monitor your Tuya heat pump device through Home Assistant — supports Cloud, Local (LAN push), and optional real-time MQTT push on top of Cloud mode.
