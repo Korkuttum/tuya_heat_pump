@@ -12,26 +12,26 @@
 
 | No | Brand | | No | Brand | | No | Brand |
 |---|---|---|---|---|---|---|---|
-| 1 | Arçelik (Beko, Grundig) | | 21 | Ivapool | | 41 | Wopoltop |
-| 2 | ACIQ | | 22 | Kensol | | | |
-| 3 | Adlar Castra | | 23 | Kushiro (Luqstoff) | | | |
-| 4 | Adlar Castra Domestic | | 24 | Mango | | | |
-| 5 | Alps Exclusive | | 25 | Mitte Aerotermia | | | |
-| 6 | Aquark | | 26 | MyCond BeeThermic | | | |
-| 7 | Aquastrong | | 27 | Poolex Dreamline | | | |
-| 8 | Aquatech X6 | | 28 | Poolsana | | | |
-| 9 | Aquatech X6 320L | | 29 | Power World | | | |
-| 10 | Cordivari Vestalis | | 30 | Power World PW030 | | | |
-| 11 | Della | | 31 | Power World R290 Full DC | | | |
-| 12 | Ecologic Ecopool | | 32 | Pure Blue Onyx | | | |
-| 13 | EnviroSun HP+ | | 33 | Reclaim Eco R290 | | | |
-| 14 | Evoheat 40T | | 34 | Rotenso | | | |
-| 15 | Fairland | | 35 | SolarEast | | | |
-| 16 | Fairland Inverter Plus | | 36 | SolarEast BLN | | | |
-| 17 | Heative Next | | 37 | Swim&Fun Fjord | | | |
-| 18 | Inventor Xforce | | 38 | Water TechniX | | | |
-| 19 | IPS Pool Systems | | 39 | W'eau | | | |
-| 20 | ITS | | 40 | W'eau WFI-007 | | | |
+| 1 | Arçelik (Beko, Grundig) | | 21 | ITS | | 41 | W'eau WFI-007 |
+| 2 | Alsavo by Zealux | | 22 | Ivapool | | 42 | Wopoltop |
+| 3 | ACIQ | | 23 | Kensol | | | |
+| 4 | Adlar Castra | | 24 | Kushiro (Luqstoff) | | | |
+| 5 | Adlar Castra Domestic | | 25 | Mango | | | |
+| 6 | Alps Exclusive | | 26 | Mitte Aerotermia | | | |
+| 7 | Aquark | | 27 | MyCond BeeThermic | | | |
+| 8 | Aquastrong | | 28 | Poolex Dreamline | | | |
+| 9 | Aquatech X6 | | 29 | Poolsana | | | |
+| 10 | Aquatech X6 320L | | 30 | Power World | | | |
+| 11 | Cordivari Vestalis | | 31 | Power World PW030 | | | |
+| 12 | Della | | 32 | Power World R290 Full DC | | | |
+| 13 | Ecologic Ecopool | | 33 | Pure Blue Onyx | | | |
+| 14 | EnviroSun HP+ | | 34 | Reclaim Eco R290 | | | |
+| 15 | Evoheat 40T | | 35 | Rotenso | | | |
+| 16 | Fairland | | 36 | SolarEast | | | |
+| 17 | Fairland Inverter Plus | | 37 | SolarEast BLN | | | |
+| 18 | Heative Next | | 38 | Swim&Fun Fjord | | | |
+| 19 | Inventor Xforce | | 39 | Water TechniX | | | |
+| 20 | IPS Pool Systems | | 40 | W'eau | | | |
 
 ---
 
