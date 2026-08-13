@@ -19,6 +19,180 @@ so those conversions null the sentinel out (`None if value == -32700 else ...`).
 
 MODEL_NAME = "Swim&Fun Fjord / Zile HF006A Inverboost Pool Heat Pump (e1kt1inc)"
 
+# ACTIVE-FAULT REGISTER `err_cur_id_info` (dp 107)
+#
+# A 244-byte raw block carried in the same cloud shadow as r_135/r_136, so
+# reading it costs no extra API call. All-zero means no active fault.
+#
+# Encoding, confirmed against two deliberately provoked x072 faults (water
+# flow stopped while the unit was running):
+#
+#     00 FF 00 48 00 00 ...   ->  int16_be slot 0 = 255, slot 1 = 72
+#     |__ module |__ code
+#
+# A value list, not a bitmap: read as bits, the observed frame would imply
+# x008/x009/x010 active, which are not defined codes. Slot 0 is the module
+# id in the manual's own notation -- page 345 defines it as "FF = System,
+# 00 = Module board no. 0", and the parameter table is scoped "FF (System)"
+# and "00~08 (Module)".
+#
+# Two consequences for any model with a similar register:
+#
+# - "A fault is present" must be tested on the module slot, or on the whole
+#   register being non-zero -- NOT on the code slot. x000 is a real code, so
+#   code == 0 does not mean "no fault". Corner case: board 0 is a valid
+#   module id, so a fault raised by board 0 cannot be told from a clear
+#   register on that slot alone. It cannot arise on this single-compressor
+#   unit, which only ever reports 0xFF, and `fault_active` tests the whole
+#   register.
+#
+# - The register BLINKS at every polling rate tested, so a consumer must
+#   latch or debounce. Sampling the shadow directly every 20-30s returned 2
+#   all-zero frames out of 8 polls; the integration's own 3-minute interval
+#   returned 1 out of ~12, one poll wide. During the latter the unit's panel
+#   still displayed the fault and every other sensor agreed it was live, so
+#   the cloud shadow was briefly wrong, not the device.
+#
+# The manual never defines the literal "x" prefix -- the error table prints
+# x000..x140 with no legend. The NUMBER is the identity; "x072" reproduces
+# the manual's notation without interpreting it.
+#
+# The unit's panel can look like evidence against the module slot and is
+# not: during a provoked x072 it read "0072" while the module slot read
+# 255. Page 337 explains it -- an active fault is shown in the display's
+# clock area, a four-digit HH:MM field, so "0072" is the code zero-padded
+# by display geometry and carries no module information.
+#
+# Open question: with two simultaneous faults (page 337 says the panel then
+# alternates between codes), is the layout repeating (module, code) records
+# or one module marker followed by several codes? One fault cannot tell.
+#
+# `err_his_cmd` (dp 116) holds fault HISTORY but is a command channel
+# (value None until written) with an unknown wire format.
+#
+# Codes below are the manual's English error table (pages 370-379), two
+# families: H0xx main control board (H006 is not defined) and x0xx unit /
+# inverter. Numbering is sparse. Names are the manual's own, normalized:
+#   - it mixes "-" and an en dash as a pseudo-colon ("Discharge temperature
+#     - sensor error"); dropped, since most entries already read "Fin sensor
+#     error" without it
+#   - "Interrupt Overflow 1" / "Task2 Overflow error" were title-cased
+#     mid-string where every other entry is sentence case
+#   - x065, x080 and x117 all read "Communication error"; the subsystem from
+#     each row's own Causes column is appended so the code is actionable
+# Cross-family duplicates are left alone: H004/x074, H005/x071 and H007/x067
+# share a name but the prefix tells them apart.
+# The manual documents x029 ("model setup in progress") and x075 ("anti-ice
+# temperature too low", whose troubleshooting column reads "normal frost
+# protection") as operating states rather than faults, yet the device still
+# writes them to this register. Whether to act on them is a consumer
+# decision, not something this model file makes.
+ERROR_CODES = {
+    'H001': 'Phase error protection',
+    'H002': 'EEPROM data error (main unit)',
+    'H003': 'Ambient temperature sensor error',
+    'H004': 'Inlet temperature sensor error',
+    'H005': 'Outlet temperature sensor error',
+    'H007': 'Phase loss protection',
+    'x000': 'Low compressor pressure',
+    'x001': 'High compressor pressure',
+    'x004': 'Fin sensor error',
+    'x005': 'Discharge temperature sensor error',
+    'x006': 'Discharge temperature too high',
+    'x011': 'Suction temperature sensor error',
+    'x012': 'Post-valve temperature error',
+    'x013': 'Suction temperature too low',
+    'x014': 'Frequent emergency defrosting',
+    'x015': 'Abnormal difference between suction and discharge temperature',
+    'x016': 'Evaporation temperature of refrigerant too low',
+    'x019': 'Inlet water temperature too low',
+    'x020': 'Inlet water temperature too high',
+    'x021': 'Fan 1 abnormal speed',
+    'x022': 'Fan 2 abnormal speed',
+    'x027': 'Inverter communication error',
+    'x028': 'Inverter error',
+    'x029': 'Inverter model setup in progress',
+    'x064': 'Module ambient temperature error',
+    'x065': 'Communication error (wired controller)',
+    'x066': 'EEPROM data error',
+    'x067': 'Phase loss protection',
+    'x069': 'Outlet temperature too low',
+    'x070': 'Outlet temperature too high',
+    'x071': 'Outlet temperature sensor error',
+    'x072': 'Insufficient water flow',
+    'x074': 'Inlet temperature sensor error',
+    'x075': 'Anti-ice temperature too low',
+    'x077': 'Large difference between outlet and inlet temperature',
+    'x078': 'Irregular difference between outlet and inlet temperature',
+    'x079': 'Power supply error',
+    'x080': 'Communication error (control panel)',
+    'x096': 'Overcurrent at startup',
+    'x097': 'Overcurrent during acceleration',
+    'x098': 'Overcurrent during deceleration',
+    'x099': 'Overcurrent at constant speed',
+    'x100': 'Overvoltage during acceleration',
+    'x101': 'Overvoltage during deceleration',
+    'x102': 'Overvoltage at constant speed',
+    'x103': 'Overvoltage in standby',
+    'x104': 'Undervoltage during operation',
+    'x105': 'Input phase failure (three-phase only)',
+    'x106': 'Output phase failure',
+    'x107': 'Power unit protection',
+    'x108': 'Inverter overheating',
+    'x109': 'Inverter overload (PFC overheating)',
+    'x110': 'Motor overload',
+    'x111': 'PFC start error',
+    'x112': 'Motor overload (load too high)',
+    'x113': 'Motor overspeed',
+    'x114': 'Motor D-axis overcurrent',
+    'x115': 'Motor Q-axis overcurrent',
+    'x116': 'Parameter storage failed',
+    'x117': 'Communication error (inverter driver board)',
+    'x118': 'Current test error',
+    'x119': 'PFC temperature test error',
+    'x120': 'Motor locked at startup',
+    'x121': 'Motor locked during operation',
+    'x122': 'Temperature test error',
+    'x123': 'Stop error',
+    'x124': 'Interrupt overflow 1',
+    'x125': 'Interrupt overflow 2',
+    'x126': 'Rotor stall at startup',
+    'x127': 'Rotor stall during operation',
+    'x128': 'PFC overcurrent',
+    'x129': 'PFC peak current too high',
+    'x130': 'PFC RMS current too high',
+    'x131': 'Input phase reversed',
+    'x132': 'Input frequency too high',
+    'x133': 'Input frequency too low',
+    'x134': 'Overvoltage at input',
+    'x135': 'Undervoltage at input',
+    'x136': 'Input phase voltage distortion',
+    'x137': 'Overvoltage at output',
+    'x138': 'Error in charging circuit',
+    'x139': 'Task 2 overflow error',
+    'x140': 'Task 2 operation error',
+}
+
+# The register carries the code as a plain number. These are the two
+# lookups the sensors use, so no consumer needs its own copy of the table:
+# one turns the number into the manufacturer's description, the other into
+# the identifier the manual's table is keyed on.
+FAULT_CODE_DESCRIPTIONS = {
+    int(code[1:]): name
+    for code, name in ERROR_CODES.items()
+    if code.startswith("x")
+}
+
+# Module identifiers, verbatim from the manual's analog-measurement screen
+# (page 345): "FF = System, 00 = Module board no. 0", with the parameter
+# table on the next page scoped "FF (System)" and "00~08 (Module)". So the
+# register's module slot is the same identifier the unit's own display
+# shows, and 0xFF is the whole system rather than a numbered board.
+# A single-compressor unit like this one only ever reports 255; the 0-8
+# range exists for the multi-module members of the same controller family.
+FAULT_MODULES = {255: "System"}
+FAULT_MODULES.update({n: f"Module board {n}" for n in range(9)})
+
 # ====================================================
 # SENSOR TYPES (read-only)
 # ====================================================
@@ -362,6 +536,59 @@ SENSOR_TYPES = {
         "device_class": "temperature",
         "state_class": "measurement",
     },
+    "fault_description": {
+        "dp_id": 107,
+        "code": "fault_description",
+        "raw_source": "err_cur_id_info",
+        "field_index": 1,
+        "guard_field_index": 0,
+        "encoding": "int16_be",
+        "value_map": FAULT_CODE_DESCRIPTIONS,
+        "value_map_default": "Unknown fault code",
+        "guard_inactive_value": "OK",
+        "name": "Fault",
+        "icon": "mdi:alert-circle-outline",
+    },
+    # Guarded on its own slot: a zero module slot means the register is
+    # clear, and reporting that as "Module board 0" would be a real reading
+    # of a value that is not one. See the note above on the corner case.
+    "fault_module": {
+        "dp_id": 107,
+        "code": "fault_module",
+        "raw_source": "err_cur_id_info",
+        "field_index": 0,
+        "guard_field_index": 0,
+        "encoding": "int16_be",
+        "value_map": FAULT_MODULES,
+        "value_map_default": "Unknown module",
+        "guard_inactive_value": "OK",
+        "name": "Fault Module",
+        "icon": "mdi:chip",
+        "entity_category": "diagnostic",
+    },
+    # Formatted as a string on purpose, for two reasons. It renders the
+    # identifier the manual's error table is keyed on ("x072"), which is
+    # where a user looks up cause and troubleshooting. And it sidesteps the
+    # float() at the end of the raw-field branch: a code is an identifier,
+    # not a measurement, so it carries no state_class -- which means the
+    # frontend prints the state verbatim rather than localizing it, and a
+    # numeric value would show up as "72.0" with an unlocalized separator.
+    # A conversion, rather than a value_map, so a code the table does not
+    # list -- the numbering is sparse and stops at x140 -- still renders
+    # its own number instead of collapsing to a default.
+    "fault_code": {
+        "dp_id": 107,
+        "code": "fault_code",
+        "raw_source": "err_cur_id_info",
+        "field_index": 1,
+        "guard_field_index": 0,
+        "encoding": "int16_be",
+        "conversion": "'x%03d' % value",
+        "guard_inactive_value": "OK",
+        "name": "Fault Code",
+        "icon": "mdi:alert-circle-outline",
+        "entity_category": "diagnostic",
+    },
 }
 
 # ====================================================
@@ -433,7 +660,21 @@ SELECT_TYPES = {
 # ====================================================
 # BINARY SENSOR TYPES
 # ====================================================
-BINARY_SENSOR_TYPES = {}
+BINARY_SENSOR_TYPES = {
+    # Encoding-agnostic presence check: base64 of an all-zero block
+    # contains only 'A' plus '=' padding, so any other character means at
+    # least one bit is set somewhere. Independent of the slot layout, which
+    # keeps it valid for sibling models laid out differently -- and it is
+    # the authority for "is a fault present", per the module-slot corner
+    # case noted at the top of this file.
+    "fault_active": {
+        "dp_id": 107,
+        "code": "err_cur_id_info",
+        "name": "Fault Active",
+        "device_class": "problem",
+        "conversion": "value.strip('A=') != ''",
+    },
+}
 
 # ====================================================
 # WEEKLY SCHEDULE / TIMERS  (documented for future work)

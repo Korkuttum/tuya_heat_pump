@@ -128,14 +128,40 @@ class TuyaHeatpumpSensor(SensorEntity):
             )
             if raw_value is None:
                 return None
+            # Optional guard: another field in the SAME raw block that must
+            # be non-zero for this value to mean anything. Needed when a
+            # register carries (selector, value) pairs -- e.g. a fault
+            # register whose code slot reads 0 both when error 0 is active
+            # and when no error is, with a module slot telling them apart.
+            guard_index = self._config.get('guard_field_index')
+            if guard_index is not None:
+                guard_value = _decode_raw_field(
+                    b64_value,
+                    guard_index,
+                    self._config.get('encoding', 'int32_be'),
+                )
+                if not guard_value:
+                    # `guard_inactive_value` distinguishes "the guard says
+                    # this field carries nothing right now" from "there is
+                    # no data at all". Without it both collapse to None ->
+                    # `unknown`, and a healthy device reads the same as an
+                    # unreachable one. Defaults to None, so models that do
+                    # not set it keep the previous behaviour.
+                    return self._config.get('guard_inactive_value')
             # Optional conversion (scale/offset etc.)
             conversion = Conversion(self._config.get('conversion', 'value'))
             try:
                 result = conversion.convert(raw_value)
-                return float(result) if isinstance(result, (int, float)) else result
             except Exception as err:
                 _LOGGER.warning("Conversion failed for raw %s: %s", self._sensor_code, err)
-                return raw_value
+                result = raw_value
+            # Optional lookup table, so a model file can turn a numeric
+            # code into the manufacturer's own label without every consumer
+            # having to carry a copy of the table.
+            value_map = self._config.get('value_map')
+            if value_map is not None:
+                return value_map.get(result, self._config.get('value_map_default'))
+            return float(result) if isinstance(result, (int, float)) else result
 
         if not self.coordinator.data or self._sensor_code not in self.coordinator.data:
             return None
