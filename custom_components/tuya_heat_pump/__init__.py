@@ -20,26 +20,39 @@ _LOGGER = logging.getLogger(__name__)
 # "biraz sonra tekrar dene" olarak ele alır (normal, beklenen davranış),
 # boot akışını bloke eden asıl "sonsuza kadar takılı kalma" ihtimalini
 # ortadan kaldırır.
-SETUP_TIMEOUT = 25
+# 25sn önceden dar geldiği için 45sn'e çıkarıldı (bkz. issue #77): üç
+# adımın (get_device_info + get_device_model + first_refresh) her biri
+# kendi timeout'una kadar sürebildiğinde toplam kolayca 25sn'i geçip
+# yavaş ama aslında sağlıklı kurulumları ConfigEntryNotReady ile
+# başarısız gösterebiliyordu.
+SETUP_TIMEOUT = 45
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Tuya Heatpump from a config entry."""
     coordinator = TuyaScaleDataUpdateCoordinator(hass, entry)
 
+    setup_started = asyncio.get_event_loop().time()
+
+    def _elapsed() -> float:
+        return asyncio.get_event_loop().time() - setup_started
+
     try:
         async with asyncio.timeout(SETUP_TIMEOUT):
             # Önce device info'yu al
             await coordinator.get_device_info()
+            _LOGGER.debug("get_device_info tamamlandı (%.1fsn)", _elapsed())
 
             # Model bilgisini al
             await coordinator.get_device_model()
+            _LOGGER.debug("get_device_model tamamlandı (%.1fsn)", _elapsed())
 
             await coordinator.async_config_entry_first_refresh()
+            _LOGGER.debug("İlk refresh tamamlandı (%.1fsn)", _elapsed())
     except asyncio.TimeoutError as err:
         raise ConfigEntryNotReady(
             f"Tuya Heat Pump setup timed out after {SETUP_TIMEOUT}s "
-            f"(device_id={coordinator.device_id}) — will retry"
+            f"(device_id={coordinator.device_id}, elapsed={_elapsed():.1f}s) — will retry"
         ) from err
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
