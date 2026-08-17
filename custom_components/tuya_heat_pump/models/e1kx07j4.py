@@ -2,6 +2,9 @@
 
 MODEL_NAME = "Lunna LV LT1530 / Nordic LV LT1530 Heat Pump (e1kx07j4)"
 # ====================================================
+# Lunna LV LT1530 @strandman
+# ====================================================
+# ====================================================
 # Lunna LV LT1530 (Nordic LV LT1530) — reported by @strandman, issue #78.
 # Built from a single cloud properties + model dump (no live device access),
 # so every field below is only as good as Tuya's own schema text — there is
