@@ -40,6 +40,8 @@ from .const import (
     DEFAULT_MANUFACTURER,
     DEFAULT_MODEL,
     CONF_USER_CODE,
+    CONF_CACHED_ACCESS_TOKEN,
+    CONF_CACHED_TOKEN_EXPIRES_AT,
 )
 import tinytuya
 from .model_loader import load_model_mapping, async_load_model_mapping
@@ -159,6 +161,19 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         # her ikisi de aynı _get_token()'ı çağırdığı için otomatik
         # düzeliyor.
         self._token_expires_at = 0.0
+
+        # entry.data'da hâlâ geçerli bir cache'lenmiş token varsa yükle
+        # (bkz. issue #77 — CONF_CACHED_ACCESS_TOKEN tanımı). Böylece
+        # async_setup_entry retry'larında (her retry'da coordinator
+        # sıfırdan oluşturuluyor) veya HA restart'ında, hâlâ geçerli
+        # bir token varken bile _get_token()'ın onu network'ten yeniden
+        # alması gerekmiyor — bu da SETUP_TIMEOUT bütçesinden 10-20sn
+        # tasarruf sağlıyor.
+        cached_token = config_entry.data.get(CONF_CACHED_ACCESS_TOKEN)
+        cached_expires_at = config_entry.data.get(CONF_CACHED_TOKEN_EXPIRES_AT, 0.0)
+        if cached_token and time.time() < cached_expires_at:
+            self.access_token = cached_token
+            self._token_expires_at = cached_expires_at
 
         if self.connection_type == "cloud":
             pass
@@ -582,6 +597,23 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 "Access token başarıyla alındı (yaklaşık %.0f dakika sonra yenilenecek)",
                 (self._token_expires_at - time.time()) / 60,
             )
+
+            # Bir sonraki setup retry'ı (veya HA restart'ı) bu token'ı
+            # network'e gitmeden reuse edebilsin diye entry.data'ya
+            # yazıyoruz (bkz. issue #77, __init__'teki cache okuma).
+            # skip_next_reload: bu sadece token persist'i, kullanıcı
+            # ayarı değişmedi — entegrasyonun reload olmasına gerek yok
+            # (bkz. sharing_mqtt.py'deki aynı desen).
+            self.skip_next_reload = True
+            self.hass.config_entries.async_update_entry(
+                self.config_entry,
+                data={
+                    **self.config_entry.data,
+                    CONF_CACHED_ACCESS_TOKEN: self.access_token,
+                    CONF_CACHED_TOKEN_EXPIRES_AT: self._token_expires_at,
+                },
+            )
+
             return True
           
         except ConfigEntryAuthFailed:
