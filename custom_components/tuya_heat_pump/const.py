@@ -40,6 +40,16 @@ PROTOCOL_OPTIONS = ["3.1", "3.3", "3.4", "3.5"]
 CONF_USER_CODE = "user_code"
 CONF_SHARING_TOKEN_INFO = "sharing_token_info"
 
+# Cloud API access_token cache'i (bkz. issue #77). Coordinator her
+# async_setup_entry retry'sinde SIFIRDAN oluşturuluyor, bu yüzden
+# _get_token()'ın in-memory cache'i (self.access_token) retry'lar arası
+# hayatta kalmıyor — her retry, hâlâ geçerli bir token varken bile onu
+# yeniden almak için ~10-20sn'lik bir network round-trip'i baştan
+# yapıyordu. Bu iki alan token'ı entry.data'ya yazarak retry'lar arası
+# (ve HA restart'ları arası) hayatta kalmasını sağlıyor.
+CONF_CACHED_ACCESS_TOKEN = "cached_access_token"
+CONF_CACHED_TOKEN_EXPIRES_AT = "cached_token_expires_at"
+
 # Herkese açık, home-assistant/core'un kendi resmi "tuya" entegrasyonunda
 # kullanılan paylaşılan kimlik bilgisi (bkz. homeassistant/components/
 # tuya/const.py) — Tuya'nın Home Assistant ekosistemi için ayırdığı
