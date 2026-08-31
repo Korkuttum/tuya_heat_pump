@@ -798,6 +798,17 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         seferliğine tekrar dener — poll'daki (_async_update_data) aynı
         self-healing davranışın komut gönderme tarafındaki karşılığı.
         """
+        # HA'nın NumberEntity.async_set_native_value'su HER ZAMAN float
+        # gönderir (örn. 39.0), ama Tuya'da "float" diye bir DP tipi yok —
+        # sayısal DP'lerin hepsi Integer (gerekirse scale ile). Tam sayı
+        # değerindeki bir float'ı (örn. 39.0) JSON'da öyle bırakıp cloud'a
+        # göndermek Tuya cloud'unda "success: true" dönebiliyor ama cihaz
+        # tip uyuşmazlığından yazmayı sessizce yok sayabiliyor (bkz. issue
+        # #80 — temp_set1 yazımı 8sn sonra eski değere dönüyordu). Burada
+        # tek noktadan normalize ediyoruz ki her code/model için ayrı ayrı
+        # "int(value)" yazmaya gerek kalmasın.
+        if isinstance(value, float) and value.is_integer():
+            value = int(value)
         try:
             if self.connection_type == "cloud":
                 # _get_token() artık expiry'yi kendi içinde kontrol ediyor,
