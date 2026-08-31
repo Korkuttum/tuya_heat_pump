@@ -355,15 +355,18 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
     async def _listen_loop(self):
         """Loop to receive instant data from the device.
 
-        Push tabanlı anlık güncelleme sadece bir OPTİMİZASYON — asıl veri
-        kaynağı ayrı bir yerde çalışan periyodik status() poll'u (birkaç
-        dakikada bir), o zaten kendi başına çalışmaya devam ediyor. Bu
-        yüzden burada tekrar tekrar backoff ile uğraşmıyoruz: bağlantı
-        BİR KERE başarısız olursa bu döngü tamamen duruyor, bir daha
-        kendiliğinden denemiyor. Veri akışı kesilmez, sadece "anlık"
-        olmaktan çıkıp normal poll hızına döner. Entegrasyon yeniden
-        yüklenirse (reload/restart) taze bir deneme başlar.
+        Local moda özgü: bu döngü verinin TEK kaynağı, opsiyonel bir
+        optimizasyon değil — local bağlantıda update_interval None (bkz.
+        __init__), yani HA'nın periyodik poll mekanizması hiç devreye
+        girmiyor. Önceden bu döngü İLK hatada tamamen durup bir daha
+        kendiliğinden denemiyordu ("periyodik poll zaten devam ediyor"
+        varsayımıyla) — ama local modda öyle bir poll yok, bu yüzden
+        geçici bir socket hatası (örn. _local_socket_lock timeout'u,
+        bağlantı sıfırlanması) tüm sensörleri kalıcı olarak dondurup
+        sadece "reload" ile düzelmesine yol açıyordu (bkz. issue #74).
+        Artık hata durumunda döngü ölmüyor, backoff ile yeniden deniyor.
         """
+        consecutive_errors = 0
         while True:
             try:
                 await asyncio.sleep(0.05)
@@ -381,21 +384,24 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                         # değerleri anında kaybolurdu.
                         merged = {**(self.data or {}), **new_data}
                         self.async_set_updated_data(merged)
+                consecutive_errors = 0
                 await asyncio.sleep(0.1)
             except Exception as err:
+                consecutive_errors += 1
+                backoff = min(5.0 * consecutive_errors, 30.0)
                 _LOGGER.warning(
-                    "Local instant-update listener stopped after an error "
-                    "(%s) — will not retry automatically. Periodic polling "
-                    "continues normally; reload the integration to try "
-                    "instant updates again.", err,
+                    "Local instant-update listener hit an error (%s) — "
+                    "retrying in %.0fs (consecutive failures: %d)",
+                    err, backoff, consecutive_errors,
                 )
-                return
+                await asyncio.sleep(backoff)
 
     async def _heartbeat_loop(self):
         """Loop to keep the connection alive. _listen_loop ile aynı
-        mantık: bağlantı bir kere başarısız olursa tamamen durur, tekrar
-        denemez — periyodik status() poll'u bağımsız çalışmaya devam
-        eder, bu döngü sadece kalıcı soketi canlı tutan bir optimizasyon."""
+        gerekçeyle: local modda bağımsız bir periyodik poll yok, bu
+        yüzden bu döngü de hata durumunda kalıcı olarak durmak yerine
+        yeniden deniyor — aksi halde soket sessizce ölür, _listen_loop
+        da onun peşinden sürekli hata almaya başlar."""
         while True:
             try:
                 if self.local_device:
@@ -403,10 +409,9 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 await asyncio.sleep(5)
             except Exception as err:
                 _LOGGER.debug(
-                    "Heartbeat loop stopped after an error (%s) — will not "
-                    "retry automatically.", err,
+                    "Heartbeat loop hit an error (%s) — retrying in 5s.", err,
                 )
-                return
+                await asyncio.sleep(5)
 
     # ============================================================================
     # MQTT (tuya_sharing) — opsiyonel, bkz. sharing_mqtt.py
