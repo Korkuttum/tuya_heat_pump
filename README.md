@@ -12,26 +12,26 @@
 
 | No | Brand | | No | Brand | | No | Brand |
 |---|---|---|---|---|---|---|---|
-| 1 | Arçelik (Beko, Grundig) | | 21 | ITS | | 41 | W'eau |
-| 2 | Alsavo by Zealux | | 22 | Ivapool | | 42 | W'eau WFI-007 |
-| 3 | ACIQ | | 23 | Kensol | | 43 | Wopoltop |
-| 4 | Adlar Castra | | 24 | Kushiro (Luqstoff) | | | |
-| 5 | Adlar Castra Domestic | | 25 | Lunna LV LT1530 (Nordic LV LT1530) | | | |
-| 6 | Alps Exclusive | | 26 | Mango | | | |
-| 7 | Aquark | | 27 | Mitte Aerotermia | | | |
-| 8 | Aquastrong | | 28 | MyCond BeeThermic | | | |
-| 9 | Aquatech X6 | | 29 | Poolex Dreamline | | | |
-| 10 | Aquatech X6 320L | | 30 | Poolsana | | | |
-| 11 | Cordivari Vestalis | | 31 | Power World | | | |
-| 12 | Della | | 32 | Power World PW030 | | | |
-| 13 | Ecologic Ecopool | | 33 | Power World R290 Full DC | | | |
-| 14 | EnviroSun HP+ | | 34 | Pure Blue Onyx | | | |
-| 15 | Evoheat 40T | | 35 | Reclaim Eco R290 | | | |
-| 16 | Fairland | | 36 | Rotenso | | | |
-| 17 | Fairland Inverter Plus | | 37 | SolarEast | | | |
-| 18 | Heative Next | | 38 | SolarEast BLN | | | |
-| 19 | Inventor Xforce | | 39 | Swim&Fun Fjord | | | |
-| 20 | IPS Pool Systems | | 40 | Water TechniX | | | |
+| 1 | Arçelik (Beko, Grundig) | | 21 | IPS Pool Systems | | 41 | Water TechniX |
+| 2 | Alsavo by Zealux | | 22 | ITS | | 42 | W'eau |
+| 3 | ACIQ | | 23 | Ivapool | | 43 | W'eau WFI-007 |
+| 4 | Adlar Castra | | 24 | Kensol | | 44 | Wopoltop |
+| 5 | Adlar Castra Domestic | | 25 | Kushiro (Luqstoff) | | | |
+| 6 | Alps Exclusive | | 26 | Lunna LV LT1530 (Nordic LV LT1530) | | | |
+| 7 | Aquark | | 27 | Mango | | | |
+| 8 | Aquastrong | | 28 | Mitte Aerotermia | | | |
+| 9 | Aquatech X6 | | 29 | MyCond BeeThermic | | | |
+| 10 | Aquatech X6 320L | | 30 | Poolex Dreamline | | | |
+| 11 | Cordivari Vestalis | | 31 | Poolsana | | | |
+| 12 | Della | | 32 | Power World | | | |
+| 13 | Ecologic Ecopool | | 33 | Power World PW030 | | | |
+| 14 | EnviroSun HP+ | | 34 | Power World R290 Full DC | | | |
+| 15 | Evoheat 40T | | 35 | Pure Blue Onyx | | | |
+| 16 | Fairland | | 36 | Reclaim Eco R290 | | | |
+| 17 | Fairland Inverter Plus | | 37 | Rotenso | | | |
+| 18 | GRAT | | 38 | SolarEast | | | |
+| 19 | Heative Next | | 39 | SolarEast BLN | | | |
+| 20 | Inventor Xforce | | 40 | Swim&Fun Fjord | | | |
 
 ---
 
