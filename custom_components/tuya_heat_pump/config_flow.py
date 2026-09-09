@@ -107,11 +107,17 @@ STEP_LOCAL_OPTIONS_SCHEMA = vol.Schema(
 
 async def validate_input(hass: HomeAssistant, data: dict, connection_type: str) -> dict:
     """Validate the user input allows us to connect."""
-    # Mock ConfigEntry oluştur (basit ve temiz şekilde)
+    # Kurulum doğrulaması için vekil ConfigEntry. Gerçek entry henüz
+    # OLUŞMADI (onu ancak doğrulama başarılı olursa async_create_entry
+    # oluşturacak), bu yüzden HA'nın config entry registry'sinde karşılığı
+    # yok. entry_id'yi açıkça None veriyoruz: coordinator kalıcı yazma
+    # yaparken (token/model cache) bunu görüp yazmayı atlıyor
+    # (bkz. TuyaScaleDataUpdateCoordinator._persist_entry_data).
     mock_config = type(
         "MockConfigEntry",
         (),
         {
+            "entry_id": None,
             "data": data,
             "options": {
                 CONF_SCAN_INTERVAL: data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
