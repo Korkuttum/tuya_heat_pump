@@ -276,6 +276,49 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 self.dp_mapping[config['dp_id']] = code
         _LOGGER.info("dp_mapping oluşturuldu - %d DP tanımlı", len(self.dp_mapping))
 
+    def _persist_entry_data(self, **fields: Any) -> None:
+        """entry.data'ya kalıcı yardımcı veri (token cache, model cache) yazar.
+
+        config_flow.py'deki validate_input, kurulumu doğrularken gerçek
+        bir ConfigEntry HENÜZ OLUŞMADAN coordinator'ı ayağa kaldırıyor ve
+        yerine sadece .data/.options taşıyan bir vekil nesne veriyor.
+        HA'nın async_update_entry'si böyle bir nesneyi tanımıyor
+        (entry_id yok -> AttributeError; olsa bile UnknownEntry), bu
+        yüzden yazma denemesi _get_token()'ın genel except'ine düşüyor ve
+        GEÇERLİ kimlik bilgileriyle yapılan yeni cloud kurulumları bile
+        formda "cannot_connect" olarak başarısız görünüyordu. Gerçek bir
+        entry yoksa sessizce atlıyoruz — persist etmek sadece bir hız
+        optimizasyonu, kurulumun doğrulanmasıyla ilgisi yok.
+        """
+        entry_id = getattr(self.config_entry, "entry_id", None)
+        if entry_id is None:
+            _LOGGER.debug(
+                "Kalıcı yazma atlandı: henüz gerçek bir config entry yok "
+                "(kurulum doğrulaması). Alanlar: %s", list(fields)
+            )
+            return
+
+        # Nesne referansı yerine registry'den TAZE entry çekiyoruz: entry
+        # bu arada güncellenmiş (örn. MQTT token yenilemesi) olabilir.
+        entry = self.hass.config_entries.async_get_entry(entry_id)
+        if entry is None:
+            _LOGGER.debug(
+                "Kalıcı yazma atlandı: entry (%s) artık mevcut değil.", entry_id
+            )
+            return
+
+        # Bu bir KULLANICI AYARI değişikliği değil (yalnızca cache) —
+        # __init__.py'deki update listener'ın reload tetiklememesi için
+        # bayrağı önceden set ediyoruz. async_update_entry veri gerçekten
+        # değişmediyse False dönüp listener'ı HİÇ tetiklemiyor; o durumda
+        # bayrağı geri almazsak takılı kalır ve bir sonraki GERÇEK ayar
+        # değişikliği sessizce yutulur.
+        self.skip_next_reload = True
+        if not self.hass.config_entries.async_update_entry(
+            entry, data={**entry.data, **fields}
+        ):
+            self.skip_next_reload = False
+
     def _pending_raw_dp_ids(self) -> list[int]:
         """Model'de tanımlı raw dp_id'lerden, henüz self.data içinde
         karşılığı olmayanları döndürür. Local (LAN) bağlantıda bazı
@@ -609,15 +652,10 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             # skip_next_reload: bu sadece token persist'i, kullanıcı
             # ayarı değişmedi — entegrasyonun reload olmasına gerek yok
             # (bkz. sharing_mqtt.py'deki aynı desen).
-            self.skip_next_reload = True
-            self.hass.config_entries.async_update_entry(
-                self.config_entry,
-                data={
-                    **self.config_entry.data,
-                    CONF_CACHED_ACCESS_TOKEN: self.access_token,
-                    CONF_CACHED_TOKEN_EXPIRES_AT: self._token_expires_at,
-                },
-            )
+            self._persist_entry_data(**{
+                CONF_CACHED_ACCESS_TOKEN: self.access_token,
+                CONF_CACHED_TOKEN_EXPIRES_AT: self._token_expires_at,
+            })
 
             return True
           
@@ -758,13 +796,9 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 # "default" fallback durumunda kaydetmiyoruz — gerçek model ID
                 # geldiğinde tekrar denesin diye.
                 if self.model_id and self.model_id != "default":
-                    self.hass.config_entries.async_update_entry(
-                        self.config_entry,
-                        data={
-                            **self.config_entry.data,
-                            "cached_model_id": self.model_id,
-                            "cached_model_device_id": self.device_id,
-                        }
+                    self._persist_entry_data(
+                        cached_model_id=self.model_id,
+                        cached_model_device_id=self.device_id,
                     )
                     _LOGGER.info("✅ model_id config_entry'e kaydedildi: %s", self.model_id)
                 # ────────────────────────────────────────────────────────────────
