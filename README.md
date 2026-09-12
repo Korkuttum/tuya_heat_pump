@@ -12,21 +12,22 @@
 
 | No | Brand | | No | Brand | | No | Brand |
 |---|---|---|---|---|---|---|---|
-| 1 | Arçelik (Beko, Grundig) | | 16 | Evoheat 40T | | 31 | Poolex Dreamline |
-| 2 | Alsavo by Zealux | | 17 | Fairland | | 32 | Poolsana |
-| 3 | ACIQ | | 18 | Fairland Inverter Plus | | 33 | Power World |
-| 4 | Adlar Castra | | 19 | GRAT | | 34 | Power World PW030 |
-| 5 | Adlar Castra Domestic | | 20 | Heative Next | | 35 | Power World R290 Full DC |
-| 6 | Alps Exclusive | | 21 | Inventor Xforce | | 36 | Pure Blue Onyx |
-| 7 | Aquark | | 22 | IPS Pool Systems | | 37 | Reclaim Eco R290 |
-| 8 | Aquastrong | | 23 | ITS | | 38 | Rotenso |
-| 9 | Aquatech X6 | | 24 | Ivapool | | 39 | SolarEast |
-| 10 | Aquatech X6 320L | | 25 | Kensol | | 40 | SolarEast BLN |
-| 11 | Cordivari Vestalis | | 26 | Kushiro (Luqstoff) | | 41 | Swim&Fun Fjord |
-| 12 | Della | | 27 | Lunna LV LT1530 (Nordic LV LT1530) | | 42 | Water TechniX |
-| 13 | Ecologic Ecopool | | 28 | Mango | | 43 | W'eau |
-| 14 | Effecta Air-IQ R290 | | 29 | Mitte Aerotermia | | 44 | W'eau WFI-007 |
-| 15 | EnviroSun HP+ | | 30 | MyCond BeeThermic | | 45 | Wopoltop |
+| 1 | Arçelik (Beko, Grundig) | | 17 | Fairland | | 33 | Poolsana |
+| 2 | Alsavo by Zealux | | 18 | Fairland Inverter Plus | | 34 | Power World |
+| 3 | ACIQ | | 19 | GRAT | | 35 | Power World PW030 |
+| 4 | Adlar Castra | | 20 | Heative Next | | 36 | Power World R290 Full DC |
+| 5 | Adlar Castra Domestic | | 21 | Inventor Xforce | | 37 | Pure Blue Onyx |
+| 6 | Alps Exclusive | | 22 | IPS Pool Systems | | 38 | Reclaim Eco R290 |
+| 7 | Aquark | | 23 | ITS | | 39 | Rotenso |
+| 8 | Aquastrong | | 24 | Ivapool | | 40 | SolarEast |
+| 9 | Aquatech X6 | | 25 | Kensol | | 41 | SolarEast BLN |
+| 10 | Aquatech X6 320L | | 26 | Kushiro (Luqstoff) | | 42 | Swim&Fun Fjord |
+| 11 | Cordivari Vestalis | | 27 | Lunna LV LT1530 (Nordic LV LT1530) | | 43 | Water TechniX |
+| 12 | Della | | 28 | Mango | | 44 | W'eau |
+| 13 | Ecologic Ecopool | | 29 | Mitte Aerotermia | | 45 | W'eau WFI-007 |
+| 14 | Effecta Air-IQ R290 | | 30 | Mr. Silent FC25 (Aquara Pool Inverter) | | 46 | Wopoltop |
+| 15 | EnviroSun HP+ | | 31 | MyCond BeeThermic | | | |
+| 16 | Evoheat 40T | | 32 | Poolex Dreamline | | | |
 
 ---
 
