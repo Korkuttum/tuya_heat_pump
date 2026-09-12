@@ -2,48 +2,15 @@
 
 MODEL_NAME = "Effecta Air-IQ R290 Heat Pump (e1nde5gc)"
 # ====================================================
-# Effecta Air-IQ R290 @mnoxfeld, issue #83
-# Product code: PW58382-4 (products_id, dp 180) — the "PW" prefix and the
-# device id's "pwvx" suffix both point at this being a Power World OEM
-# unit, same family as e1k5wjuc (Power World R290 Full DC).
-#
-# DP 1, 2, 5, 6, 110, 111, 112, 125, 130, 180 and 15 match e1k5wjuc's own
-# schema exactly (same codes, same enum ranges, same accessMode), so
-# SWITCH/SELECT/BINARY_SENSOR below are taken directly from this device's
-# own typeSpec — not guessed from e1k5wjuc.
-#
-# pg120_status (dp 101, ro) — live telemetry raw block — confirmed and
-# field-mapped by @mnoxfeld against the real device using
-# test/raw_explorer.py, cross-checked live against the Smart Life app.
-# Despite "120" in the name it decodes as 120 × int16_be fields (240 / 2
-# bytes), not int32_be. Field indices 6 and 20 are unused/unidentified and
-# left unmapped.
-#
-# wth_set/heating_set ranges (28-65°C / 15-70°C) are @mnoxfeld's real
-# on-device confirmed limits — narrower than Tuya's own typeSpec
-# (28-176 / 15-176), which was a template placeholder, not a real bound.
-# cooling_set (7-86°C) is still the untouched typeSpec range — not yet
-# confirmed against a real device, since @mnoxfeld's report didn't cover
-# cooling mode. reset (dp125) and hdef (dp130) are kept even though
-# @mnoxfeld's own contributed file dropped them as "potentially
-# destructive/service functions" — they match e1k5wjuc's confirmed
-# schema, so left available for anyone who wants them (hide the entities
-# individually in HA if unwanted).
-#
-# UNRESOLVED — raw parameter groups: still no field-level breakdown for:
-#   - pg60_user_1    (dp 120, rw) — 60 × int32_be user parameter group 1
-#   - pg60_user_2    (dp 121, rw) — 60 × int32_be user parameter group 2
-#   - pg60_factory_1 (dp 122, rw) — 60 × int32_be factory parameter group 1
-#   - pg60_factory_2 (dp 123, rw) — 60 × int32_be factory parameter group 2
-#   - pg60_factory_3 (dp 124, rw) — 60 × int32_be factory parameter group 3
-#   - pg_es          (dp 140, rw) — 20 × int32_be "electricity statistics"
-#     group; the one sample has a device-clock-shaped tail
-#     (…, 2026, 9, 10, 21, 19, 39, 0, 0, …) but no confirmed field map
-#   - pg80_fault     (dp 190, ro) — 80 × uint8 fault detail block, all
-#     zero in the one sample (no active faults) so nothing to anchor a
-#     field map to yet
-# Run test/raw_explorer.py against the real device to map any of these.
+# Effecta Air-IQ R290 @mnoxfeld
 # ====================================================
+# Product code PW58382-4; same Power World OEM family as e1k5wjuc.
+# pg120_status (dp 101) confirmed int16_be and field-mapped by @mnoxfeld
+# via raw_explorer.py, verified against the Smart Life app. wth_set/
+# heating_set ranges confirmed on the real device; cooling_set still
+# untested (kept at Tuya's own typeSpec range). reset/hdef kept even
+# though @mnoxfeld's own contribution dropped them, for anyone who wants
+# them (hide the entities individually in HA if unwanted).
 
 # ====================================================
 # SENSOR TYPES (read-only value - accessMode: "ro")
@@ -406,8 +373,8 @@ SWITCH_TYPES = {
 # NUMBER TYPES (read-write value - accessMode: "rw"/"wr")
 # ====================================================
 NUMBER_TYPES = {
-    # Hot Water Temperature Setpoint (dp_id: 110) — range confirmed
-    # against the real device by @mnoxfeld (issue #83).
+    # Hot Water Temperature Setpoint (dp_id: 110) — range confirmed on
+    # the real device by @mnoxfeld.
     "wth_set": {
         "dp_id": 110,
         "code": "wth_set",
@@ -419,8 +386,8 @@ NUMBER_TYPES = {
         "step": 1.0,
         "api_conversion": "value",
     },
-    # Heating Temperature Setpoint (dp_id: 111) — range confirmed
-    # against the real device by @mnoxfeld (issue #83).
+    # Heating Temperature Setpoint (dp_id: 111) — range confirmed on the
+    # real device by @mnoxfeld.
     "heating_set": {
         "dp_id": 111,
         "code": "heating_set",
@@ -433,9 +400,7 @@ NUMBER_TYPES = {
         "api_conversion": "value",
     },
     # Cooling Temperature Setpoint (dp_id: 112) — still Tuya's own
-    # typeSpec range, not yet confirmed against a real device in cooling
-    # mode. Tighten once someone verifies it (see wth_set/heating_set
-    # above for the confirmed pattern).
+    # typeSpec range, not yet confirmed against a real device.
     "cooling_set": {
         "dp_id": 112,
         "code": "cooling_set",
@@ -503,3 +468,4 @@ SELECT_TYPES = {
         },
     },
 }
+x
