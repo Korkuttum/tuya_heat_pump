@@ -7,22 +7,30 @@ MODEL_NAME = "Effecta Air-IQ R290 Heat Pump (e1nde5gc)"
 # device id's "pwvx" suffix both point at this being a Power World OEM
 # unit, same family as e1k5wjuc (Power World R290 Full DC).
 #
-# Built from a single cloud properties + model dump (no live device
-# access, no raw_explorer.py run yet). DP 1, 2, 5, 6, 110, 111, 112, 125,
-# 130, 180 and 15 match e1k5wjuc's own schema exactly (same codes, same
-# enum ranges, same accessMode), so SWITCH/SELECT/NUMBER/SENSOR/
-# BINARY_SENSOR below are taken directly from this device's own typeSpec —
-# not guessed from e1k5wjuc.
+# DP 1, 2, 5, 6, 110, 111, 112, 125, 130, 180 and 15 match e1k5wjuc's own
+# schema exactly (same codes, same enum ranges, same accessMode), so
+# SWITCH/SELECT/BINARY_SENSOR below are taken directly from this device's
+# own typeSpec — not guessed from e1k5wjuc.
 #
-# UNRESOLVED — raw parameter groups: this device has no field-level
-# breakdown for any of its "raw" DPs in Tuya's model metadata (same
-# situation as e1kx07j4/Lunna, issue #78). The raw group *names* are
-# different from e1k5wjuc's (status_parameter_group_1/2,
-# parameter_group_23) — this device uses:
-#   - pg120_status   (dp 101, ro) — 240-byte status block. NOTE: despite
-#     "120" in the name this decodes as 120 × int16_be fields (240 / 2),
-#     not int32_be — the one sample dump has small plausible-looking
-#     values (30s and 300s range) only when read as int16.
+# pg120_status (dp 101, ro) — live telemetry raw block — confirmed and
+# field-mapped by @mnoxfeld against the real device using
+# test/raw_explorer.py, cross-checked live against the Smart Life app.
+# Despite "120" in the name it decodes as 120 × int16_be fields (240 / 2
+# bytes), not int32_be. Field indices 6 and 20 are unused/unidentified and
+# left unmapped.
+#
+# wth_set/heating_set ranges (28-65°C / 15-70°C) are @mnoxfeld's real
+# on-device confirmed limits — narrower than Tuya's own typeSpec
+# (28-176 / 15-176), which was a template placeholder, not a real bound.
+# cooling_set (7-86°C) is still the untouched typeSpec range — not yet
+# confirmed against a real device, since @mnoxfeld's report didn't cover
+# cooling mode. reset (dp125) and hdef (dp130) are kept even though
+# @mnoxfeld's own contributed file dropped them as "potentially
+# destructive/service functions" — they match e1k5wjuc's confirmed
+# schema, so left available for anyone who wants them (hide the entities
+# individually in HA if unwanted).
+#
+# UNRESOLVED — raw parameter groups: still no field-level breakdown for:
 #   - pg60_user_1    (dp 120, rw) — 60 × int32_be user parameter group 1
 #   - pg60_user_2    (dp 121, rw) — 60 × int32_be user parameter group 2
 #   - pg60_factory_1 (dp 122, rw) — 60 × int32_be factory parameter group 1
@@ -34,26 +42,309 @@ MODEL_NAME = "Effecta Air-IQ R290 Heat Pump (e1nde5gc)"
 #   - pg80_fault     (dp 190, ro) — 80 × uint8 fault detail block, all
 #     zero in the one sample (no active faults) so nothing to anchor a
 #     field map to yet
-# All live sensors (water/ambient temps, compressor, fan speeds, power,
-# etc. — presumably packed into pg120_status, going by e1k5wjuc/e1kx07j4
-# precedent) are unavailable until these are mapped. To find them: run
-# test/raw_explorer.py against the real device — it decodes each raw DP
-# live, highlights which fields change, and can export a ready-to-paste
-# SENSOR_TYPES/NUMBER_TYPES snippet once a field is identified. Paste that
-# snippet at the bottom of this file once available.
-#
-# Setpoint ranges (wth_set 28-176, heating_set 15-176, cooling_set 7-86)
-# are this device's own typeSpec min/max, taken as-is — unlike e1kx07j4's
-# heat_settemp, these are not an obvious template placeholder (they differ
-# per DP). They're wide enough to span both °C and °F, though, so if the
-# real on-device range turns out narrower once confirmed via the Smart
-# Life app, tighten these.
+# Run test/raw_explorer.py against the real device to map any of these.
 # ====================================================
 
 # ====================================================
 # SENSOR TYPES (read-only value - accessMode: "ro")
 # ====================================================
 SENSOR_TYPES = {
+    # ---- pg120_status (dp 101) — live system telemetry, @mnoxfeld ----
+    "water_inlet_temperature": {
+        "dp_id": 101,
+        "code": "water_inlet_temperature",
+        "raw_source": "pg120_status",
+        "field_index": 0,
+        "encoding": "int16_be",
+        "name": "Water Inlet Temperature",
+        "unit": "°C",
+        "icon": "mdi:water-thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+    },
+    "water_outlet_temperature": {
+        "dp_id": 101,
+        "code": "water_outlet_temperature",
+        "raw_source": "pg120_status",
+        "field_index": 1,
+        "encoding": "int16_be",
+        "name": "Water Outlet Temperature",
+        "unit": "°C",
+        "icon": "mdi:water-thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+    },
+    "exhaust_gas_temperature": {
+        "dp_id": 101,
+        "code": "exhaust_gas_temperature",
+        "raw_source": "pg120_status",
+        "field_index": 2,
+        "encoding": "int16_be",
+        "name": "Exhaust Gas Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer-alert",
+        "device_class": "temperature",
+        "state_class": "measurement",
+    },
+    "return_gas_temperature": {
+        "dp_id": 101,
+        "code": "return_gas_temperature",
+        "raw_source": "pg120_status",
+        "field_index": 3,
+        "encoding": "int16_be",
+        "name": "Return Gas Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+    },
+    "evaporator_coil_temperature": {
+        "dp_id": 101,
+        "code": "evaporator_coil_temperature",
+        "raw_source": "pg120_status",
+        "field_index": 4,
+        "encoding": "int16_be",
+        "name": "Evaporator Coil Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer-lines",
+        "device_class": "temperature",
+        "state_class": "measurement",
+    },
+    # Field index 6 skipped — unused/unidentified.
+    "opening_steps_main_exp_valve": {
+        "dp_id": 101,
+        "code": "opening_steps_main_exp_valve",
+        "raw_source": "pg120_status",
+        "field_index": 5,
+        "encoding": "int16_be",
+        "name": "Main Expansion Valve Opening",
+        "unit": "step",
+        "icon": "mdi:pipe-valve",
+        "state_class": "measurement",
+    },
+    "compressor_actual_frequency": {
+        "dp_id": 101,
+        "code": "compressor_actual_frequency",
+        "raw_source": "pg120_status",
+        "field_index": 7,
+        "encoding": "int16_be",
+        "name": "Compressor Actual Frequency",
+        "unit": "Hz",
+        "icon": "mdi:cosine-wave",
+        "device_class": "frequency",
+        "state_class": "measurement",
+    },
+    "low_pressure_conversion_temp": {
+        "dp_id": 101,
+        "code": "low_pressure_conversion_temp",
+        "raw_source": "pg120_status",
+        "field_index": 8,
+        "encoding": "int16_be",
+        "name": "Low Pressure Conversion Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+    },
+    "fan1_wind_speed": {
+        "dp_id": 101,
+        "code": "fan1_wind_speed",
+        "raw_source": "pg120_status",
+        "field_index": 9,
+        "encoding": "int16_be",
+        "name": "Fan 1 Speed",
+        "unit": "rpm",
+        "icon": "mdi:fan",
+        "state_class": "measurement",
+    },
+    "current_water_flow_rate": {
+        "dp_id": 101,
+        "code": "current_water_flow_rate",
+        "raw_source": "pg120_status",
+        "field_index": 10,
+        "encoding": "int16_be",
+        "conversion": "value / 100",
+        "name": "Water Flow Rate",
+        "unit": "m³/h",
+        "icon": "mdi:water-pump",
+        "state_class": "measurement",
+    },
+    "total_power_of_heatpump": {
+        "dp_id": 101,
+        "code": "total_power_of_heatpump",
+        "raw_source": "pg120_status",
+        "field_index": 11,
+        "encoding": "int16_be",
+        "name": "Heat Pump Power",
+        "unit": "W",
+        "icon": "mdi:flash",
+        "device_class": "power",
+        "state_class": "measurement",
+    },
+    "ambient_temperature": {
+        "dp_id": 101,
+        "code": "ambient_temperature",
+        "raw_source": "pg120_status",
+        "field_index": 12,
+        "encoding": "int16_be",
+        "name": "Ambient Temperature",
+        "unit": "°C",
+        "icon": "mdi:home-thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+    },
+    "total_effluent_temperature": {
+        "dp_id": 101,
+        "code": "total_effluent_temperature",
+        "raw_source": "pg120_status",
+        "field_index": 13,
+        "encoding": "int16_be",
+        "name": "Total Effluent Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer-water",
+        "device_class": "temperature",
+        "state_class": "measurement",
+    },
+    "cooling_coil_temperature": {
+        "dp_id": 101,
+        "code": "cooling_coil_temperature",
+        "raw_source": "pg120_status",
+        "field_index": 14,
+        "encoding": "int16_be",
+        "name": "Cooling Coil Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer-lines",
+        "device_class": "temperature",
+        "state_class": "measurement",
+    },
+    "water_tank_temperature": {
+        "dp_id": 101,
+        "code": "water_tank_temperature",
+        "raw_source": "pg120_status",
+        "field_index": 15,
+        "encoding": "int16_be",
+        "name": "Water Tank Temperature",
+        "unit": "°C",
+        "icon": "mdi:water-thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+    },
+    "compressor_current": {
+        "dp_id": 101,
+        "code": "compressor_current",
+        "raw_source": "pg120_status",
+        "field_index": 16,
+        "encoding": "int16_be",
+        "name": "Compressor Current",
+        "unit": "A",
+        "icon": "mdi:current-ac",
+        "device_class": "current",
+        "state_class": "measurement",
+    },
+    "heat_sink_temperature": {
+        "dp_id": 101,
+        "code": "heat_sink_temperature",
+        "raw_source": "pg120_status",
+        "field_index": 17,
+        "encoding": "int16_be",
+        "name": "Heat Sink Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+    },
+    "frequency_of_press_operation": {
+        "dp_id": 101,
+        "code": "frequency_of_press_operation",
+        "raw_source": "pg120_status",
+        "field_index": 18,
+        "encoding": "int16_be",
+        "name": "Frequency of Press Operation",
+        "unit": "Hz",
+        "icon": "mdi:cosine-wave",
+        "device_class": "frequency",
+        "state_class": "measurement",
+    },
+    "low_pressure_sensor_value": {
+        "dp_id": 101,
+        "code": "low_pressure_sensor_value",
+        "raw_source": "pg120_status",
+        "field_index": 19,
+        "encoding": "int16_be",
+        "conversion": "value / 100",
+        "name": "Low Pressure Sensor",
+        "unit": "bar",
+        "icon": "mdi:gauge",
+        "device_class": "pressure",
+        "state_class": "measurement",
+    },
+    # Field index 20 skipped — unused/unidentified.
+    # EUV/SG grid signals — kept as-is, no unit; user can rename if their
+    # utility/grid setup exposes what these actually mean.
+    "euv_powered_signal": {
+        "dp_id": 101,
+        "code": "euv_powered_signal",
+        "raw_source": "pg120_status",
+        "field_index": 21,
+        "encoding": "int16_be",
+        "name": "EUV Powered Signal",
+        "icon": "mdi:signal",
+    },
+    "sg_grid_signal": {
+        "dp_id": 101,
+        "code": "sg_grid_signal",
+        "raw_source": "pg120_status",
+        "field_index": 22,
+        "encoding": "int16_be",
+        "name": "SG Grid Signal",
+        "icon": "mdi:signal",
+    },
+    "refrigerant_concentration": {
+        "dp_id": 101,
+        "code": "refrigerant_concentration",
+        "raw_source": "pg120_status",
+        "field_index": 23,
+        "encoding": "int16_be",
+        "name": "Refrigerant Concentration",
+        "unit": "%",
+        "icon": "mdi:percent",
+        "state_class": "measurement",
+    },
+    "dc_bus_voltage_value": {
+        "dp_id": 101,
+        "code": "dc_bus_voltage_value",
+        "raw_source": "pg120_status",
+        "field_index": 24,
+        "encoding": "int16_be",
+        "name": "DC Bus Voltage",
+        "unit": "V",
+        "icon": "mdi:lightning-bolt",
+        "device_class": "voltage",
+        "state_class": "measurement",
+    },
+    "target_speed_dc_water_pump": {
+        "dp_id": 101,
+        "code": "target_speed_dc_water_pump",
+        "raw_source": "pg120_status",
+        "field_index": 25,
+        "encoding": "int16_be",
+        "name": "Target DC Water Pump Speed",
+        "unit": "%",
+        "icon": "mdi:pump",
+        "state_class": "measurement",
+    },
+    "actual_speed_dc_water_pump": {
+        "dp_id": 101,
+        "code": "actual_speed_dc_water_pump",
+        "raw_source": "pg120_status",
+        "field_index": 26,
+        "encoding": "int16_be",
+        "name": "Actual DC Water Pump Speed",
+        "unit": "%",
+        "icon": "mdi:pump",
+        "state_class": "measurement",
+    },
+
     # Fault Description (dp_id: 15) — Tuya's own schema for this device
     # lists a single bitmap label: Er09 (communication fault).
     "fault": {
@@ -115,7 +406,8 @@ SWITCH_TYPES = {
 # NUMBER TYPES (read-write value - accessMode: "rw"/"wr")
 # ====================================================
 NUMBER_TYPES = {
-    # Hot Water Temperature Setpoint (dp_id: 110)
+    # Hot Water Temperature Setpoint (dp_id: 110) — range confirmed
+    # against the real device by @mnoxfeld (issue #83).
     "wth_set": {
         "dp_id": 110,
         "code": "wth_set",
@@ -123,11 +415,12 @@ NUMBER_TYPES = {
         "icon": "mdi:water-thermometer",
         "unit": "°C",
         "min_value": 28.0,
-        "max_value": 176.0,
+        "max_value": 65.0,
         "step": 1.0,
         "api_conversion": "value",
     },
-    # Heating Temperature Setpoint (dp_id: 111)
+    # Heating Temperature Setpoint (dp_id: 111) — range confirmed
+    # against the real device by @mnoxfeld (issue #83).
     "heating_set": {
         "dp_id": 111,
         "code": "heating_set",
@@ -135,11 +428,14 @@ NUMBER_TYPES = {
         "icon": "mdi:thermostat",
         "unit": "°C",
         "min_value": 15.0,
-        "max_value": 176.0,
+        "max_value": 70.0,
         "step": 1.0,
         "api_conversion": "value",
     },
-    # Cooling Temperature Setpoint (dp_id: 112)
+    # Cooling Temperature Setpoint (dp_id: 112) — still Tuya's own
+    # typeSpec range, not yet confirmed against a real device in cooling
+    # mode. Tighten once someone verifies it (see wth_set/heating_set
+    # above for the confirmed pattern).
     "cooling_set": {
         "dp_id": 112,
         "code": "cooling_set",
@@ -207,11 +503,3 @@ SELECT_TYPES = {
         },
     },
 }
-
-# ====================================================
-# Raw-field entries from test/raw_explorer.py go here once available.
-#
-# Paste the exported snippet below this line, then merge each block into
-# the matching dict above via .update() — see e1kx07j4.py or ew8plw.py for
-# the exact pattern raw_explorer.py's export uses.
-# ====================================================
