@@ -6,6 +6,10 @@ MODEL_NAME = "Mr. Silent FC25 / Aquara Pool Inverter Heat Pump (0000021mey)"
 # ====================================================
 # No raw DPs — same generic template as Ivapool (000004kb7r) and Pure
 # Blue Onyx (f6ry00), but at this device's own unsuffixed dp_ids.
+#
+# Fault code descriptions (dp 15 / dp 101) contributed by @rolfsg from
+# his unit's manual — covers 29 of the 30 dp 15 codes and all 4 dp 101
+# codes; E9 has no known description yet so it's shown as a bare code.
 
 SENSOR_TYPES = {
     "temp_current": {
@@ -123,30 +127,62 @@ SENSOR_TYPES = {
         "icon": "mdi:pipe-valve",
         "state_class": "measurement",
     },
+    # Fault Description (dp_id: 15) — descriptions contributed by @rolfsg
+    # from his unit's manual.
     "fault": {
         "dp_id": 15,
         "code": "fault",
         "name": "Fault Description",
         "icon": "mdi:alert-circle",
         "conversion": (
-            "', '.join(n for b, n in [(1,'E1'),(2,'E2'),(4,'E3'),(8,'E4'),"
-            "(16,'E5'),(32,'E6'),(64,'E7'),(128,'E8'),(256,'E9'),(512,'EA'),"
-            "(1024,'EB'),(2048,'ED'),(4096,'P0'),(8192,'P1'),(16384,'P2'),"
-            "(32768,'P3'),(65536,'P4'),(131072,'P5'),(262144,'P6'),"
-            "(524288,'P7'),(1048576,'P8'),(2097152,'P9'),(4194304,'PA'),"
-            "(8388608,'F1'),(16777216,'F2'),(33554432,'F3'),(67108864,'F4'),"
-            "(134217728,'F5'),(268435456,'F6'),(536870912,'F7')"
+            "', '.join(n for b, n in ["
+            "(1,'E1: High pressure protection'),"
+            "(2,'E2: Low pressure protection'),"
+            "(4,'E3: No water protection'),"
+            "(8,'E4: 3-phase sequence protection'),"
+            "(16,'E5: Power supply exceeds operation range (not failure)'),"
+            "(32,'E6: Excessive temp difference between inlet and outlet water'),"
+            "(64,'E7: Water outlet temp too high or too low protection'),"
+            "(128,'E8: High exhaust temp protection'),"
+            "(256,'E9'),"
+            "(512,'EA: Heat exchanger overheat protection'),"
+            "(1024,'EB: Ambient temperature too high or too low protection (not failure)'),"
+            "(2048,'ED: Anti-freezing reminder'),"
+            "(4096,'P0: Controller communication failure'),"
+            "(8192,'P1: Water inlet temp sensor failure'),"
+            "(16384,'P2: Water outlet temp sensor failure'),"
+            "(32768,'P3: Gas exhaust temp sensor failure'),"
+            "(65536,'P4: Evaporator coil pipe temp sensor failure'),"
+            "(131072,'P5: Gas return temp sensor failure'),"
+            "(262144,'P6: Cooling coil temp sensor failure'),"
+            "(524288,'P7: Ambient temp sensor failure'),"
+            "(1048576,'P8: Cooling plate temp sensor failure'),"
+            "(2097152,'P9: Current sensor failure'),"
+            "(4194304,'PA: Restart memory failure'),"
+            "(8388608,'F1: Compressor driver module failure'),"
+            "(16777216,'F2: PFC module failure'),"
+            "(33554432,'F3: Compressor start failure'),"
+            "(67108864,'F4: Compressor running failure'),"
+            "(134217728,'F5: Inverter board over-current protection'),"
+            "(268435456,'F6: Inverter board over-heat protection'),"
+            "(536870912,'F7: Current protection')"
             "] if value & b) or 'OK'"
         ),
     },
+    # Extra Fault Description (dp_id: 101) — descriptions contributed by
+    # @rolfsg from his unit's manual.
     "fault1": {
         "dp_id": 101,
         "code": "fault1",
         "name": "Extra Fault Description",
         "icon": "mdi:alert-circle-outline",
         "conversion": (
-            "', '.join(n for b, n in [(1,'F8'),(2,'F9'),(4,'Fb'),(8,'Fa')]"
-            " if value & b) or 'OK'"
+            "', '.join(n for b, n in ["
+            "(1,'F8: Cooling plate over-heat protection'),"
+            "(2,'F9: Fan motor failure'),"
+            "(4,'Fb: Power filter plate no-power protection'),"
+            "(8,'FA: PFC module over-current protection')"
+            "] if value & b) or 'OK'"
         ),
     },
 }
