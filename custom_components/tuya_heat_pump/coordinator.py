@@ -247,6 +247,16 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     self.local_device.set_socketTimeout(1)
                 except Exception:
                     pass  # bu tinytuya sürümünde yoksa sessizce geç
+                # tinytuya'nın soket koptuğunda yeniden bağlanma denemeleri
+                # arasındaki varsayılan bekleme (5sn) kısa bir ağ kesintisi
+                # sonrası toparlanmayı gereksiz yavaşlatıyor — heartbeat
+                # gerçekten bir yeniden bağlanma tetiklediğinde (bkz.
+                # _local_heartbeat) bu, art arda denemeler arasında saniyeler
+                # kazandırıyor.
+                try:
+                    self.local_device.set_socketRetryDelay(1)
+                except Exception:
+                    pass  # bu tinytuya sürümünde yoksa sessizce geç
                 _LOGGER.info("Local Tuya device initialized (Persistent Mode + NoDelay): %s", self.device_id)
                
                 self.hass.loop.create_task(self._async_start_listener())
@@ -361,11 +371,32 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             self._local_socket_lock.release()
 
     def _local_heartbeat(self):
-        """Locked wrapper around local_device.heartbeat()."""
+        """Locked wrapper around local_device.heartbeat().
+
+        nowait=False BİLİNÇLİ bir seçim, varsayılana (nowait=True)
+        bırakılmamalı: nowait=True'da tinytuya paketi gönderip cevabı hiç
+        beklemeden döner ("gönder ve unut"). Soket, TCP seviyesinde
+        sessizce (RST/FIN paketi olmadan, örn. kısa bir ağ kesintisinde
+        route'un anlık kaybolması) ölmüş olsa bile sendall() genelde
+        hemen hata vermez — veri sadece kernel'in gönderme tamponuna
+        yazılır ve gerçek TCP retransmit/timeout'u OS'e kalır, ki bu
+        varsayılan ayarlarla dakikalar-saatler sürebilir. Sonuç: heartbeat
+        "başarılı" görünmeye devam eder, bağlantının gerçekten koptuğu HİÇ
+        fark edilmez ve _listen_loop de receive() timeout'unu (tamamen
+        normal, veri gelmediğini gösteren) hatayla karıştırmadığı için
+        sessizce donar.
+        nowait=False heartbeat'i cevap bekleyen gerçek bir sorguya
+        çeviriyor: cevap kısa soket timeout'umuz (1sn, bkz.
+        set_socketTimeout) içinde gelmezse tinytuya'nın kendi
+        _send_receive() mantığı soketi zorla kapatıp yeniden bağlanmayı
+        dener — yani kopan bağlantı bir sonraki heartbeat turunda (en
+        fazla 5sn) fark edilip saniyeler içinde toparlanır, saatlerce
+        değil.
+        """
         if not self._local_socket_lock.acquire(timeout=self._LOCK_ACQUIRE_TIMEOUT):
             raise TimeoutError("Local socket lock alınamadı (heartbeat)")
         try:
-            return self.local_device.heartbeat()
+            return self.local_device.heartbeat(nowait=False)
         finally:
             self._local_socket_lock.release()
 
