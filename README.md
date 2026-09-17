@@ -12,22 +12,23 @@
 
 | No | Brand | | No | Brand | | No | Brand |
 |---|---|---|---|---|---|---|---|
-| 1 | Arçelik (Beko, Grundig) | | 17 | Fairland | | 33 | Poolex Dreamline |
-| 2 | Alsavo by Zealux | | 18 | Fairland Inverter Plus | | 34 | Poolsana |
-| 3 | ACIQ | | 19 | GRAT | | 35 | Power World |
-| 4 | Adlar Castra | | 20 | Heative Next | | 36 | Power World PW030 |
-| 5 | Adlar Castra Domestic | | 21 | Inventor Xforce | | 37 | Power World R290 Full DC |
-| 6 | Alps Exclusive | | 22 | IPS Pool Systems | | 38 | Pure Blue Onyx |
-| 7 | Aquark | | 23 | ITS | | 39 | Reclaim Eco R290 |
-| 8 | Aquastrong | | 24 | Ivapool | | 40 | Rotenso |
-| 9 | Aquatech X6 | | 25 | Kensol | | 41 | SolarEast |
-| 10 | Aquatech X6 320L | | 26 | Kushiro (Luqstoff) | | 42 | SolarEast BLN |
-| 11 | Cordivari Vestalis | | 27 | Lunna LV LT1530 (Nordic LV LT1530) | | 43 | Swim&Fun Fjord |
-| 12 | Della | | 28 | Macon/Arctic | | 44 | Water TechniX |
-| 13 | Ecologic Ecopool | | 29 | Mango | | 45 | W'eau |
-| 14 | Effecta Air-IQ R290 | | 30 | Mitte Aerotermia | | 46 | W'eau WFI-007 |
-| 15 | EnviroSun HP+ | | 31 | Mr. Silent FC25 (Aquara Pool Inverter) | | 47 | Wopoltop |
-| 16 | Evoheat 40T | | 32 | MyCond BeeThermic | | | |
+| 1 | Arçelik (Beko, Grundig) | | 18 | Fairland | | 35 | Poolsana |
+| 2 | Alsavo by Zealux | | 19 | Fairland Inverter Plus | | 36 | Power World |
+| 3 | ACIQ | | 20 | GRAT | | 37 | Power World PW030 |
+| 4 | Adlar Castra | | 21 | Heative Next | | 38 | Power World R290 Full DC |
+| 5 | Adlar Castra Domestic | | 22 | Inventor Xforce | | 39 | Pure Blue Onyx |
+| 6 | Alps Exclusive | | 23 | IPS Pool Systems | | 40 | Reclaim Eco R290 |
+| 7 | Aquark | | 24 | ITS | | 41 | Rinnai Enviroflo GR (EHPG280VM) |
+| 8 | Aquastrong | | 25 | Ivapool | | 42 | Rotenso |
+| 9 | Aquatech X6 | | 26 | Kensol | | 43 | SolarEast |
+| 10 | Aquatech X6 320L | | 27 | Kushiro (Luqstoff) | | 44 | SolarEast BLN |
+| 11 | Argo Apollo 12HP | | 28 | Lunna LV LT1530 (Nordic LV LT1530) | | 45 | Swim&Fun Fjord |
+| 12 | Cordivari Vestalis | | 29 | Macon/Arctic | | 46 | Water TechniX |
+| 13 | Della | | 30 | Mango | | 47 | W'eau |
+| 14 | Ecologic Ecopool | | 31 | Mitte Aerotermia | | 48 | W'eau WFI-007 |
+| 15 | Effecta Air-IQ R290 | | 32 | Mr. Silent FC25 (Aquara Pool Inverter) | | 49 | Wopoltop |
+| 16 | EnviroSun HP+ | | 33 | MyCond BeeThermic | | | |
+| 17 | Evoheat 40T | | 34 | Poolex Dreamline | | | |
 
 ---
 
