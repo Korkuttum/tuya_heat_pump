@@ -440,8 +440,20 @@ SWITCH_TYPES = {
 # ====================================================
 # NUMBER TYPES (read-write value - accessMode: "rw")
 # ====================================================
+# wth_set/heating_set/cooling_set: @tomoo777 traced the write path
+# (number.py → conversion.py → coordinator.send_command → tinytuya) and
+# confirmed the integration sends the raw value unmodified — the device
+# itself then multiplies whatever it receives by 10 to get its real
+# target temperature (e.g. writing 5 makes the device target 50°C, per
+# the Smart Life app). Read side needs no conversion — the raw value the
+# device reports already matches the real temperature. api_conversion
+# "value / 10" below corrects the write side so a value typed in HA
+# matches what actually gets set on the device.
 NUMBER_TYPES = {
-    # Hot Water Temperature Setpoint (dp_id: 110)
+    # Hot Water Temperature Setpoint (dp_id: 110). max_value kept at the
+    # device's declared 99°C — @tomoo777 confirmed the real clamp for
+    # heating_set/cooling_set below but didn't specifically test this
+    # one, so it's left as-is rather than guessed.
     "wth_set": {
         "dp_id": 110,
         "code": "wth_set",
@@ -451,9 +463,10 @@ NUMBER_TYPES = {
         "min_value": 0.0,
         "max_value": 99.0,
         "step": 1.0,
-        "api_conversion": "value",
+        "api_conversion": "value / 10",
     },
-    # Heating Temperature Setpoint (dp_id: 111)
+    # Heating Temperature Setpoint (dp_id: 111) — max_value 70 confirmed
+    # by @tomoo777 as the device's real clamp (typed 50 → device set 70).
     "heating_set": {
         "dp_id": 111,
         "code": "heating_set",
@@ -461,11 +474,12 @@ NUMBER_TYPES = {
         "icon": "mdi:thermostat",
         "unit": "°C",
         "min_value": 0.0,
-        "max_value": 99.0,
+        "max_value": 70.0,
         "step": 1.0,
-        "api_conversion": "value",
+        "api_conversion": "value / 10",
     },
-    # Cooling Temperature Setpoint (dp_id: 112)
+    # Cooling Temperature Setpoint (dp_id: 112) — max_value 30 confirmed
+    # by @tomoo777 as the device's real clamp (typed 18 → device set 30).
     "cooling_set": {
         "dp_id": 112,
         "code": "cooling_set",
@@ -473,9 +487,9 @@ NUMBER_TYPES = {
         "icon": "mdi:snowflake",
         "unit": "°C",
         "min_value": 0.0,
-        "max_value": 99.0,
+        "max_value": 30.0,
         "step": 1.0,
-        "api_conversion": "value",
+        "api_conversion": "value / 10",
     },
     # Manual Defrost (dp_id: 130) - accessMode: "wr"
     "hdef": {
