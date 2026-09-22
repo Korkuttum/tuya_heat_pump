@@ -130,6 +130,39 @@ SENSOR_TYPES.update({
     },
 })
 
+# --- merge into SENSOR_TYPES (issue #90 \u2014 @nicychristoph-creator) ---
+# data_tunnel_2 (dp_id 109) is a self-describing raw DP: it packs a
+# repeating [flags][int16 value][int16 label length][UTF-16BE label]
+# record per reading. Its three records are, in order, "R\u00fccklauftemperatur"
+# (already covered above as return_temperature via r_135) and
+# "Vorlauftemperatur" (flow_temperature above), then "Umgebungstemperatur"
+# (ambient) -- the one genuinely missing sensor. Its value lands at byte
+# offset 93, which isn't a multiple of int16_be's 2-byte width (record
+# lengths vary with each label's length), hence `byte_offset` instead of
+# `field_index`. Confirmed against two live dumps taken minutes apart --
+# same offset both times, so the record layout is stable for this
+# firmware. This value is far more trustworthy than `ambient_temperature_2`
+# above (r_140/int32, marked "?" -- reads an implausible ~46\u00b0C in the same
+# dumps where this one reads ~15-21\u00b0C); `ambient_temperature_2` is left in
+# place rather than removed, in case some other installation's entity
+# history depends on it.
+SENSOR_TYPES = globals().get("SENSOR_TYPES", {})
+SENSOR_TYPES.update({
+    "ambient_temperature": {
+        "dp_id": 109,
+        "code": "ambient_temperature",
+        "raw_source": "data_tunnel_2",
+        "byte_offset": 93,
+        "encoding": "int16_be",
+        "conversion": "value / 10",
+        "name": "Ambient Temperature",
+        "unit": "\u00b0C",
+        "icon": "mdi:thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+    },
+})
+
 # --- merge into NUMBER_TYPES (contributed by @Schneider006 via raw_explorer.py) ---
 # r_141 (dp_id 141) real Tuya name: "03压机设置 & 04风机设置" = "03 Compressor
 # Settings & 04 Fan Settings", accessMode "rw" — confirms this is a genuine
