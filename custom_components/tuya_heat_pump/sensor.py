@@ -34,7 +34,7 @@ async def async_setup_entry(
     
     for sensor_code, sensor_config in sensor_configs.items():
         # Raw-field sensor: value comes from decoding a raw payload DP
-        if "field_index" in sensor_config:
+        if "field_index" in sensor_config or "byte_offset" in sensor_config:
             raw_source = _resolve_raw_source(coordinator, sensor_config)
             if raw_source and coordinator.data and raw_source in coordinator.data:
                 # Stash the resolved source on the config so the entity
@@ -45,7 +45,7 @@ async def async_setup_entry(
                     "Adding raw-field sensor: %s (from %s[%s])",
                     sensor_config.get('name', sensor_code),
                     raw_source,
-                    sensor_config.get('field_index'),
+                    sensor_config.get('field_index', sensor_config.get('byte_offset')),
                 )
             else:
                 # Not in the first poll yet — common on local/LAN
@@ -114,7 +114,7 @@ class TuyaHeatpumpSensor(SensorEntity):
             return self._calculate_power()
 
         # Raw-field sensor: decode from the raw payload DP
-        if "field_index" in self._config:
+        if "field_index" in self._config or "byte_offset" in self._config:
             raw_source = _resolve_raw_source(self.coordinator, self._config)
             if raw_source is None:
                 return None
@@ -123,8 +123,9 @@ class TuyaHeatpumpSensor(SensorEntity):
             b64_value = self.coordinator.data[raw_source].get('value')
             raw_value = _decode_raw_field(
                 b64_value,
-                self._config['field_index'],
+                self._config.get('field_index', 0),
                 self._config.get('encoding', 'int32_be'),
+                byte_offset=self._config.get('byte_offset'),
             )
             if raw_value is None:
                 return None
@@ -215,11 +216,13 @@ class TuyaHeatpumpSensor(SensorEntity):
         """Tuya DP ID ve Code bilgilerini attributes'a ekle."""
         attrs: dict[str, Any] = {}
 
-        if "field_index" in self._config:
+        if "field_index" in self._config or "byte_offset" in self._config:
             raw_source = _resolve_raw_source(self.coordinator, self._config)
             attrs["tuya_code"] = raw_source or "<unknown>"
             attrs["tuya_dp_id"] = self._config.get("dp_id")
             attrs["raw_field_index"] = self._config.get("field_index")
+            if "byte_offset" in self._config:
+                attrs["raw_byte_offset"] = self._config.get("byte_offset")
             attrs["raw_encoding"] = self._config.get("encoding", "int32_be")
         else:
             attrs["tuya_code"] = self._config.get("code", self._sensor_code)
@@ -236,7 +239,7 @@ class TuyaHeatpumpSensor(SensorEntity):
         if self._sensor_code in ["calculated_power", "total_energy"]:
             return self.coordinator.last_update_success
 
-        if "field_index" in self._config:
+        if "field_index" in self._config or "byte_offset" in self._config:
             raw_source = _resolve_raw_source(self.coordinator, self._config)
             return (
                 self.coordinator.last_update_success and

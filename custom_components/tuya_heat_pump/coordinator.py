@@ -370,6 +370,21 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         finally:
             self._local_socket_lock.release()
 
+    def _local_updatedps(self, dp_ids: list[int]):
+        """Locked wrapper around local_device.updatedps().
+
+        status() bazı cihazlarda büyük raw DP gruplarını hiç döndürmüyor
+        (bkz. issue #53) — cihaz onları sadece kendi isteğiyle (örn. bir
+        ayar değiştiğinde) proaktif push ediyor. updatedps() bu DP'leri
+        AÇIKÇA talep eder; cihaz destekliyorsa cevap status() ile aynı
+        şekilde bir 'dps' sözlüğü içinde döner."""
+        if not self._local_socket_lock.acquire(timeout=self._LOCK_ACQUIRE_TIMEOUT):
+            raise TimeoutError("Local socket lock alınamadı (updatedps)")
+        try:
+            return self.local_device.updatedps(dp_ids)
+        finally:
+            self._local_socket_lock.release()
+
     def _local_heartbeat(self):
         """Locked wrapper around local_device.heartbeat().
 
@@ -853,7 +868,9 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
     # KOMUT GÖNDERME
     # ============================================================================
 
-    async def send_command(self, code: str, value: Any, _retry: bool = True) -> bool:
+    async def send_command(
+        self, code: str, value: Any, _retry: bool = True, display_value: Any = None,
+    ) -> bool:
         """Send command to device - local için debounce ile en son değeri gönder.
 
         _retry: dahili kullanım için. Cloud modda "token invalid" hatası
@@ -862,7 +879,19 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         ihtimaline karşı savunma amaçlı), access_token'ı temizleyip TEK
         seferliğine tekrar dener — poll'daki (_async_update_data) aynı
         self-healing davranışın komut gönderme tarafındaki karşılığı.
+
+        display_value: entity'nin kendi (api_conversion ÖNCESİ) native
+        değeri — verilmezse `value` ile aynı kabul edilir. `value` cihaza
+        gönderilen (api_conversion SONRASI) "tel" değeridir. Asimetrik
+        scale'li DP'lerde (örn. yazarken value/10, okurken scale yok —
+        bkz. issue #53) bu ikisi birbirinden farklıdır: optimistic update
+        ve _sent_value_cache HER ZAMAN display_value'yu tutmalı, yoksa
+        entity anlık olarak "tel" değerini gösterir ve _apply_sent_cache
+        cihazdan gelen doğru echo'yu (display_value ile eşleşen) "eski
+        değer" sanıp geri çevirir.
         """
+        if display_value is None:
+            display_value = value
         # HA'nın NumberEntity.async_set_native_value'su HER ZAMAN float
         # gönderir (örn. 39.0), ama Tuya'da "float" diye bir DP tipi yok —
         # sayısal DP'lerin hepsi Integer (gerekirse scale ile). Tam sayı
@@ -872,7 +901,15 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         # #80 — temp_set1 yazımı 8sn sonra eski değere dönüyordu). Burada
         # tek noktadan normalize ediyoruz ki her code/model için ayrı ayrı
         # "int(value)" yazmaya gerek kalmasın.
-        if isinstance(value, float) and value.is_integer():
+        #
+        # SADECE hiç scale conversion uygulanmamışsa (value == display_value)
+        # kırpıyoruz — asimetrik scale'li DP'lerde (bkz. issue #53) 10'un
+        # katı bir girdi (örn. 40 → api_value 4.0) burada normal bir tam
+        # sayıya kırpılırsa cihaz ondalık noktasız değeri farklı yorumluyor
+        # (kendi gerçek minimumuna clamp ediyor) — sadece 10'un katı OLMAYAN
+        # girdilerde sorun görünmüyordu, bu yüzden ilk bakışta cihaza özgü
+        # sanılmıştı.
+        if isinstance(value, float) and value.is_integer() and value == display_value:
             value = int(value)
         try:
             if self.connection_type == "cloud":
@@ -918,7 +955,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     # cache'e yazıyoruz ki _apply_sent_cache (aşağıdaki
                     # poll'da çağrılıyor) Tuya cloud'un henüz yetişmediği
                     # bir "eski değer" döndürmesi durumunda bunu düzeltebilsin.
-                    self._sent_value_cache[code] = (value, time.time())
+                    self._sent_value_cache[code] = (display_value, time.time())
                     # Optimistic update: local moddaki ile aynı sebep —
                     # cihazdan/Tuya cloud'undan gerçek yankıyı beklemeden
                     # entity'ye YENİ değeri hemen yansıtıyoruz. Bu olmadan
@@ -928,9 +965,12 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     # hâlâ eski değeri döndürebilir, bu da UI'da "kapandı,
                     # sonra tekrar açıldı" gibi görünen bir titreşime ve
                     # Activity geçmişinde yanlış/eksik bir olay sırasına
-                    # yol açıyordu.
+                    # yol açıyordu. display_value kullanıyoruz (bkz. issue
+                    # #53) — code'un entity'si api_conversion uyguluyorsa
+                    # value zaten "tel" (cihaza giden) değeri, entity'nin
+                    # kendi native değeri değil.
                     if self.data and code in self.data:
-                        self.data[code]['value'] = value
+                        self.data[code]['value'] = display_value
                         self.data[code]['timestamp'] = int(time.time() * 1000)
                         self.async_update_listeners()
                     await asyncio.sleep(2)
@@ -967,7 +1007,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     _LOGGER.debug("Önceki debounce iptal edildi: %s", code)
                
                 # Son gönderilen değeri cache'e yaz
-                self._sent_value_cache[code] = (value, time.time())
+                self._sent_value_cache[code] = (display_value, time.time())
 
                 # Optimistic update: cihazdan echo/status beklemeden
                 # entity'lere YENİ değeri hemen göster. Bunu yapmazsak
@@ -978,8 +1018,10 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 # titreşim görür. self.data burada hemen güncellenince bu
                 # titreşim tamamen ortadan kalkıyor; _apply_sent_cache zaten
                 # cihazdan gerçekten farklı bir echo gelirse bunu koruyor.
+                # display_value kullanıyoruz (bkz. issue #53) — aynı sebep
+                # cloud tarafındaki optimistic update ile.
                 if self.data and code in self.data:
-                    self.data[code]['value'] = value
+                    self.data[code]['value'] = display_value
                     self.data[code]['timestamp'] = int(time.time() * 1000)
                     self.async_update_listeners()
 
@@ -1189,9 +1231,30 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 if self._previous_online != self.is_online:
                     _LOGGER.info("Online status değişti: ONLINE")
                     self._previous_online = self.is_online
-               
+
                 self.async_update_listeners()
-               
+
+                # Bazı cihazlar status()'a büyük raw DP gruplarını hiç
+                # dahil etmiyor, sadece kendi isteğiyle proaktif push
+                # ediyor (bkz. issue #53) — bunlar restart sonrası cihaz
+                # bir şey push edene kadar süresiz "unavailable" kalırdı.
+                # Henüz hiç görülmemiş raw DP'leri updatedps() ile açıkça
+                # istiyoruz; cihaz desteklemiyorsa ya da cevap vermiyorsa
+                # bu poll'u bozmadan sessizce devam ediyoruz.
+                pending_dp_ids = self._pending_raw_dp_ids()
+                if pending_dp_ids:
+                    try:
+                        extra = await self.hass.async_add_executor_job(
+                            self._local_updatedps, pending_dp_ids
+                        )
+                        if extra and 'dps' in extra:
+                            status['dps'].update(extra['dps'])
+                    except Exception as err:
+                        _LOGGER.debug(
+                            "updatedps() ile bekleyen raw DP'ler (%s) istenemedi: %s",
+                            pending_dp_ids, err,
+                        )
+
                 data = self._process_local_dps(status['dps'])
                 self._apply_sent_cache(data)
                 return data

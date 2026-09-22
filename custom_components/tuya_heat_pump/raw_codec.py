@@ -22,13 +22,23 @@ _STRUCT_FORMAT = {
 
 
 def decode_raw_field(b64_string: str | None, field_index: int,
-                      encoding: str = "int32_be") -> int | None:
+                      encoding: str = "int32_be",
+                      byte_offset: int | None = None) -> int | None:
     """Decode a single field out of a base64-encoded raw payload.
 
     Supports:
         - int32_be : 4-byte big-endian signed  (large status blobs)
         - int16_be : 2-byte big-endian signed  (small counters/timers)
         - uint8    : 1-byte unsigned            (single-byte flags)
+
+    Most payloads are a fixed-width array, so `field_index * size` gives
+    the right byte position. Some devices instead pack variable-length
+    records (e.g. a value preceded by a length-prefixed label string —
+    see issue #90's Mango Energy data tunnels), where the value can land
+    on a byte position that isn't a multiple of `size`. `byte_offset`
+    lets a model file address that exact position directly, bypassing
+    the `field_index * size` math; `field_index` is still required by
+    callers but ignored when `byte_offset` is given.
     """
     if not b64_string:
         return None
@@ -37,12 +47,13 @@ def decode_raw_field(b64_string: str | None, field_index: int,
         _LOGGER.warning("Unknown raw encoding: %s", encoding)
         return None
     fmt, size = fmt_size
+    offset = field_index * size if byte_offset is None else byte_offset
     try:
         payload = base64.b64decode(b64_string)
-        return struct.unpack_from(fmt, payload, field_index * size)[0]
+        return struct.unpack_from(fmt, payload, offset)[0]
     except Exception as err:
-        _LOGGER.debug("Raw decode failed at field_index=%s (%s): %s",
-                      field_index, encoding, err)
+        _LOGGER.debug("Raw decode failed at offset=%s (%s): %s",
+                      offset, encoding, err)
         return None
 
 
