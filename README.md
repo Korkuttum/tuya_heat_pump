@@ -12,23 +12,24 @@
 
 | No | Brand | | No | Brand | | No | Brand |
 |---|---|---|---|---|---|---|---|
-| 1 | Arçelik (Beko, Grundig) | | 18 | EnviroSun HP+ | | 35 | MyCond BeeThermic |
-| 2 | Alsavo by Zealux | | 19 | Evoheat 40T | | 36 | Poolex Dreamline |
-| 3 | ACIQ | | 20 | Fairland | | 37 | Poolsana |
-| 4 | Adlar Castra | | 21 | Fairland Inverter Plus | | 38 | Power World |
-| 5 | Adlar Castra Domestic | | 22 | GRAT | | 39 | Power World PW030 |
-| 6 | Alps Exclusive | | 23 | Heative Next | | 40 | Power World R290 Full DC |
-| 7 | Alps Exclusive (f3w5t8 variant) | | 24 | Inventor Xforce | | 41 | Pure Blue Onyx |
-| 8 | Aqua Clear Turbo Silence AXR13 | | 25 | IPS Pool Systems | | 42 | Reclaim Eco R290 |
-| 9 | Aquark | | 26 | ITS | | 43 | Rinnai Enviroflo GR (EHPG280VM) |
-| 10 | Aquastrong | | 27 | Ivapool | | 44 | Rotenso |
-| 11 | Aquatech X6 | | 28 | Kensol | | 45 | SolarEast |
-| 12 | Aquatech X6 320L | | 29 | Kushiro (Luqstoff) | | 46 | SolarEast BLN |
-| 13 | Argo Apollo 12HP | | 30 | Lunna LV LT1530 (Nordic LV LT1530) | | 47 | Swim&Fun Fjord |
-| 14 | Cordivari Vestalis | | 31 | Macon/Arctic | | 48 | Water TechniX |
-| 15 | Della | | 32 | Mango | | 49 | W'eau |
-| 16 | Ecologic Ecopool | | 33 | Mitte Aerotermia | | 50 | W'eau WFI-007 |
-| 17 | Effecta Air-IQ R290 | | 34 | Mr. Silent FC25 (Aquara Pool Inverter) | | 51 | Wopoltop |
+| 1 | Arçelik (Beko, Grundig) | | 19 | Effecta Air-IQ R290 | | 37 | MyCond BeeThermic |
+| 2 | Alsavo by Zealux | | 20 | EnviroSun HP+ | | 38 | Poolex Dreamline |
+| 3 | ACIQ | | 21 | Evoheat 40T | | 39 | Poolsana |
+| 4 | Adlar Castra | | 22 | Fairland | | 40 | Power World |
+| 5 | Adlar Castra Domestic | | 23 | Fairland Inverter Plus | | 41 | Power World PW030 |
+| 6 | Alps Exclusive | | 24 | GRAT | | 42 | Power World R290 Full DC |
+| 7 | Alps Exclusive (f3w5t8 variant) | | 25 | Heative Next | | 43 | Pure Blue Onyx |
+| 8 | Aqua Clear Turbo Silence AXR13 | | 26 | Inventor Xforce | | 44 | Reclaim Eco R290 |
+| 9 | Aquark | | 27 | IPS Pool Systems | | 45 | Rinnai Enviroflo GR (EHPG280VM) |
+| 10 | Aquastrong | | 28 | ITS | | 46 | Rotenso |
+| 11 | Aquatech X6 | | 29 | Ivapool | | 47 | SolarEast |
+| 12 | Aquatech X6 320L | | 30 | Kensol | | 48 | SolarEast BLN |
+| 13 | Argo Apollo 12HP | | 31 | Kushiro (Luqstoff) | | 49 | Swim&Fun Fjord |
+| 14 | Climalution -5G | | 32 | Lunna LV LT1530 (Nordic LV LT1530) | | 50 | Water TechniX |
+| 15 | Cordivari Vestalis | | 33 | Macon/Arctic | | 51 | W'eau |
+| 16 | Della | | 34 | Mango | | 52 | W'eau WFI-007 |
+| 17 | Ecologic Ecopool | | 35 | Mitte Aerotermia | | 53 | Wopoltop |
+| 18 | Ecolynx | | 36 | Mr. Silent FC25 (Aquara Pool Inverter) | |  |  |
 
 ---
 
