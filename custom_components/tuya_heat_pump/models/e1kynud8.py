@@ -441,7 +441,7 @@ NUMBER_TYPES = {
         "max_value": 31.0,
         "step": 0.5,
         "conversion": "value / 100",
-        "api_conversion": "value * 100",
+        "api_conversion": "int(value * 100)",
     },
     # Target Fahrenheit Temperature (dp_id: 24)
     "temp_set_f": {
@@ -453,7 +453,7 @@ NUMBER_TYPES = {
         "min_value": 61.0,
         "max_value": 88.0,
         "step": 1.0,
-        "api_conversion": "value",
+        "api_conversion": "int(value)",
     },
     # Wind Speed Percentage (dp_id: 115)
     "wind_speed_percentage": {
