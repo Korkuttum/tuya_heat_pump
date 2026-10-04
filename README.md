@@ -22,14 +22,14 @@
 | 8 | Aqua Clear Turbo Silence AXR13 | | 26 | Inventor Xforce | | 44 | Reclaim Eco R290 |
 | 9 | Aquark | | 27 | IPS Pool Systems | | 45 | Rinnai Enviroflo GR (EHPG280VM) |
 | 10 | Aquastrong | | 28 | ITS | | 46 | Rotenso |
-| 11 | Aquatech X6 | | 29 | Ivapool | | 47 | SolarEast |
-| 12 | Aquatech X6 320L | | 30 | Kensol | | 48 | SolarEast BLN |
-| 13 | Argo Apollo 12HP | | 31 | Kushiro (Luqstoff) | | 49 | Swim&Fun Fjord |
-| 14 | Climalution -5G | | 32 | Lunna LV LT1530 (Nordic LV LT1530) | | 50 | Water TechniX |
-| 15 | Cordivari Vestalis | | 33 | Macon/Arctic | | 51 | W'eau |
-| 16 | Della | | 34 | Mango | | 52 | W'eau WFI-007 |
-| 17 | Ecologic Ecopool | | 35 | Mitte Aerotermia | | 53 | Wopoltop |
-| 18 | Ecolynx | | 36 | Mr. Silent FC25 (Aquara Pool Inverter) | |  |  |
+| 11 | Aquatech X6 | | 29 | Ivapool | | 47 | Sannover Stelios 2 |
+| 12 | Aquatech X6 320L | | 30 | Kensol | | 48 | SolarEast |
+| 13 | Argo Apollo 12HP | | 31 | Kushiro (Luqstoff) | | 49 | SolarEast BLN |
+| 14 | Climalution -5G | | 32 | Lunna LV LT1530 (Nordic LV LT1530) | | 50 | Swim&Fun Fjord |
+| 15 | Cordivari Vestalis | | 33 | Macon/Arctic | | 51 | Water TechniX |
+| 16 | Della | | 34 | Mango | | 52 | W'eau |
+| 17 | Ecologic Ecopool | | 35 | Mitte Aerotermia | | 53 | W'eau WFI-007 |
+| 18 | Ecolynx | | 36 | Mr. Silent FC25 (Aquara Pool Inverter) | | 54 | Wopoltop |
 
 ---
 
