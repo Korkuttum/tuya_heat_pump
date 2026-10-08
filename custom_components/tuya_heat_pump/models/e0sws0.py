@@ -46,7 +46,7 @@ MODEL_NAME = "NMT MIA13 (e0sws0)"
 # report -- left out for now.
 
 SENSOR_TYPES = {
-    "circuit1_current_temp": {
+    "temp_current": {
         "dp_id": 3,
         "code": "temp_current",
         "name": "Heating Circuit 1 Current Temperature",
@@ -56,7 +56,7 @@ SENSOR_TYPES = {
         "state_class": "measurement",
         "conversion": "value / 10",
     },
-    "circuit2_current_temp": {
+    "work_power": {
         "dp_id": 10,
         "code": "work_power",
         "name": "Heating Circuit 2 Current Temperature",
@@ -66,7 +66,7 @@ SENSOR_TYPES = {
         "state_class": "measurement",
         "conversion": "value / 10",
     },
-    "circuit3_current_temp": {
+    "temp_indoor": {
         "dp_id": 113,
         "code": "temp_indoor",
         "name": "Heating Circuit 3 Current Temperature",
@@ -76,7 +76,7 @@ SENSOR_TYPES = {
         "state_class": "measurement",
         "conversion": "value / 10",
     },
-    "hot_water_tank_temp": {
+    "temp_outdoor": {
         "dp_id": 115,
         "code": "temp_outdoor",
         "name": "Hot Water Tank Temperature",
@@ -99,30 +99,46 @@ SENSOR_TYPES = {
         "device_class": "temperature",
         "state_class": "measurement",
     },
+    # Circuit 1 setpoint as shown in the vendor app. Tuya's own temp_set
+    # (dp 2) only holds the -20 placeholder on this unit; the live value
+    # sits in the same zone1_func_info block (int16_be, byte 14-15).
+    "circuit1_setpoint_raw": {
+        "dp_id": 106,
+        "code": "circuit1_setpoint_raw",
+        "raw_source": "zone1_func_info",
+        "field_index": 7,  # byte offset 14-15
+        "encoding": "int16_be",
+        "conversion": "value",
+        "name": "Heating Circuit 1 Setpoint Reading",
+        "unit": "°C",
+        "icon": "mdi:thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+    },
 }
 
 BINARY_SENSOR_TYPES = {}
 
 SWITCH_TYPES = {
-    "circuit1_power": {
+    "switch": {
         "dp_id": 1,
         "code": "switch",
         "name": "Heating Circuit 1 Power",
         "icon": "mdi:power",
     },
-    "circuit2_power": {
+    "child_lock": {
         "dp_id": 9,
         "code": "child_lock",
         "name": "Heating Circuit 2 Power",
         "icon": "mdi:power",
     },
-    "circuit3_power": {
+    "switch_led": {
         "dp_id": 112,
         "code": "switch_led",
         "name": "Heating Circuit 3 Power",
         "icon": "mdi:power",
     },
-    "hot_water_power": {
+    "hot_switch": {
         "dp_id": 114,
         "code": "hot_switch",
         "name": "Hot Water Power",
@@ -131,7 +147,7 @@ SWITCH_TYPES = {
 }
 
 NUMBER_TYPES = {
-    "circuit1_setpoint": {
+    "temp_set": {
         "dp_id": 2,
         "code": "temp_set",
         "name": "Heating Circuit 1 Setpoint",
@@ -142,7 +158,7 @@ NUMBER_TYPES = {
         "step": 1.0,
         "api_conversion": "value",
     },
-    "circuit2_setpoint": {
+    "lower_temp": {
         "dp_id": 16,
         "code": "lower_temp",
         "name": "Heating Circuit 2 Setpoint",
@@ -153,7 +169,7 @@ NUMBER_TYPES = {
         "step": 1.0,
         "api_conversion": "value",
     },
-    "circuit3_setpoint": {
+    "temp_correction": {
         "dp_id": 19,
         "code": "temp_correction",
         "name": "Heating Circuit 3 Setpoint",
@@ -164,7 +180,7 @@ NUMBER_TYPES = {
         "step": 1.0,
         "api_conversion": "value",
     },
-    "hot_water_setpoint": {
+    "upper_temp": {
         "dp_id": 15,
         "code": "upper_temp",
         "name": "Hot Water Setpoint",
