@@ -99,6 +99,13 @@ class TuyaHeatpumpNumber(NumberEntity):
         # Device info
         self._attr_device_info = coordinator.device_info
 
+    def _lookup_code(self) -> str:
+        """The real Tuya DP code to use for coordinator.data lookups and
+        for send_command (normally identical to the dict key, but a
+        model file can set an explicit "code" to decouple the two --
+        see binary_sensor.py's identical helper)."""
+        return self._config.get("code", self._number_code)
+
     @property
     def device_info(self):
         """Return device info."""
@@ -127,10 +134,11 @@ class TuyaHeatpumpNumber(NumberEntity):
                 _LOGGER.warning("Conversion failed for raw %s: %s", self._number_code, err)
                 return raw_value
 
-        if not self.coordinator.data or self._number_code not in self.coordinator.data:
+        lookup_code = self._lookup_code()
+        if not self.coordinator.data or lookup_code not in self.coordinator.data:
             return None
-            
-        raw_value = self.coordinator.data[self._number_code]['value']
+
+        raw_value = self.coordinator.data[lookup_code]['value']
 
         conversion = Conversion(self._config.get('conversion', 'value'))
         try:
@@ -168,7 +176,7 @@ class TuyaHeatpumpNumber(NumberEntity):
             )
         else:
             success = await self.coordinator.send_command(
-                self._number_code, api_value, display_value=value,
+                self._lookup_code(), api_value, display_value=value,
             )
         
         if success:
@@ -195,7 +203,7 @@ class TuyaHeatpumpNumber(NumberEntity):
             attrs["raw_field_index"] = self._config.get("field_index")
             attrs["raw_encoding"] = self._config.get("encoding", "int32_be")
         else:
-            dp_info = self.coordinator.get_tuya_dp_info(self._number_code)
+            dp_info = self.coordinator.get_tuya_dp_info(self._lookup_code())
             attrs["tuya_code"] = dp_info["code"]
             attrs["tuya_dp_id"] = dp_info["dp_id"]
 
@@ -221,9 +229,9 @@ class TuyaHeatpumpNumber(NumberEntity):
             )
 
         return (
-            self.coordinator.last_update_success and 
+            self.coordinator.last_update_success and
             self.coordinator.data is not None and
-            self._number_code in self.coordinator.data
+            self._lookup_code() in self.coordinator.data
         )
 
     async def async_added_to_hass(self) -> None:

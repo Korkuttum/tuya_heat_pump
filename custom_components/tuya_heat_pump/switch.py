@@ -96,6 +96,13 @@ class TuyaHeatpumpSwitch(SwitchEntity):
         # Device info
         self._attr_device_info = coordinator.device_info
 
+    def _lookup_code(self) -> str:
+        """The real Tuya DP code to use for coordinator.data lookups and
+        for send_command (normally identical to the dict key, but a
+        model file can set an explicit "code" to decouple the two --
+        see binary_sensor.py's identical helper)."""
+        return self._config.get("code", self._switch_code)
+
     @property
     def device_info(self):
         """Return device info."""
@@ -118,10 +125,11 @@ class TuyaHeatpumpSwitch(SwitchEntity):
                 return None
             return bool(raw_value)
 
-        if not self.coordinator.data or self._switch_code not in self.coordinator.data:
+        lookup_code = self._lookup_code()
+        if not self.coordinator.data or lookup_code not in self.coordinator.data:
             return None
-            
-        raw_value = self.coordinator.data[self._switch_code]['value']
+
+        raw_value = self.coordinator.data[lookup_code]['value']
 
         conversion = Conversion(self._config.get('conversion', 'bool(value)'))
         try:
@@ -152,7 +160,7 @@ class TuyaHeatpumpSwitch(SwitchEntity):
             attrs["raw_field_index"] = self._config.get("field_index")
             attrs["raw_encoding"] = self._config.get("encoding", "uint8")
         else:
-            dp_info = self.coordinator.get_tuya_dp_info(self._switch_code)
+            dp_info = self.coordinator.get_tuya_dp_info(self._lookup_code())
             attrs["tuya_code"] = dp_info["code"]
             attrs["tuya_dp_id"] = dp_info["dp_id"]
 
@@ -187,8 +195,8 @@ class TuyaHeatpumpSwitch(SwitchEntity):
                 except Exception as err:
                     _LOGGER.warning("API conversion failed: %s", err)
 
-            success = await self.coordinator.send_command(self._switch_code, api_value)
-        
+            success = await self.coordinator.send_command(self._lookup_code(), api_value)
+
         if success:
             _LOGGER.info("✅ Successfully turned ON %s", self._switch_code)
             await self.coordinator.async_request_refresh()
@@ -224,8 +232,8 @@ class TuyaHeatpumpSwitch(SwitchEntity):
                 except Exception as err:
                     _LOGGER.warning("API conversion failed: %s", err)
 
-            success = await self.coordinator.send_command(self._switch_code, api_value)
-        
+            success = await self.coordinator.send_command(self._lookup_code(), api_value)
+
         if success:
             _LOGGER.info("✅ Successfully turned OFF %s", self._switch_code)
             await self.coordinator.async_request_refresh()
@@ -248,9 +256,9 @@ class TuyaHeatpumpSwitch(SwitchEntity):
             )
 
         return (
-            self.coordinator.last_update_success and 
+            self.coordinator.last_update_success and
             self.coordinator.data is not None and
-            self._switch_code in self.coordinator.data
+            self._lookup_code() in self.coordinator.data
         )
 
     async def async_added_to_hass(self) -> None:

@@ -58,7 +58,8 @@ async def async_setup_entry(
                 )
             continue
 
-        if coordinator.data and sensor_code in coordinator.data:
+        lookup_code = sensor_config.get("code", sensor_code)
+        if coordinator.data and lookup_code in coordinator.data:
             sensors.append(TuyaHeatpumpSensor(coordinator, sensor_code, sensor_config))
             _LOGGER.info("Adding sensor: %s (%s)", sensor_config.get('name', sensor_code), sensor_code)
         elif sensor_code == "calculated_power":
@@ -101,6 +102,13 @@ class TuyaHeatpumpSensor(SensorEntity):
         self._attr_state_class = config.get('state_class')
         self._attr_has_entity_name = True
         self._attr_device_info = coordinator.device_info
+
+    def _lookup_code(self) -> str:
+        """The real Tuya DP code to use for coordinator.data lookups.
+        Normally identical to the dict key (sensor_code), but a model
+        file can set an explicit "code" to decouple the two (see
+        binary_sensor.py's identical helper)."""
+        return self._config.get("code", self._sensor_code)
 
     @property
     def device_info(self):
@@ -164,10 +172,11 @@ class TuyaHeatpumpSensor(SensorEntity):
                 return value_map.get(result, self._config.get('value_map_default'))
             return float(result) if isinstance(result, (int, float)) else result
 
-        if not self.coordinator.data or self._sensor_code not in self.coordinator.data:
+        lookup_code = self._lookup_code()
+        if not self.coordinator.data or lookup_code not in self.coordinator.data:
             return None
 
-        raw_value = self.coordinator.data[self._sensor_code]['value']
+        raw_value = self.coordinator.data[lookup_code]['value']
 
         conversion = Conversion(self._config.get('conversion', 'value'))
         try:
@@ -249,9 +258,9 @@ class TuyaHeatpumpSensor(SensorEntity):
             )
 
         return (
-            self.coordinator.last_update_success and 
+            self.coordinator.last_update_success and
             self.coordinator.data is not None and
-            self._sensor_code in self.coordinator.data
+            self._lookup_code() in self.coordinator.data
         )
 
     async def async_added_to_hass(self) -> None:

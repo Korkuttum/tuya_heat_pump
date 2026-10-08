@@ -270,10 +270,20 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
     # ============================================================================
 
     def _build_dp_mapping(self):
-        """model_mapping'den dp_mapping dict'ini oluştur."""
+        """model_mapping'den dp_mapping dict'ini oluştur.
+
+        Değer olarak HER ZAMAN gerçek Tuya `code`'unu kullanıyoruz (model
+        dict key'ini DEĞİL) -- bir model dosyası entity'yi tanımlamak için
+        farklı bir dict key kullanıp "code" alanıyla gerçek DP koduna işaret
+        edebilir (örn. aynı dp_id'yi paylaşan birden fazla entity, ya da
+        sadece daha açıklayıcı bir isim). dp_mapping'in değerleri gerçek
+        code olmazsa, local moddaki self.data bu farklı modellerde dict
+        key'iyle anahtarlanır, cloud modda ise her zaman gerçek code'la --
+        entity'ler ikisini de aynı şekilde okuyamaz, cloud modda böyle bir
+        model hem okurken hem yazarken sessizce bozulur (bkz. issue #99)."""
         self.dp_mapping = {}
         for entity_type in ['sensors', 'binary_sensors', 'switches', 'numbers', 'selects', 'texts']:
-            for code, config in self.model_mapping.get(entity_type, {}).items():
+            for key, config in self.model_mapping.get(entity_type, {}).items():
                 if 'dp_id' not in config:
                     continue
                 # Raw-field sensor'lar (birden fazlası aynı dp_id'yi paylaşır)
@@ -283,7 +293,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     self.dp_mapping[config['dp_id']] = raw_source
                     self.raw_code_by_dp_id[config['dp_id']] = raw_source
                     continue
-                self.dp_mapping[config['dp_id']] = code
+                self.dp_mapping[config['dp_id']] = config.get('code', key)
         _LOGGER.info("dp_mapping oluşturuldu - %d DP tanımlı", len(self.dp_mapping))
 
     def _persist_entry_data(self, **fields: Any) -> None:
