@@ -44,6 +44,13 @@ MODEL_NAME = "NMT MIA13 (e0sws0)"
 # version_info (dp 101) and system_info (dp 102) contain plain
 # firmware/hardware version text but weren't confirmed/needed for this
 # report -- left out for now.
+#
+# circuit1_setpoint_raw (added per @MrIcemanLE, PR #99): on this unit
+# the plain DP temp_set (dp 2) only ever reads the -20 placeholder, so
+# the Heating Circuit 1 Setpoint number entity above can't show the
+# real value. The live setpoint (58 degC, matching the app) is in the
+# same zone1_func_info block as buffer_top_temp, read-only here since
+# writing it would need the raw field path, not plain dp 2.
 
 SENSOR_TYPES = {
     "circuit1_current_temp": {
@@ -94,6 +101,19 @@ SENSOR_TYPES = {
         "encoding": "int16_be",
         "conversion": "value / 10",
         "name": "Buffer Top Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+    },
+    "circuit1_setpoint_raw": {
+        "dp_id": 106,
+        "code": "circuit1_setpoint_raw",
+        "raw_source": "zone1_func_info",
+        "field_index": 7,  # byte offset 14-15
+        "encoding": "int16_be",
+        "conversion": "value",
+        "name": "Heating Circuit 1 Setpoint Reading",
         "unit": "°C",
         "icon": "mdi:thermometer",
         "device_class": "temperature",
