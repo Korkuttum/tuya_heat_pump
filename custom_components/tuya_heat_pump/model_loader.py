@@ -1,6 +1,7 @@
 """Model loader for Tuya Heat Pump."""
 import logging
 import importlib
+import sys
 from typing import Dict, Any
 from homeassistant.core import HomeAssistant
 
@@ -8,6 +9,28 @@ _LOGGER = logging.getLogger(__name__)
 
 # Cache for loaded models
 _MODEL_CACHE = {}
+
+
+def clear_model_cache(model_id: str | None = None) -> None:
+    """Clear cached model mapping(s) so the next load re-reads the model file.
+
+    _MODEL_CACHE alone isn't enough: Python's own import machinery
+    (sys.modules) also keeps the already-imported model module around,
+    so a plain `importlib.import_module()` call returns the stale
+    module even after _MODEL_CACHE is cleared. Removing it from
+    sys.modules too forces a fresh read from disk on the next import.
+    Without this, an edited/updated model file is only picked up after
+    a full Home Assistant restart -- reloading the integration entry
+    is not enough. Call this on unload (see async_unload_entry).
+    """
+    prefix = f"{__package__}.models."
+    if model_id is None:
+        _MODEL_CACHE.clear()
+        for name in [n for n in sys.modules if n.startswith(prefix)]:
+            del sys.modules[name]
+        return
+    _MODEL_CACHE.pop(model_id, None)
+    sys.modules.pop(f"{prefix}{model_id}", None)
 
 async def async_load_model_mapping(hass: HomeAssistant, model_id: str = None) -> Dict[str, Any]:
     """Load model mapping based on model ID - ASYNC VERSION."""

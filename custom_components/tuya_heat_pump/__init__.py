@@ -8,6 +8,7 @@ from homeassistant.exceptions import ConfigEntryNotReady
 
 from .const import DOMAIN, PLATFORMS
 from .coordinator import TuyaScaleDataUpdateCoordinator
+from .model_loader import clear_model_cache
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -99,5 +100,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if coordinator.sharing_mqtt is not None:
             await coordinator.sharing_mqtt.async_stop()
         hass.data[DOMAIN].pop(entry.entry_id)
+        # Model dosyası düzenlenip entry reload edildiğinde değişikliklerin
+        # hemen yansıması için (bkz. model_loader.clear_model_cache) --
+        # aksi halde değişiklik ancak tam bir HA restart'ında görülür.
+        clear_model_cache(coordinator.model_id)
 
     return unload_ok
