@@ -207,6 +207,10 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             # sorunu, Python'dan zorla iptal edilemez) ama YENİ çağrıların
             # o thread'in peşine takılıp aynı kaderi paylaşmasını engeller.
             self._local_socket_lock = threading.Lock()
+            # A pending write makes receive()/heartbeat() step aside. Without
+            # this, on a slow/lossy device the two background loops starve
+            # set_value() of the shared lock and the write is dropped.
+            self._write_pending = threading.Event()
             try:
                 try:
                     self.local_device = tinytuya.Device(
@@ -384,6 +388,9 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
 
     def _local_receive(self):
         """Locked wrapper around local_device.receive()."""
+        if self._write_pending.is_set():
+            time.sleep(0.3)
+            return None
         if not self._local_socket_lock.acquire(timeout=self._LOCK_ACQUIRE_TIMEOUT):
             raise TimeoutError("Local socket lock alınamadı (receive)")
         try:
@@ -429,6 +436,8 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         fazla 5sn) fark edilip saniyeler içinde toparlanır, saatlerce
         değil.
         """
+        if self._write_pending.is_set():
+            return None
         if not self._local_socket_lock.acquire(timeout=self._LOCK_ACQUIRE_TIMEOUT):
             raise TimeoutError("Local socket lock alınamadı (heartbeat)")
         try:
@@ -438,12 +447,19 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
 
     def _local_set_value(self, dp_id, value):
         """Locked wrapper around local_device.set_value()."""
-        if not self._local_socket_lock.acquire(timeout=self._LOCK_ACQUIRE_TIMEOUT):
-            raise TimeoutError(f"Local socket lock alınamadı (set_value dp {dp_id})")
+        self._write_pending.set()
         try:
-            return self.local_device.set_value(dp_id, value)
+            # ponytail: a second write finishing clears the flag early, harmless
+            # (writes are debounced per code); longer wait than the 4 s of the
+            # background calls because this one must not be dropped.
+            if not self._local_socket_lock.acquire(timeout=10):
+                raise TimeoutError(f"Local socket lock alınamadı (set_value dp {dp_id})")
+            try:
+                return self.local_device.set_value(dp_id, value)
+            finally:
+                self._local_socket_lock.release()
         finally:
-            self._local_socket_lock.release()
+            self._write_pending.clear()
 
     async def _async_start_listener(self):
         """Start the background listener for instant updates.
