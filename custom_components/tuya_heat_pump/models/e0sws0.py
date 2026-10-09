@@ -119,9 +119,47 @@ SENSOR_TYPES = {
         "device_class": "temperature",
         "state_class": "measurement",
     },
+    # Flow temperature "VL-Temp.TWout2_ac" of the app's status page. The
+    # zone2_func_info block reports it continuously (int16_be, byte 28-29),
+    # no status page request needed. Matched against the app (40.5 C).
+    "flow_temp": {
+        "dp_id": 108,
+        "code": "flow_temp",
+        "raw_source": "zone2_func_info",
+        "field_index": 14,  # byte offset 28-29
+        "encoding": "int16_be",
+        "conversion": "value / 10",
+        "name": "Flow Temperature",
+        "unit": "°C",
+        "icon": "mdi:thermometer-water",
+        "device_class": "temperature",
+        "state_class": "measurement",
+    },
 }
 
-BINARY_SENSOR_TYPES = {}
+BINARY_SENSOR_TYPES = {
+    # Single bytes of zone1_func_info (dp 106). Both are 0 with the unit off,
+    # "operating" turns 1 when switched on, "compressor" about a minute later
+    # (pre-heating). The plain dp 1 "switch" is not updated reliably here.
+    "operating": {
+        "dp_id": 106,
+        "code": "operating",
+        "raw_source": "zone1_func_info",
+        "field_index": 5,  # byte offset 5
+        "encoding": "uint8",
+        "name": "Operating",
+        "device_class": "running",
+    },
+    "compressor": {
+        "dp_id": 106,
+        "code": "compressor",
+        "raw_source": "zone1_func_info",
+        "field_index": 81,  # byte offset 81
+        "encoding": "uint8",
+        "name": "Compressor",
+        "device_class": "running",
+    },
+}
 
 SWITCH_TYPES = {
     "circuit1_power": {
@@ -154,7 +192,7 @@ NUMBER_TYPES = {
     "circuit1_setpoint": {
         "dp_id": 2,
         "code": "temp_set",
-        "name": "Heating Circuit 1 Setpoint",
+        "name": "Heating Circuit 1 Setpoint (placeholder)",
         "icon": "mdi:thermostat",
         "unit": "°C",
         "min_value": -20.0,
@@ -165,7 +203,9 @@ NUMBER_TYPES = {
     "circuit2_setpoint": {
         "dp_id": 16,
         "code": "lower_temp",
-        "name": "Heating Circuit 2 Setpoint",
+        # Carries the zone 1 setpoint on a one-zone unit (matches the vendor
+        # app and the zone1_func_info value); dp 2 only holds the -20 placeholder.
+        "name": "Heating Circuit 1 Setpoint",
         "icon": "mdi:thermostat",
         "unit": "°C",
         "min_value": -20.0,
