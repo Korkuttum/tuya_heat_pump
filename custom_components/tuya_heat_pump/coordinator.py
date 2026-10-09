@@ -127,6 +127,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         self._raw_write_lock = asyncio.Lock()
         self._listener_task = None
         self._heartbeat_task = None
+        self._fallback_poll_task = None
         # Debounce için (local)
         self._pending_commands = {}  # code → (value, task)
         self._debounce_delay = 1.0   # 1 saniye
@@ -270,20 +271,10 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
     # ============================================================================
 
     def _build_dp_mapping(self):
-        """model_mapping'den dp_mapping dict'ini oluştur.
-
-        Değer olarak HER ZAMAN gerçek Tuya `code`'unu kullanıyoruz (model
-        dict key'ini DEĞİL) -- bir model dosyası entity'yi tanımlamak için
-        farklı bir dict key kullanıp "code" alanıyla gerçek DP koduna işaret
-        edebilir (örn. aynı dp_id'yi paylaşan birden fazla entity, ya da
-        sadece daha açıklayıcı bir isim). dp_mapping'in değerleri gerçek
-        code olmazsa, local moddaki self.data bu farklı modellerde dict
-        key'iyle anahtarlanır, cloud modda ise her zaman gerçek code'la --
-        entity'ler ikisini de aynı şekilde okuyamaz, cloud modda böyle bir
-        model hem okurken hem yazarken sessizce bozulur (bkz. issue #99)."""
+        """model_mapping'den dp_mapping dict'ini oluştur."""
         self.dp_mapping = {}
         for entity_type in ['sensors', 'binary_sensors', 'switches', 'numbers', 'selects', 'texts']:
-            for key, config in self.model_mapping.get(entity_type, {}).items():
+            for code, config in self.model_mapping.get(entity_type, {}).items():
                 if 'dp_id' not in config:
                     continue
                 # Raw-field sensor'lar (birden fazlası aynı dp_id'yi paylaşır)
@@ -293,7 +284,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     self.dp_mapping[config['dp_id']] = raw_source
                     self.raw_code_by_dp_id[config['dp_id']] = raw_source
                     continue
-                self.dp_mapping[config['dp_id']] = config.get('code', key)
+                self.dp_mapping[config['dp_id']] = code
         _LOGGER.info("dp_mapping oluşturuldu - %d DP tanımlı", len(self.dp_mapping))
 
     def _persist_entry_data(self, **fields: Any) -> None:
@@ -358,6 +349,16 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
     # ============================================================================
 
     _LOCK_ACQUIRE_TIMEOUT = 4
+    # Local modda update_interval None (bkz. __init__) -- HA'nın periyodik
+    # poll'u hiç çalışmaz, _listen_loop TEK veri kaynağıdır ve SADECE
+    # cihazın kendiliğinden push ettiği DP'leri görür. Cihaz bir DP'yi
+    # kendi iç mantığıyla değiştirip (örn. pompa kendi başına durduğunda)
+    # bunu proaktif push etmezse, o entity reload'a veya başka bir
+    # entity'ye yazılıp async_request_refresh() tetiklenene kadar
+    # SONSUZA DEK eski değerinde kalır. _fallback_poll_loop bu boşluğu,
+    # cihazın push davranışından bağımsız kendi periyodik sorgusuyla
+    # kapatıyor.
+    _FALLBACK_POLL_INTERVAL = 60
 
     def _local_status(self):
         """Locked wrapper around local_device.status()."""
@@ -450,6 +451,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         _LOGGER.info("Starting TinyTuya listener loop for %s", self.device_id)
         self._listener_task = self.hass.loop.create_task(self._listen_loop())
         self._heartbeat_task = self.hass.loop.create_task(self._heartbeat_loop())
+        self._fallback_poll_task = self.hass.loop.create_task(self._fallback_poll_loop())
 
     async def _listen_loop(self):
         """Loop to receive instant data from the device.
@@ -511,6 +513,28 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     "Heartbeat loop hit an error (%s) — retrying in 5s.", err,
                 )
                 await asyncio.sleep(5)
+
+    async def _fallback_poll_loop(self):
+        """Periodic safety-net poll for local mode (see _FALLBACK_POLL_INTERVAL).
+
+        _listen_loop only sees DPs the device proactively pushes over its
+        persistent socket. Some state changes happen on the device's own
+        initiative (a pump stopping, a protection flag clearing) without
+        being pushed -- those entities would otherwise stay frozen at
+        their last-seen value until something else (a reload, or any
+        send_command-triggered refresh) forces a fresh status() query.
+        async_request_refresh() reuses the exact same local status() +
+        pending-raw-dp-request path _async_update_data() already has, so
+        this adds no new device-query logic, just a regular heartbeat for
+        it independent of what the device chooses to push on its own."""
+        while True:
+            try:
+                await asyncio.sleep(self._FALLBACK_POLL_INTERVAL)
+                await self.async_request_refresh()
+            except Exception as err:
+                _LOGGER.debug(
+                    "Fallback poll loop hit an error (%s) — will retry next cycle.", err,
+                )
 
     # ============================================================================
     # MQTT (tuya_sharing) — opsiyonel, bkz. sharing_mqtt.py
