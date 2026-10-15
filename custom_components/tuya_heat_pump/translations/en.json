@@ -38,6 +38,16 @@
                 },
                 "description": "Step 1: Open the Tuya Smart or Smart Life app on your phone → tap + in the top right corner → Scan → scan the QR code shown below.\n\nStep 2: Once the app confirms it worked, come back here and click Submit.\n\nNote: how well this works varies by device — some devices get all their data instantly, others are limited by Tuya's own restrictions and only get partial updates this way. Either way, the integration automatically falls back to regular polling for anything MQTT can't cover, so nothing breaks. If the QR code expires before you scan it, just click Submit to get a new one.",
                 "title": "Scan to Enable Instant Updates"
+            },
+            "climate_options": {
+                "data": {
+                    "climate_enabled": "Enable climate card",
+                    "climate_power_code": "Power switch",
+                    "climate_current_temp_code": "Current temperature (optional)",
+                    "climate_target_temp_code": "Target temperature (optional — use it if your device has one, otherwise leave blank)"
+                },
+                "description": "Completely optional and OFF by default — most models here are pool heat pumps where the temperature being controlled is the water, not the room, and on some models Tuya's own app already runs its own room-temperature control internally. Only turn this on if you actually want a Home Assistant thermostat card for this device, and you don't already have a separate physical/hardware thermostat or app-side control doing the same job (that can fight with this card over the same setting).\n\nIf you turn it on, pick the DP to use as the power switch (required), and optionally the ones to show as current and target temperature — pre-filled with a suggestion where your device's own data makes one obvious, but you can change any of them or leave current/target blank if your device doesn't have a fitting one. You can revisit all of this later from the integration's own Options.",
+                "title": "Optional: Climate (Thermostat) Card"
             }
         },
         "error": {
@@ -73,6 +83,16 @@
                 },
                 "description": "Update local device connection details\n\nDevice must be on the same local network",
                 "title": "Local Device Settings"
+            },
+            "climate_options": {
+                "data": {
+                    "climate_enabled": "Enable climate card",
+                    "climate_power_code": "Power switch",
+                    "climate_current_temp_code": "Current temperature (optional)",
+                    "climate_target_temp_code": "Target temperature (optional — use it if your device has one, otherwise leave blank)"
+                },
+                "description": "Completely optional and OFF by default — most models here are pool heat pumps where the temperature being controlled is the water, not the room, and on some models Tuya's own app already runs its own room-temperature control internally. Only turn this on if you actually want a Home Assistant thermostat card for this device, and you don't already have a separate physical/hardware thermostat or app-side control doing the same job (that can fight with this card over the same setting).\n\nIf you turn it on, pick the DP to use as the power switch (required), and optionally the ones to show as current and target temperature — pre-filled with a suggestion where your device's own data makes one obvious, but you can change any of them or leave current/target blank if your device doesn't have a fitting one.",
+                "title": "Optional: Climate (Thermostat) Card"
             }
         }
     },

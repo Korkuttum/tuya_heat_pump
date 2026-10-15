@@ -38,6 +38,16 @@
                 },
                 "description": "1. Adım: Telefonunuzda Tuya Smart ya da Smart Life uygulamasını açın → sağ üstteki + işaretine dokunun → Scan → aşağıdaki QR kodu tarayın.\n\n2. Adım: Uygulama onayladıktan sonra buraya dönüp Gönder'e (Submit) basın.\n\nBilginize: MQTT'nin faydası cihazdan cihaza değişir — bazı cihazlarda tüm veriler anlık gelir, bazılarında Tuya'nın kendi kısıtlaması yüzünden sadece bir kısmı gelir. Böyle durumlarda entegrasyon otomatik olarak normal periyodik sorgulamaya devam eder, hiçbir şey bozulmaz. QR kod süresi dolarsa, tekrar Gönder'e basmanız yeter, yeni bir tane alırsınız.",
                 "title": "Anlık Güncelleme İçin Tarayın"
+            },
+            "climate_options": {
+                "data": {
+                    "climate_enabled": "Termostat kartını etkinleştir",
+                    "climate_power_code": "Power switch",
+                    "climate_current_temp_code": "Anlık sıcaklık (opsiyonel)",
+                    "climate_target_temp_code": "Hedef sıcaklık (opsiyonel — cihazınızda varsa kullanın, yoksa boş bırakın)"
+                },
+                "description": "Tamamen opsiyonel ve varsayılan olarak KAPALI — buradaki modellerin çoğu havuz ısı pompası, yani kontrol edilen değer oda değil su sıcaklığı, ve bazı modellerde Tuya'nın kendi uygulaması zaten dahili bir oda sıcaklığı kontrolü çalıştırıyor olabilir. Bunu sadece bu cihaz için gerçekten bir Home Assistant termostat kartı istiyorsanız ve aynı işi yapan ayrı bir fiziksel/donanım termostatınız ya da uygulama tarafı bir kontrolünüz yoksa açın (aksi halde aynı ayar üzerinde birbirleriyle çakışabilirler).\n\nAçarsanız, power switch olarak kullanılacak DP'yi seçin (zorunlu), anlık ve hedef sıcaklık olarak gösterilecekleri ise opsiyonel olarak seçin — cihazınızın kendi verisi net bir aday sunuyorsa önceden seçili geliyor, ama hepsini değiştirebilir, cihazınızda uygun bir alan yoksa anlık/hedef sıcaklığı boş bırakabilirsiniz. Bunların hepsini daha sonra entegrasyonun kendi Ayarlar (Options) ekranından tekrar değiştirebilirsiniz.",
+                "title": "Opsiyonel: Termostat (Climate) Kartı"
             }
         },
         "error": {
@@ -73,6 +83,16 @@
                 },
                 "description": "Yerel cihaz bağlantı bilgilerini güncelleyin\n\nCihaz aynı yerel ağda olmalı",
                 "title": "Yerel Cihaz Ayarları"
+            },
+            "climate_options": {
+                "data": {
+                    "climate_enabled": "Termostat kartını etkinleştir",
+                    "climate_power_code": "Power switch",
+                    "climate_current_temp_code": "Anlık sıcaklık (opsiyonel)",
+                    "climate_target_temp_code": "Hedef sıcaklık (opsiyonel — cihazınızda varsa kullanın, yoksa boş bırakın)"
+                },
+                "description": "Tamamen opsiyonel ve varsayılan olarak KAPALI — buradaki modellerin çoğu havuz ısı pompası, yani kontrol edilen değer oda değil su sıcaklığı, ve bazı modellerde Tuya'nın kendi uygulaması zaten dahili bir oda sıcaklığı kontrolü çalıştırıyor olabilir. Bunu sadece bu cihaz için gerçekten bir Home Assistant termostat kartı istiyorsanız ve aynı işi yapan ayrı bir fiziksel/donanım termostatınız ya da uygulama tarafı bir kontrolünüz yoksa açın (aksi halde aynı ayar üzerinde birbirleriyle çakışabilirler).\n\nAçarsanız, power switch olarak kullanılacak DP'yi seçin (zorunlu), anlık ve hedef sıcaklık olarak gösterilecekleri ise opsiyonel olarak seçin — cihazınızın kendi verisi net bir aday sunuyorsa önceden seçili geliyor, ama hepsini değiştirebilir, cihazınızda uygun bir alan yoksa anlık/hedef sıcaklığı boş bırakabilirsiniz.",
+                "title": "Opsiyonel: Termostat (Climate) Kartı"
             }
         }
     },
