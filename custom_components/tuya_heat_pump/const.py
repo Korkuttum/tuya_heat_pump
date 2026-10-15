@@ -13,6 +13,7 @@ PLATFORMS = [
     Platform.NUMBER,
     Platform.SELECT,  # Yeni ekledik
     Platform.TEXT,    # Raw whole-DP string fields (username vb.)
+    Platform.CLIMATE,  # Opsiyonel, varsayılan kapalı — bkz. climate.py
 ]
 
 DEFAULT_SCAN_INTERVAL = 3
@@ -88,3 +89,48 @@ CURRENT_TIME = "2025-05-29 14:10:10"
 # NOT: ESKİ SENSOR_TYPES, BINARY_SENSOR_TYPES, vs. ARTIK KULLANILMIYOR
 # Bunlar artık models/default.py'de ve diğer model dosyalarında
 # Bu dosyada sadece genel constant'lar ve API sabitleri kalıyor
+
+# --- Opsiyonel climate (termostat) entity'si ---
+# Kesinlikle kullanıcı tercihi: varsayılan kapalı (CONF_CLIMATE_ENABLED
+# yoksa/False ise climate.py hiçbir entity oluşturmaz). Birçok model bir
+# havuz ısı pompası (kontrol edilen değer su sıcaklığı, oda değil) ve
+# bazı modellerde Tuya'nın kendi app'i zaten dahili bir oda termostatı
+# döngüsü çalıştırıyor olabilir — bu yüzden HA tarafında ikinci bir
+# kontrol döngüsü ancak kullanıcı açıkça isterse oluşturulmalı. Power/
+# current/target/mode-select hepsi model_mapping'teki DÜZ (raw olmayan)
+# birer dict key — switch.py/number.py/sensor.py/select.py'nin zaten
+# okuduğu aynı DP'ler, ayrı bir veri yolu değil.
+#
+# İki alt mod var (climate.py karar veriyor, kullanıcı seçmiyor):
+# - "Direct": cihazın kendi yazılabilir hedef sıcaklığı (CLIMATE_TARGET_
+#   TEMP_CODE) seçiliyse, climate kartı doğrudan o DP'ye yazar — cihaz
+#   zaten kendi kapalı döngüsünü çalıştırıyor, biz sadece arayüzüyüz.
+# - "Virtual": hedef seçilmediyse ama current seçiliyse, climate kartı
+#   HA'nın kendi generic_thermostat'ı gibi davranır — hedefi kendi
+#   içinde tutar (cihaza hiç yazmaz) ve Power switch'i current/target
+#   karşılaştırmasıyla (tolerans + min. çevrim süresi korumalı) kendisi
+#   açıp kapatır.
+CONF_CLIMATE_ENABLED = "climate_enabled"
+CONF_CLIMATE_POWER_CODE = "climate_power_code"
+CONF_CLIMATE_CURRENT_TEMP_CODE = "climate_current_temp_code"
+CONF_CLIMATE_TARGET_TEMP_CODE = "climate_target_temp_code"
+
+# Soğutma modu — opsiyonel. Model dosyasındaki bir SELECT_TYPES entity'si
+# (örn. "work_mode") ısı/soğutma modunu seçiyorsa, o select'in hangi ham
+# değerinin heat/cool anlamına geldiğini burada tutuyoruz. İkisi de
+# seçilmemişse climate kartı sadece HEAT/OFF sunar (mevcut davranış).
+CONF_CLIMATE_MODE_SELECT_CODE = "climate_mode_select_code"
+CONF_CLIMATE_HEAT_VALUE = "climate_heat_value"
+CONF_CLIMATE_COOL_VALUE = "climate_cool_value"
+
+# Sadece "virtual" modda kullanılır (bkz. yukarı) — direct modda bunların
+# yerine her zaman cihazın kendi target DP'sindeki min/max/step kullanılır.
+CONF_CLIMATE_TOLERANCE = "climate_tolerance"
+CONF_CLIMATE_MIN_CYCLE_MINUTES = "climate_min_cycle_minutes"
+CONF_CLIMATE_MIN_TEMP = "climate_min_temp"
+CONF_CLIMATE_MAX_TEMP = "climate_max_temp"
+
+DEFAULT_CLIMATE_TOLERANCE = 0.3
+DEFAULT_CLIMATE_MIN_CYCLE_MINUTES = 5
+DEFAULT_CLIMATE_MIN_TEMP = 5
+DEFAULT_CLIMATE_MAX_TEMP = 30
