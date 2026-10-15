@@ -44,10 +44,23 @@
                     "climate_enabled": "Termostat kartını etkinleştir",
                     "climate_power_code": "Power switch",
                     "climate_current_temp_code": "Anlık sıcaklık (opsiyonel)",
-                    "climate_target_temp_code": "Hedef sıcaklık (opsiyonel — cihazınızda varsa kullanın, yoksa boş bırakın)"
+                    "climate_target_temp_code": "Hedef sıcaklık (opsiyonel — cihazınızda varsa kullanın, yoksa boş bırakın)",
+                    "climate_mode_select_code": "Mod seçimi (opsiyonel — sadece cihazınız soğutma da yapabiliyorsa)",
+                    "climate_tolerance": "Tolerans (sadece yukarıda hedef sıcaklık seçilmediyse kullanılır)",
+                    "climate_min_cycle_minutes": "Minimum açma/kapama çevrim süresi, dakika (kompresör koruması; sadece yukarıda hedef sıcaklık seçilmediyse kullanılır)",
+                    "climate_min_temp": "Minimum hedef sıcaklık (sadece yukarıda hedef sıcaklık seçilmediyse kullanılır)",
+                    "climate_max_temp": "Maksimum hedef sıcaklık (sadece yukarıda hedef sıcaklık seçilmediyse kullanılır)"
                 },
-                "description": "Tamamen opsiyonel ve varsayılan olarak KAPALI — buradaki modellerin çoğu havuz ısı pompası, yani kontrol edilen değer oda değil su sıcaklığı, ve bazı modellerde Tuya'nın kendi uygulaması zaten dahili bir oda sıcaklığı kontrolü çalıştırıyor olabilir. Bunu sadece bu cihaz için gerçekten bir Home Assistant termostat kartı istiyorsanız ve aynı işi yapan ayrı bir fiziksel/donanım termostatınız ya da uygulama tarafı bir kontrolünüz yoksa açın (aksi halde aynı ayar üzerinde birbirleriyle çakışabilirler).\n\nAçarsanız, power switch olarak kullanılacak DP'yi seçin (zorunlu), anlık ve hedef sıcaklık olarak gösterilecekleri ise opsiyonel olarak seçin — cihazınızın kendi verisi net bir aday sunuyorsa önceden seçili geliyor, ama hepsini değiştirebilir, cihazınızda uygun bir alan yoksa anlık/hedef sıcaklığı boş bırakabilirsiniz. Bunların hepsini daha sonra entegrasyonun kendi Ayarlar (Options) ekranından tekrar değiştirebilirsiniz.",
+                "description": "Tamamen opsiyonel ve varsayılan olarak KAPALI — buradaki modellerin çoğu havuz ısı pompası, yani kontrol edilen değer oda değil su sıcaklığı, ve bazı modellerde Tuya'nın kendi uygulaması zaten dahili bir oda sıcaklığı kontrolü çalıştırıyor olabilir. Bunu sadece bu cihaz için gerçekten bir Home Assistant termostat kartı istiyorsanız ve aynı işi yapan ayrı bir fiziksel/donanım termostatınız ya da uygulama tarafı bir kontrolünüz yoksa açın.\n\nPower (zorunlu): kartın açıp kapatacağı switch.\nAnlık/Hedef sıcaklık (opsiyonel): cihazınızda varsa seçin, yoksa boş bırakın.\nMod seçimi (opsiyonel): sadece cihazınız bir mod alanıyla hem ısıtma HEM soğutma yapabiliyorsa — seçerseniz kart Soğutma seçeneği de sunar (bir sonraki ekranda hangi değerin ısıtma/soğutma olduğunu soracağız).\n\nTolerans, minimum çevrim, min/maks sıcaklık: sadece yukarıda hedef sıcaklık SEÇİLMEDİYSE kullanılır — bu durumda kart, power switch'i kendisi yönetir (Home Assistant'ın kendi Generic Thermostat'ı gibi) ve bunlar kompresörü sık açma/kapamadan (short-cycling) korur. Aksi halde görmezden gelinir.\n\nBuradaki her şey cihazınızın kendi verisi net bir aday sunduğunda önceden seçili geliyor, ama tüm alanlar değiştirilebilir, bunların hepsini daha sonra entegrasyonun kendi Ayarlar (Options) ekranından tekrar değiştirebilirsiniz.",
                 "title": "Opsiyonel: Termostat (Climate) Kartı"
+            },
+            "climate_mode_values": {
+                "data": {
+                    "climate_heat_value": "Isıtma anlamına gelen değer",
+                    "climate_cool_value": "Soğutma anlamına gelen değer"
+                },
+                "description": "Yukarıda bir mod-seçim alanı seçtiniz. Bu alanın kendi değerlerinden hangisinin Isıtma, hangisinin Soğutma anlamına geldiğini onaylayın — bariz bir eşleşme varsa önceden seçili geliyor, ama cihazınızla karşılaştırıp kontrol edin.",
+                "title": "Termostat Kartı: Isıtma/Soğutma Değerleri"
             }
         },
         "error": {
@@ -89,10 +102,23 @@
                     "climate_enabled": "Termostat kartını etkinleştir",
                     "climate_power_code": "Power switch",
                     "climate_current_temp_code": "Anlık sıcaklık (opsiyonel)",
-                    "climate_target_temp_code": "Hedef sıcaklık (opsiyonel — cihazınızda varsa kullanın, yoksa boş bırakın)"
+                    "climate_target_temp_code": "Hedef sıcaklık (opsiyonel — cihazınızda varsa kullanın, yoksa boş bırakın)",
+                    "climate_mode_select_code": "Mod seçimi (opsiyonel — sadece cihazınız soğutma da yapabiliyorsa)",
+                    "climate_tolerance": "Tolerans (sadece yukarıda hedef sıcaklık seçilmediyse kullanılır)",
+                    "climate_min_cycle_minutes": "Minimum açma/kapama çevrim süresi, dakika (kompresör koruması; sadece yukarıda hedef sıcaklık seçilmediyse kullanılır)",
+                    "climate_min_temp": "Minimum hedef sıcaklık (sadece yukarıda hedef sıcaklık seçilmediyse kullanılır)",
+                    "climate_max_temp": "Maksimum hedef sıcaklık (sadece yukarıda hedef sıcaklık seçilmediyse kullanılır)"
                 },
-                "description": "Tamamen opsiyonel ve varsayılan olarak KAPALI — buradaki modellerin çoğu havuz ısı pompası, yani kontrol edilen değer oda değil su sıcaklığı, ve bazı modellerde Tuya'nın kendi uygulaması zaten dahili bir oda sıcaklığı kontrolü çalıştırıyor olabilir. Bunu sadece bu cihaz için gerçekten bir Home Assistant termostat kartı istiyorsanız ve aynı işi yapan ayrı bir fiziksel/donanım termostatınız ya da uygulama tarafı bir kontrolünüz yoksa açın (aksi halde aynı ayar üzerinde birbirleriyle çakışabilirler).\n\nAçarsanız, power switch olarak kullanılacak DP'yi seçin (zorunlu), anlık ve hedef sıcaklık olarak gösterilecekleri ise opsiyonel olarak seçin — cihazınızın kendi verisi net bir aday sunuyorsa önceden seçili geliyor, ama hepsini değiştirebilir, cihazınızda uygun bir alan yoksa anlık/hedef sıcaklığı boş bırakabilirsiniz.",
+                "description": "Tamamen opsiyonel ve varsayılan olarak KAPALI — buradaki modellerin çoğu havuz ısı pompası, yani kontrol edilen değer oda değil su sıcaklığı, ve bazı modellerde Tuya'nın kendi uygulaması zaten dahili bir oda sıcaklığı kontrolü çalıştırıyor olabilir. Bunu sadece bu cihaz için gerçekten bir Home Assistant termostat kartı istiyorsanız ve aynı işi yapan ayrı bir fiziksel/donanım termostatınız ya da uygulama tarafı bir kontrolünüz yoksa açın.\n\nPower (zorunlu): kartın açıp kapatacağı switch.\nAnlık/Hedef sıcaklık (opsiyonel): cihazınızda varsa seçin, yoksa boş bırakın.\nMod seçimi (opsiyonel): sadece cihazınız bir mod alanıyla hem ısıtma HEM soğutma yapabiliyorsa — seçerseniz kart Soğutma seçeneği de sunar (bir sonraki ekranda hangi değerin ısıtma/soğutma olduğunu soracağız).\n\nTolerans, minimum çevrim, min/maks sıcaklık: sadece yukarıda hedef sıcaklık SEÇİLMEDİYSE kullanılır — bu durumda kart, power switch'i kendisi yönetir (Home Assistant'ın kendi Generic Thermostat'ı gibi) ve bunlar kompresörü sık açma/kapamadan (short-cycling) korur. Aksi halde görmezden gelinir.",
                 "title": "Opsiyonel: Termostat (Climate) Kartı"
+            },
+            "climate_mode_values": {
+                "data": {
+                    "climate_heat_value": "Isıtma anlamına gelen değer",
+                    "climate_cool_value": "Soğutma anlamına gelen değer"
+                },
+                "description": "Yukarıda bir mod-seçim alanı seçtiniz. Bu alanın kendi değerlerinden hangisinin Isıtma, hangisinin Soğutma anlamına geldiğini onaylayın — bariz bir eşleşme varsa önceden seçili geliyor, ama cihazınızla karşılaştırıp kontrol edin.",
+                "title": "Termostat Kartı: Isıtma/Soğutma Değerleri"
             }
         }
     },
