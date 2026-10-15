@@ -26,11 +26,11 @@
 | 12 | Aquatech X6 320L | | 31 | Klimalife | | 50 | SolarEast |
 | 13 | Argo Apollo 12HP | | 32 | Kushiro (Luqstoff) | | 51 | SolarEast BLN |
 | 14 | Climalution -5G | | 33 | Lunna LV LT1530 (Nordic LV LT1530) | | 52 | Swim&Fun Fjord |
-| 15 | Cordivari Vestalis | | 34 | Macon/Arctic | | 53 | Water TechniX |
-| 16 | Della | | 35 | Mango | | 54 | W'eau |
-| 17 | Ecologic Ecopool | | 36 | Mitte Aerotermia | | 55 | W'eau WFI-007 |
-| 18 | Ecolynx | | 37 | Mr. Silent FC25 (Aquara Pool Inverter) | | 56 | Wopoltop |
-| 19 | Effecta Air-IQ R290 | | 38 | MyCond BeeThermic | |  |  |
+| 15 | Cordivari Vestalis | | 34 | Macon/Arctic | | 53 | U-Energy |
+| 16 | Della | | 35 | Mango | | 54 | Water TechniX |
+| 17 | Ecologic Ecopool | | 36 | Mitte Aerotermia | | 55 | W'eau |
+| 18 | Ecolynx | | 37 | Mr. Silent FC25 (Aquara Pool Inverter) | | 56 | W'eau WFI-007 |
+| 19 | Effecta Air-IQ R290 | | 38 | MyCond BeeThermic | | 57 | Wopoltop |
 ---
 
 This project allows you to control and monitor your Tuya heat pump device through Home Assistant — supports Cloud, Local (LAN push), and optional real-time MQTT push on top of Cloud mode.
