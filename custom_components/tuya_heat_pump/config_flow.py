@@ -31,6 +31,17 @@ from .const import (
     CONF_CLIMATE_POWER_CODE,
     CONF_CLIMATE_CURRENT_TEMP_CODE,
     CONF_CLIMATE_TARGET_TEMP_CODE,
+    CONF_CLIMATE_MODE_SELECT_CODE,
+    CONF_CLIMATE_HEAT_VALUE,
+    CONF_CLIMATE_COOL_VALUE,
+    CONF_CLIMATE_TOLERANCE,
+    CONF_CLIMATE_MIN_CYCLE_MINUTES,
+    CONF_CLIMATE_MIN_TEMP,
+    CONF_CLIMATE_MAX_TEMP,
+    DEFAULT_CLIMATE_TOLERANCE,
+    DEFAULT_CLIMATE_MIN_CYCLE_MINUTES,
+    DEFAULT_CLIMATE_MIN_TEMP,
+    DEFAULT_CLIMATE_MAX_TEMP,
 )
 from .coordinator import TuyaScaleDataUpdateCoordinator
 from .sharing_mqtt import SharingQRLogin
@@ -41,8 +52,8 @@ _LOGGER = logging.getLogger(__name__)
 
 # --- Opsiyonel climate (termostat) entity'si için yardımcılar ---
 # Hem ilk kurulumun (TuyaHeatpumpConfigFlow) hem de Options akışının
-# (TuyaHeatpumpOptionsFlow) sonunda aynı 3 alanlı formu gösteriyoruz;
-# bu fonksiyonlar ikisi arasında paylaşılıyor.
+# (TuyaHeatpumpOptionsFlow) sonunda aynı formları gösteriyoruz; bu
+# fonksiyonlar ikisi arasında paylaşılıyor.
 
 def _is_temperature_field(cfg: dict) -> bool:
     """A plain NUMBER/SENSOR dict entry that represents a temperature,
@@ -67,6 +78,59 @@ def _climate_option_list(mapping: dict, *, temperature_only: bool) -> list:
     return options
 
 
+def _select_raw_keys(cfg: dict) -> list:
+    """A SELECT_TYPES entry's real Tuya enum values (the dict keys when
+    'options' is a {raw: label} map, or the list itself otherwise) —
+    what actually gets read from/written to the device, as opposed to
+    the human-readable label select.py shows in the UI."""
+    options_dict = cfg.get("options", {})
+    if isinstance(options_dict, dict):
+        return list(options_dict.keys())
+    return list(options_dict)
+
+
+def _select_option_list(selects: dict) -> list:
+    """Dropdown options for picking WHICH select entity is the heat/cool
+    mode select (plain DPs only, same rule as _climate_option_list)."""
+    options = []
+    for key, cfg in selects.items():
+        if "field_index" in cfg:
+            continue
+        label = cfg.get("name", key)
+        options.append(selector.SelectOptionDict(value=key, label=f"{label} ({key})"))
+    return options
+
+
+def _select_value_option_list(select_cfg: dict) -> list:
+    """Dropdown options for picking a specific raw value out of one
+    (already chosen) select entity's own option list."""
+    options_dict = select_cfg.get("options", {})
+    options = []
+    for key in _select_raw_keys(select_cfg):
+        label = options_dict.get(key, key) if isinstance(options_dict, dict) else key
+        options.append(selector.SelectOptionDict(value=key, label=f"{label} ({key})"))
+    return options
+
+
+def _guess_heat_cool_values(select_cfg: dict) -> dict:
+    """Best-effort guess at which of a select's own raw values means
+    heat/cool, by substring match — same generic, no-model-hardcoded
+    approach as the rest of this file. Always editable afterwards."""
+    raw_keys = _select_raw_keys(select_cfg)
+    guesses: dict = {}
+
+    heat = next((k for k in raw_keys if "heat" in k.lower() and "cool" not in k.lower()), None) \
+        or next((k for k in raw_keys if "heat" in k.lower()), None)
+    cool = next((k for k in raw_keys if "cool" in k.lower() and "heat" not in k.lower()), None) \
+        or next((k for k in raw_keys if "cool" in k.lower()), None)
+
+    if heat:
+        guesses["heat_value"] = heat
+    if cool:
+        guesses["cool_value"] = cool
+    return guesses
+
+
 def _detect_climate_defaults(model_mapping: dict) -> dict:
     """Best-effort suggestions only — every field below stays editable
     and can be left blank. No model file is special-cased here; this is
@@ -78,10 +142,14 @@ def _detect_climate_defaults(model_mapping: dict) -> dict:
       ROOM-temperature control (as opposed to a water/tank setpoint) is
       there a settable "room"/"indoor" temperature number — on those we
       default target+current to that pair. On a plain water-only model
-      (the majority here), nothing matches and both stay blank."""
+      (the majority here), nothing matches and both stay blank.
+    - Mode select: a select DP whose own raw values include both a
+      heat-like and a cool-like one (the repo's own "work_mode"
+      convention) — when found, also guesses which raw value is which."""
     switches = model_mapping.get("switches", {})
     numbers = model_mapping.get("numbers", {})
     sensors = model_mapping.get("sensors", {})
+    selects = model_mapping.get("selects", {})
 
     defaults: dict = {}
 
@@ -111,6 +179,25 @@ def _detect_climate_defaults(model_mapping: dict) -> dict:
                 defaults["current"] = key
                 break
 
+    mode_select_key = None
+    work_mode_cfg = selects.get("work_mode")
+    if work_mode_cfg is not None and "field_index" not in work_mode_cfg:
+        guess = _guess_heat_cool_values(work_mode_cfg)
+        if "heat_value" in guess and "cool_value" in guess:
+            mode_select_key = "work_mode"
+    if mode_select_key is None:
+        for key, cfg in selects.items():
+            if "field_index" in cfg:
+                continue
+            guess = _guess_heat_cool_values(cfg)
+            if "heat_value" in guess and "cool_value" in guess:
+                mode_select_key = key
+                break
+
+    if mode_select_key:
+        defaults["mode_select"] = mode_select_key
+        defaults.update(_guess_heat_cool_values(selects[mode_select_key]))
+
     return defaults
 
 
@@ -127,6 +214,7 @@ def _climate_options_schema(model_mapping: dict | None, current: dict) -> vol.Sc
         temperature_only=True,
     )
     target_temp_options = _climate_option_list(model_mapping.get("numbers", {}), temperature_only=True)
+    mode_select_options = _select_option_list(model_mapping.get("selects", {}))
 
     none_option = [selector.SelectOptionDict(value="", label="— none / leave blank —")]
 
@@ -160,6 +248,82 @@ def _climate_options_schema(model_mapping: dict | None, current: dict) -> vol.Sc
             ): selector.SelectSelector(
                 selector.SelectSelectorConfig(
                     options=none_option + target_temp_options,
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                )
+            ),
+            vol.Optional(
+                CONF_CLIMATE_MODE_SELECT_CODE,
+                default=current.get(CONF_CLIMATE_MODE_SELECT_CODE) or defaults.get("mode_select", ""),
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=none_option + mode_select_options,
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                )
+            ),
+            vol.Optional(
+                CONF_CLIMATE_TOLERANCE,
+                default=current.get(CONF_CLIMATE_TOLERANCE, DEFAULT_CLIMATE_TOLERANCE),
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=0.1, max=5, step=0.1, mode=selector.NumberSelectorMode.BOX,
+                    unit_of_measurement="°C",
+                )
+            ),
+            vol.Optional(
+                CONF_CLIMATE_MIN_CYCLE_MINUTES,
+                default=current.get(CONF_CLIMATE_MIN_CYCLE_MINUTES, DEFAULT_CLIMATE_MIN_CYCLE_MINUTES),
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=0, max=60, step=1, mode=selector.NumberSelectorMode.BOX,
+                    unit_of_measurement="min",
+                )
+            ),
+            vol.Optional(
+                CONF_CLIMATE_MIN_TEMP,
+                default=current.get(CONF_CLIMATE_MIN_TEMP, DEFAULT_CLIMATE_MIN_TEMP),
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=-20, max=100, step=1, mode=selector.NumberSelectorMode.BOX,
+                    unit_of_measurement="°C",
+                )
+            ),
+            vol.Optional(
+                CONF_CLIMATE_MAX_TEMP,
+                default=current.get(CONF_CLIMATE_MAX_TEMP, DEFAULT_CLIMATE_MAX_TEMP),
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=-20, max=100, step=1, mode=selector.NumberSelectorMode.BOX,
+                    unit_of_measurement="°C",
+                )
+            ),
+        }
+    )
+
+
+def _climate_mode_values_schema(select_cfg: dict, current: dict) -> vol.Schema:
+    """Second step, shown only if a mode select was picked above — lets
+    the user confirm/correct which of ITS real option values means heat
+    and which means cool."""
+    value_options = _select_value_option_list(select_cfg)
+    defaults = _guess_heat_cool_values(select_cfg)
+
+    return vol.Schema(
+        {
+            vol.Optional(
+                CONF_CLIMATE_HEAT_VALUE,
+                default=current.get(CONF_CLIMATE_HEAT_VALUE) or defaults.get("heat_value", ""),
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=value_options,
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                )
+            ),
+            vol.Optional(
+                CONF_CLIMATE_COOL_VALUE,
+                default=current.get(CONF_CLIMATE_COOL_VALUE) or defaults.get("cool_value", ""),
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=value_options,
                     mode=selector.SelectSelectorMode.DROPDOWN,
                 )
             ),
@@ -297,10 +461,11 @@ async def validate_input(hass: HomeAssistant, data: dict, connection_type: str) 
     # docstring'i, access_id/key her iki bağlantı tipinde de toplanıyor).
     # Burada en baştan çekiyoruz ki climate-entity eşleme ekranı
     # kurulumun SONUNDA (henüz hiçbir entity/coordinator kalıcı olarak
-    # oluşmamışken) gerçek switch/sensor/number listesinden dropdown
-    # gösterebilsin. Başarısız olursa (örn. model API'sine erişilemedi)
-    # sessizce "default" mapping'e düşer ve climate adımı sadece boş bir
-    # dropdown gösterir — kurulumun geri kalanını etkilemez.
+    # oluşmamışken) gerçek switch/sensor/number/select listesinden
+    # dropdown gösterebilsin. Başarısız olursa (örn. model API'sine
+    # erişilemedi) sessizce "default" mapping'e düşer ve climate adımı
+    # sadece boş dropdown'lar gösterir — kurulumun geri kalanını
+    # etkilemez.
     try:
         await coordinator.get_device_model()
     except Exception as err:
@@ -422,8 +587,10 @@ class TuyaHeatpumpOptionsFlow(config_entries.OptionsFlow):
         control internally, so a second HA-side control loop should
         only exist if the user explicitly asks for it."""
         if user_input is not None:
-            data = {**self._pending_options, **user_input}
-            return self.async_create_entry(title="", data=data)
+            self._pending_options = {**self._pending_options, **user_input}
+            if user_input.get(CONF_CLIMATE_MODE_SELECT_CODE):
+                return await self.async_step_climate_mode_values()
+            return self.async_create_entry(title="", data=self._pending_options)
 
         coordinator = self.hass.data.get(DOMAIN, {}).get(self._config_entry.entry_id)
         model_mapping = coordinator.model_mapping if coordinator else {}
@@ -435,6 +602,26 @@ class TuyaHeatpumpOptionsFlow(config_entries.OptionsFlow):
             ),
         )
 
+    async def async_step_climate_mode_values(self, user_input=None):
+        """Second step, only reached if a mode select was picked above —
+        confirm/correct which of ITS real option values means heat and
+        which means cool."""
+        if user_input is not None:
+            self._pending_options = {**self._pending_options, **user_input}
+            return self.async_create_entry(title="", data=self._pending_options)
+
+        coordinator = self.hass.data.get(DOMAIN, {}).get(self._config_entry.entry_id)
+        model_mapping = coordinator.model_mapping if coordinator else {}
+        mode_select_code = self._pending_options.get(CONF_CLIMATE_MODE_SELECT_CODE)
+        select_cfg = model_mapping.get("selects", {}).get(mode_select_code, {})
+
+        return self.async_show_form(
+            step_id="climate_mode_values",
+            data_schema=_climate_mode_values_schema(
+                select_cfg, current=self._config_entry.options
+            ),
+        )
+
 
 class TuyaHeatpumpConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Tuya Heat Pump."""
@@ -443,8 +630,9 @@ class TuyaHeatpumpConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     connection_type = None
     user_data = None  # Geçici user input sakla
     _qr_login = None  # SharingQRLogin instance'ı — bir akış boyunca tek sefer oluşturulur
-    _pending_entry_title = None  # climate_options adımına kadar taşınan create_entry bilgisi
+    _pending_entry_title = None  # climate adımlarına kadar taşınan create_entry bilgisi
     _pending_entry_data = None
+    _pending_climate_options = None
     _model_mapping = None  # validate_input'tan gelen, climate dropdown'ları için
 
     async def async_step_user(
@@ -610,15 +798,38 @@ class TuyaHeatpumpConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         room control internally, so a second HA-side control loop
         should only exist if the user explicitly asks for one."""
         if user_input is not None:
+            self._pending_climate_options = dict(user_input)
+            if user_input.get(CONF_CLIMATE_MODE_SELECT_CODE):
+                return await self.async_step_climate_mode_values()
             return self.async_create_entry(
                 title=self._pending_entry_title,
                 data=self._pending_entry_data,
-                options=user_input,
+                options=self._pending_climate_options,
             )
 
         return self.async_show_form(
             step_id="climate_options",
             data_schema=_climate_options_schema(self._model_mapping, current={}),
+        )
+
+    async def async_step_climate_mode_values(self, user_input=None) -> FlowResult:
+        """Second step, only reached if a mode select was picked above —
+        confirm/correct which of ITS real option values means heat and
+        which means cool."""
+        if user_input is not None:
+            options = {**self._pending_climate_options, **user_input}
+            return self.async_create_entry(
+                title=self._pending_entry_title,
+                data=self._pending_entry_data,
+                options=options,
+            )
+
+        mode_select_code = self._pending_climate_options.get(CONF_CLIMATE_MODE_SELECT_CODE)
+        select_cfg = (self._model_mapping or {}).get("selects", {}).get(mode_select_code, {})
+
+        return self.async_show_form(
+            step_id="climate_mode_values",
+            data_schema=_climate_mode_values_schema(select_cfg, current={}),
         )
 
     @staticmethod
