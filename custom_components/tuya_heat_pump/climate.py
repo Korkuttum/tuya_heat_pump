@@ -188,6 +188,10 @@ class TuyaHeatpumpClimate(ClimateEntity, RestoreEntity):
         # own closed loop there, so no hysteresis is needed or wanted.
         self._is_virtual = self._target_code is None and self._current_code is not None
         self._hvac_mode: HVACMode = HVACMode.OFF
+        # Remembers the last non-OFF mode the user explicitly picked, so
+        # the simple power-on toggle (async_turn_on) can resume HEAT or
+        # COOL correctly instead of always forcing HEAT.
+        self._last_active_mode: HVACMode = HVACMode.HEAT
         self._virtual_target_temperature: float | None = None
         self._last_power_change = None
 
@@ -367,6 +371,10 @@ class TuyaHeatpumpClimate(ClimateEntity, RestoreEntity):
         attrs["climate_bridge_mode"] = "direct" if self._target_code else (
             "virtual" if self._is_virtual else "power_only"
         )
+        if self._is_virtual:
+            # Restored across restarts (see async_added_to_hass) so the
+            # power-on toggle can resume the right mode.
+            attrs["last_active_mode"] = self._last_active_mode.value
 
         if self.coordinator.model_id:
             attrs["tuya_model_id"] = self.coordinator.model_id
@@ -467,6 +475,9 @@ class TuyaHeatpumpClimate(ClimateEntity, RestoreEntity):
         """Set a new HVAC mode."""
         _LOGGER.info("Setting climate HVAC mode to %s", hvac_mode)
 
+        if hvac_mode != HVACMode.OFF:
+            self._last_active_mode = hvac_mode
+
         if self._is_virtual:
             self._hvac_mode = hvac_mode
             self.async_write_ha_state()
@@ -494,8 +505,18 @@ class TuyaHeatpumpClimate(ClimateEntity, RestoreEntity):
         await self._async_power(True)
 
     async def async_turn_on(self) -> None:
-        """Turn the heat pump on (in HEAT mode)."""
-        await self.async_set_hvac_mode(HVACMode.HEAT)
+        """Turn the heat pump on, resuming its last heat/cool mode."""
+        if self._is_virtual:
+            # Virtual mode tracks its own mode locally (there is no
+            # device state to read it back from), so resume explicitly.
+            await self.async_set_hvac_mode(self._last_active_mode)
+        else:
+            # Direct mode: the device itself remembers its own last
+            # heat/cool mode-select value even while off, so just flip
+            # power — rewriting the mode here would be redundant, and
+            # async_set_hvac_mode(HEAT) would wrongly force HEAT even if
+            # the device was last in COOL.
+            await self._async_power(True)
 
     async def async_turn_off(self) -> None:
         """Turn the heat pump off."""
@@ -579,6 +600,12 @@ class TuyaHeatpumpClimate(ClimateEntity, RestoreEntity):
                     self._hvac_mode = HVACMode(last_state.state)
                 except ValueError:
                     pass
+                last_active = last_state.attributes.get("last_active_mode")
+                if last_active is not None:
+                    try:
+                        self._last_active_mode = HVACMode(last_active)
+                    except ValueError:
+                        pass
             if self._virtual_target_temperature is None:
                 self._virtual_target_temperature = (self._attr_min_temp + self._attr_max_temp) / 2
 

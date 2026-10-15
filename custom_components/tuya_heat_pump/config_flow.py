@@ -484,7 +484,18 @@ class TuyaHeatpumpOptionsFlow(config_entries.OptionsFlow):
         self._pending_options: dict = {}
 
     async def async_step_init(self, user_input=None):
-        """Manage the options."""
+        """Top-level menu — connection settings and the optional climate
+        card are independent sections now: editing one never touches or
+        re-asks about the other (previously connection settings silently
+        chained into climate questions every time, and saving local
+        connection details could wipe out already-saved climate options)."""
+        return self.async_show_menu(
+            step_id="init",
+            menu_options=["connection_options", "climate_options"],
+        )
+
+    async def async_step_connection_options(self, user_input=None):
+        """Route to the cloud/local connection settings form."""
         if self.connection_type == "cloud":
             return await self.async_step_cloud_options()
         else:
@@ -493,8 +504,8 @@ class TuyaHeatpumpOptionsFlow(config_entries.OptionsFlow):
     async def async_step_cloud_options(self, user_input=None):
         """Manage cloud options."""
         if user_input is not None:
-            self._pending_options = dict(user_input)
-            return await self.async_step_climate_options()
+            data = {**self._config_entry.options, **user_input}
+            return self.async_create_entry(title="", data=data)
 
         return self.async_show_form(
             step_id="cloud_options",
@@ -520,7 +531,7 @@ class TuyaHeatpumpOptionsFlow(config_entries.OptionsFlow):
     async def async_step_local_options(self, user_input=None):
         """Manage local options."""
         errors = {}
-        
+
         if user_input is not None:
             # Yerel cihaz bağlantısını doğrula
             try:
@@ -541,15 +552,17 @@ class TuyaHeatpumpOptionsFlow(config_entries.OptionsFlow):
                         CONF_LOCAL_KEY: user_input[CONF_LOCAL_KEY],
                         CONF_PROTOCOL: user_input[CONF_PROTOCOL],
                     })
-                    
+
                     # ConfigEntry'i güncelle
                     self.hass.config_entries.async_update_entry(
                         self._config_entry,
                         data=updated_data
                     )
 
-                    self._pending_options = {}
-                    return await self.async_step_climate_options()
+                    # Bu adım sadece bağlantı bilgilerini (entry.data)
+                    # değiştiriyor — entry.options'a (climate ayarları
+                    # dahil) hiç dokunmamalı, olduğu gibi korunmalı.
+                    return self.async_create_entry(title="", data=dict(self._config_entry.options))
             except Exception:
                 _LOGGER.exception("Local validation error in options")
                 errors["base"] = "cannot_connect"
@@ -566,7 +579,7 @@ class TuyaHeatpumpOptionsFlow(config_entries.OptionsFlow):
                     vol.Required(CONF_IP, default=current_ip): str,
                     vol.Required(CONF_LOCAL_KEY, default=current_local_key): str,
                     vol.Required(
-                        CONF_PROTOCOL, 
+                        CONF_PROTOCOL,
                         default=current_protocol
                     ): selector.SelectSelector(
                         selector.SelectSelectorConfig(
@@ -587,10 +600,15 @@ class TuyaHeatpumpOptionsFlow(config_entries.OptionsFlow):
         control internally, so a second HA-side control loop should
         only exist if the user explicitly asks for it."""
         if user_input is not None:
-            self._pending_options = {**self._pending_options, **user_input}
-            if user_input.get(CONF_CLIMATE_MODE_SELECT_CODE):
+            data = {**self._config_entry.options, **user_input}
+            # Sadece gerçekten etkinleştirilmişse VE bir mode-select
+            # seçilmişse heat/cool sorusuna geç — kapatırken (enabled
+            # False) dropdown'daki eski değer hâlâ dolu olsa bile bir
+            # daha sormamalı.
+            if user_input.get(CONF_CLIMATE_ENABLED) and user_input.get(CONF_CLIMATE_MODE_SELECT_CODE):
+                self._pending_options = data
                 return await self.async_step_climate_mode_values()
-            return self.async_create_entry(title="", data=self._pending_options)
+            return self.async_create_entry(title="", data=data)
 
         coordinator = self.hass.data.get(DOMAIN, {}).get(self._config_entry.entry_id)
         model_mapping = coordinator.model_mapping if coordinator else {}
@@ -607,8 +625,8 @@ class TuyaHeatpumpOptionsFlow(config_entries.OptionsFlow):
         confirm/correct which of ITS real option values means heat and
         which means cool."""
         if user_input is not None:
-            self._pending_options = {**self._pending_options, **user_input}
-            return self.async_create_entry(title="", data=self._pending_options)
+            data = {**self._pending_options, **user_input}
+            return self.async_create_entry(title="", data=data)
 
         coordinator = self.hass.data.get(DOMAIN, {}).get(self._config_entry.entry_id)
         model_mapping = coordinator.model_mapping if coordinator else {}
@@ -799,7 +817,9 @@ class TuyaHeatpumpConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         should only exist if the user explicitly asks for one."""
         if user_input is not None:
             self._pending_climate_options = dict(user_input)
-            if user_input.get(CONF_CLIMATE_MODE_SELECT_CODE):
+            # Sadece gerçekten etkinleştirilmişse VE bir mode-select
+            # seçilmişse heat/cool sorusuna geç.
+            if user_input.get(CONF_CLIMATE_ENABLED) and user_input.get(CONF_CLIMATE_MODE_SELECT_CODE):
                 return await self.async_step_climate_mode_values()
             return self.async_create_entry(
                 title=self._pending_entry_title,

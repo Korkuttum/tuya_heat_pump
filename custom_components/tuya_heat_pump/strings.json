@@ -19,7 +19,7 @@
             },
             "local": {
                 "title": "Local Device Setup",
-                "description": "Enter local device details\n\nNote: Device must be on the same local network as Home Assistant",
+                "description": "Enter local device details\n\nNote: Device must be on the same local network as Home Assistant\n\nAfter this, you'll also be asked about an optional climate (thermostat) card for this device — it's off by default, feel free to skip it.",
                 "data": {
                     "ip": "Device IP Address",
                     "local_key": "Local Key",
@@ -28,7 +28,7 @@
             },
             "cloud_options": {
                 "title": "Cloud Configuration",
-                "description": "Configure sensor refresh interval\n\nLower values = faster updates but more API calls",
+                "description": "Configure sensor refresh interval\n\nLower values = faster updates but more API calls\n\nAfter this, you'll also be asked about an optional climate (thermostat) card for this device — it's off by default, feel free to skip it.",
                 "data": {
                     "scan_interval": "Sensor Refresh Interval (minutes)"
                 }
@@ -79,8 +79,11 @@
         "step": {
             "init": {
                 "title": "Tuya Heat Pump Configuration",
-                "description": "Configure connection settings",
-                "data": {}
+                "description": "What would you like to configure?",
+                "menu_options": {
+                    "connection_options": "Connection Settings",
+                    "climate_options": "Climate (Thermostat) Card"
+                }
             },
             "cloud_options": {
                 "title": "Cloud Device Settings",
