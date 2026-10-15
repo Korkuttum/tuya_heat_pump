@@ -461,6 +461,26 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         finally:
             self._write_pending.clear()
 
+    def cancel_background_tasks(self) -> None:
+        """Cancel the listener/heartbeat/fallback-poll tasks, if running.
+
+        These are started synchronously in __init__ (local mode), before
+        get_device_info/get_device_model/first_refresh even run. If the
+        device is unreachable, setup times out and HA retries
+        async_setup_entry automatically -- each retry builds a brand new
+        coordinator and starts three new background tasks of its own,
+        while the previous attempt's tasks were never stopped (nothing
+        else holds a reference to this coordinator once the attempt that
+        created it fails, but the tasks themselves keep running
+        regardless). Over a long outage, with HA retrying every few
+        minutes, this leaked an ever-growing set of listener/heartbeat/
+        fallback-poll tasks, each holding its own socket to the device --
+        call this on any setup failure, and on a normal unload, so a
+        failed or replaced attempt always cleans up after itself."""
+        for task in (self._listener_task, self._heartbeat_task, self._fallback_poll_task):
+            if task is not None and not task.done():
+                task.cancel()
+
     async def _async_start_listener(self):
         """Start the background listener for instant updates.
 

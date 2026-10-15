@@ -51,10 +51,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             await coordinator.async_config_entry_first_refresh()
             _LOGGER.debug("İlk refresh tamamlandı (%.1fsn)", _elapsed())
     except asyncio.TimeoutError as err:
+        # local mod için listener/heartbeat/fallback-poll görevleri
+        # __init__'te (buraya gelmeden ÖNCE) zaten başlatılmıştı — bu
+        # deneme başarısız olup HA'nın otomatik tekrar denemesi yeni bir
+        # coordinator yaratacağından, bu denemenin görevlerini durdurmazsak
+        # sonsuza kadar arka planda birikirler (bkz. cancel_background_tasks).
+        coordinator.cancel_background_tasks()
         raise ConfigEntryNotReady(
             f"Tuya Heat Pump setup timed out after {SETUP_TIMEOUT}s "
             f"(device_id={coordinator.device_id}, elapsed={_elapsed():.1f}s) — will retry"
         ) from err
+    except Exception:
+        coordinator.cancel_background_tasks()
+        raise
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
@@ -97,6 +106,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         coordinator: TuyaScaleDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+        coordinator.cancel_background_tasks()
         if coordinator.sharing_mqtt is not None:
             await coordinator.sharing_mqtt.async_stop()
         hass.data[DOMAIN].pop(entry.entry_id)
