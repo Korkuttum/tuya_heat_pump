@@ -1,17 +1,12 @@
 {
   "domain": "tuya_heat_pump",
   "name": "Tuya Heat Pump",
-  "codeowners": [
-    "@Korkuttum"
-  ],
+  "codeowners": ["@Korkuttum"],
   "config_flow": true,
   "documentation": "https://github.com/Korkuttum/tuya_heat_pump",
   "integration_type": "device",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/Korkuttum/tuya_heat_pump/issues",
-  "requirements": [
-    "tinytuya>=1.15.0",
-    "tuya-device-sharing-sdk>=0.2.0"
-  ],
+  "requirements": ["tinytuya>=1.15.0", "tuya-device-sharing-sdk>=0.2.0"],
   "version": "2.6.0-beta02"
 }
