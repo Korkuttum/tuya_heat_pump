@@ -27,12 +27,145 @@ from .const import (
     PROTOCOL_OPTIONS,
     CONF_USER_CODE,
     CONF_SHARING_TOKEN_INFO,
+    CONF_CLIMATE_ENABLED,
+    CONF_CLIMATE_POWER_CODE,
+    CONF_CLIMATE_CURRENT_TEMP_CODE,
+    CONF_CLIMATE_TARGET_TEMP_CODE,
 )
 from .coordinator import TuyaScaleDataUpdateCoordinator
 from .sharing_mqtt import SharingQRLogin
 import tinytuya
 
 _LOGGER = logging.getLogger(__name__)
+
+
+# --- Opsiyonel climate (termostat) entity'si için yardımcılar ---
+# Hem ilk kurulumun (TuyaHeatpumpConfigFlow) hem de Options akışının
+# (TuyaHeatpumpOptionsFlow) sonunda aynı 3 alanlı formu gösteriyoruz;
+# bu fonksiyonlar ikisi arasında paylaşılıyor.
+
+def _is_temperature_field(cfg: dict) -> bool:
+    """A plain NUMBER/SENSOR dict entry that represents a temperature,
+    regardless of whether the model file tagged it with device_class or
+    just a °C/°F unit."""
+    return cfg.get("device_class") == "temperature" or cfg.get("unit") in ("°C", "°F")
+
+
+def _climate_option_list(mapping: dict, *, temperature_only: bool) -> list:
+    """Dropdown options built straight from a model's own dict keys.
+    Raw-field DPs (field_index) are skipped — the climate bridge only
+    supports plain DPs, same as every other code path here that reads
+    coordinator.data directly."""
+    options = []
+    for key, cfg in mapping.items():
+        if "field_index" in cfg:
+            continue
+        if temperature_only and not _is_temperature_field(cfg):
+            continue
+        label = cfg.get("name", key)
+        options.append(selector.SelectOptionDict(value=key, label=f"{label} ({key})"))
+    return options
+
+
+def _detect_climate_defaults(model_mapping: dict) -> dict:
+    """Best-effort suggestions only — every field below stays editable
+    and can be left blank. No model file is special-cased here; this is
+    a single generic rule applied uniformly to all of them:
+
+    - Power: every known model exposes a switch literally called/coded
+      "Power", so that one is always safe to default to.
+    - Target: only on models whose OWN firmware already runs closed-loop
+      ROOM-temperature control (as opposed to a water/tank setpoint) is
+      there a settable "room"/"indoor" temperature number — on those we
+      default target+current to that pair. On a plain water-only model
+      (the majority here), nothing matches and both stay blank."""
+    switches = model_mapping.get("switches", {})
+    numbers = model_mapping.get("numbers", {})
+    sensors = model_mapping.get("sensors", {})
+
+    defaults: dict = {}
+
+    for key, cfg in switches.items():
+        if "field_index" in cfg:
+            continue
+        if key.lower() == "power" or str(cfg.get("code", "")).lower() == "power":
+            defaults["power"] = key
+            break
+
+    target_key = None
+    for key, cfg in numbers.items():
+        if "field_index" in cfg or not _is_temperature_field(cfg):
+            continue
+        haystack = f"{key} {cfg.get('name', '')}".lower()
+        if ("room" in haystack or "indoor" in haystack) and ("set" in haystack or "target" in haystack):
+            target_key = key
+            break
+
+    if target_key:
+        defaults["target"] = target_key
+        for key, cfg in sensors.items():
+            if "field_index" in cfg or not _is_temperature_field(cfg):
+                continue
+            haystack = f"{key} {cfg.get('name', '')}".lower()
+            if "room" in haystack or "indoor" in haystack:
+                defaults["current"] = key
+                break
+
+    return defaults
+
+
+def _climate_options_schema(model_mapping: dict | None, current: dict) -> vol.Schema:
+    """Build the climate_options form schema from a model's own DPs,
+    pre-filled with the auto-detected defaults (or, on an already
+    configured entry, whatever the user picked last time)."""
+    model_mapping = model_mapping or {}
+    defaults = _detect_climate_defaults(model_mapping)
+
+    power_options = _climate_option_list(model_mapping.get("switches", {}), temperature_only=False)
+    current_temp_options = _climate_option_list(
+        {**model_mapping.get("sensors", {}), **model_mapping.get("numbers", {})},
+        temperature_only=True,
+    )
+    target_temp_options = _climate_option_list(model_mapping.get("numbers", {}), temperature_only=True)
+
+    none_option = [selector.SelectOptionDict(value="", label="— none / leave blank —")]
+
+    return vol.Schema(
+        {
+            vol.Optional(
+                CONF_CLIMATE_ENABLED,
+                default=current.get(CONF_CLIMATE_ENABLED, False),
+            ): selector.BooleanSelector(),
+            vol.Optional(
+                CONF_CLIMATE_POWER_CODE,
+                default=current.get(CONF_CLIMATE_POWER_CODE) or defaults.get("power", ""),
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=none_option + power_options,
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                )
+            ),
+            vol.Optional(
+                CONF_CLIMATE_CURRENT_TEMP_CODE,
+                default=current.get(CONF_CLIMATE_CURRENT_TEMP_CODE) or defaults.get("current", ""),
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=none_option + current_temp_options,
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                )
+            ),
+            vol.Optional(
+                CONF_CLIMATE_TARGET_TEMP_CODE,
+                default=current.get(CONF_CLIMATE_TARGET_TEMP_CODE) or defaults.get("target", ""),
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=none_option + target_temp_options,
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                )
+            ),
+        }
+    )
+
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
@@ -125,8 +258,9 @@ async def validate_input(hass: HomeAssistant, data: dict, connection_type: str) 
         },
     )()
 
+    coordinator = TuyaScaleDataUpdateCoordinator(hass, mock_config)
+
     if connection_type == "cloud":
-        coordinator = TuyaScaleDataUpdateCoordinator(hass, mock_config)
         try:
             # Token ve device info almayı dene
             if not coordinator.access_token:
@@ -138,7 +272,7 @@ async def validate_input(hass: HomeAssistant, data: dict, connection_type: str) 
                 raise InvalidAuth("Invalid credentials") from err
             raise CannotConnect("Cannot connect to Tuya cloud") from err
 
-        return {"title": f"Tuya Heat Pump ({data[CONF_DEVICE_ID]})"}
+        title = f"Tuya Heat Pump ({data[CONF_DEVICE_ID]})"
 
     else:
         # Local validation
@@ -156,7 +290,23 @@ async def validate_input(hass: HomeAssistant, data: dict, connection_type: str) 
             _LOGGER.error("Local validation error: %s", err)
             raise CannotConnect(f"Cannot connect to local device: {err}") from err
 
-        return {"title": f"Tuya Heat Pump Local ({data[CONF_DEVICE_ID]})"}
+        title = f"Tuya Heat Pump Local ({data[CONF_DEVICE_ID]})"
+
+    # Model mapping — Tuya'nın DP şeması her zaman cloud API'den gelir,
+    # bağlantı tipi local olsa bile (bkz. coordinator.get_device_model
+    # docstring'i, access_id/key her iki bağlantı tipinde de toplanıyor).
+    # Burada en baştan çekiyoruz ki climate-entity eşleme ekranı
+    # kurulumun SONUNDA (henüz hiçbir entity/coordinator kalıcı olarak
+    # oluşmamışken) gerçek switch/sensor/number listesinden dropdown
+    # gösterebilsin. Başarısız olursa (örn. model API'sine erişilemedi)
+    # sessizce "default" mapping'e düşer ve climate adımı sadece boş bir
+    # dropdown gösterir — kurulumun geri kalanını etkilemez.
+    try:
+        await coordinator.get_device_model()
+    except Exception as err:
+        _LOGGER.warning("Model mapping kurulum sırasında alınamadı: %s", err)
+
+    return {"title": title, "model_mapping": coordinator.model_mapping or {}}
 
 
 class TuyaHeatpumpOptionsFlow(config_entries.OptionsFlow):
@@ -166,6 +316,7 @@ class TuyaHeatpumpOptionsFlow(config_entries.OptionsFlow):
         """Initialize options flow."""
         self._config_entry = config_entry
         self.connection_type = config_entry.data.get(CONF_CONNECTION_TYPE, "cloud")
+        self._pending_options: dict = {}
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
@@ -177,7 +328,8 @@ class TuyaHeatpumpOptionsFlow(config_entries.OptionsFlow):
     async def async_step_cloud_options(self, user_input=None):
         """Manage cloud options."""
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            self._pending_options = dict(user_input)
+            return await self.async_step_climate_options()
 
         return self.async_show_form(
             step_id="cloud_options",
@@ -230,9 +382,9 @@ class TuyaHeatpumpOptionsFlow(config_entries.OptionsFlow):
                         self._config_entry,
                         data=updated_data
                     )
-                    
-                    # Options'a sadece gereksiz alanları ekle (boş olabilir)
-                    return self.async_create_entry(title="", data={})
+
+                    self._pending_options = {}
+                    return await self.async_step_climate_options()
             except Exception:
                 _LOGGER.exception("Local validation error in options")
                 errors["base"] = "cannot_connect"
@@ -262,6 +414,27 @@ class TuyaHeatpumpOptionsFlow(config_entries.OptionsFlow):
             errors=errors,
         )
 
+    async def async_step_climate_options(self, user_input=None):
+        """Optional climate (thermostat) card — strictly opt-in, default
+        off. See const.py's CONF_CLIMATE_* comment for why: most models
+        here are pool heat pumps (water is the controlled value, not
+        room air) and some already run their own closed-loop room
+        control internally, so a second HA-side control loop should
+        only exist if the user explicitly asks for it."""
+        if user_input is not None:
+            data = {**self._pending_options, **user_input}
+            return self.async_create_entry(title="", data=data)
+
+        coordinator = self.hass.data.get(DOMAIN, {}).get(self._config_entry.entry_id)
+        model_mapping = coordinator.model_mapping if coordinator else {}
+
+        return self.async_show_form(
+            step_id="climate_options",
+            data_schema=_climate_options_schema(
+                model_mapping, current=self._config_entry.options
+            ),
+        )
+
 
 class TuyaHeatpumpConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Tuya Heat Pump."""
@@ -270,6 +443,9 @@ class TuyaHeatpumpConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     connection_type = None
     user_data = None  # Geçici user input sakla
     _qr_login = None  # SharingQRLogin instance'ı — bir akış boyunca tek sefer oluşturulur
+    _pending_entry_title = None  # climate_options adımına kadar taşınan create_entry bilgisi
+    _pending_entry_data = None
+    _model_mapping = None  # validate_input'tan gelen, climate dropdown'ları için
 
     async def async_step_user(
         self, user_input: dict[str, any] | None = None
@@ -303,15 +479,18 @@ class TuyaHeatpumpConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             try:
                 info = await validate_input(self.hass, full_data, "cloud")
                 await self.async_set_unique_id(full_data[CONF_DEVICE_ID])
-                
+
                 # Check if device is already configured
                 try:
                     self._abort_if_unique_id_configured()
                 except:
                     _LOGGER.error("Device already configured, aborting")
                     return self.async_abort(reason="already_configured")
-                
-                return self.async_create_entry(title=info["title"], data=full_data)
+
+                self._pending_entry_title = info["title"]
+                self._pending_entry_data = full_data
+                self._model_mapping = info.get("model_mapping") or {}
+                return await self.async_step_climate_options()
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
@@ -350,7 +529,11 @@ class TuyaHeatpumpConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         self._abort_if_unique_id_configured()
                     except Exception:
                         return self.async_abort(reason="already_configured")
-                    return self.async_create_entry(title=info["title"], data=full_data)
+
+                    self._pending_entry_title = info["title"]
+                    self._pending_entry_data = full_data
+                    self._model_mapping = info.get("model_mapping") or {}
+                    return await self.async_step_climate_options()
                 except CannotConnect:
                     errors["base"] = "cannot_connect"
                 except InvalidAuth:
@@ -396,15 +579,18 @@ class TuyaHeatpumpConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             try:
                 info = await validate_input(self.hass, full_data, "local")
                 await self.async_set_unique_id(full_data[CONF_DEVICE_ID])
-                
+
                 # Check if device is already configured
                 try:
                     self._abort_if_unique_id_configured()
                 except:
                     _LOGGER.error("Device already configured, aborting")
                     return self.async_abort(reason="already_configured")
-                
-                return self.async_create_entry(title=info["title"], data=full_data)
+
+                self._pending_entry_title = info["title"]
+                self._pending_entry_data = full_data
+                self._model_mapping = info.get("model_mapping") or {}
+                return await self.async_step_climate_options()
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except Exception:
@@ -413,6 +599,26 @@ class TuyaHeatpumpConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="local", data_schema=STEP_LOCAL_DATA_SCHEMA, errors=errors
+        )
+
+    async def async_step_climate_options(self, user_input=None) -> FlowResult:
+        """Optional climate (thermostat) card, shown at the end of
+        initial setup too (not just later in Options) — strictly
+        opt-in, default off. See const.py's CONF_CLIMATE_* comment:
+        most models here are pool heat pumps (water is the controlled
+        value, not room air) and some already run their own closed-loop
+        room control internally, so a second HA-side control loop
+        should only exist if the user explicitly asks for one."""
+        if user_input is not None:
+            return self.async_create_entry(
+                title=self._pending_entry_title,
+                data=self._pending_entry_data,
+                options=user_input,
+            )
+
+        return self.async_show_form(
+            step_id="climate_options",
+            data_schema=_climate_options_schema(self._model_mapping, current={}),
         )
 
     @staticmethod

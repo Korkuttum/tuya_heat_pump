@@ -13,6 +13,7 @@ PLATFORMS = [
     Platform.NUMBER,
     Platform.SELECT,  # Yeni ekledik
     Platform.TEXT,    # Raw whole-DP string fields (username vb.)
+    Platform.CLIMATE,  # Opsiyonel, varsayılan kapalı — bkz. climate.py
 ]
 
 DEFAULT_SCAN_INTERVAL = 3
@@ -88,3 +89,18 @@ CURRENT_TIME = "2025-05-29 14:10:10"
 # NOT: ESKİ SENSOR_TYPES, BINARY_SENSOR_TYPES, vs. ARTIK KULLANILMIYOR
 # Bunlar artık models/default.py'de ve diğer model dosyalarında
 # Bu dosyada sadece genel constant'lar ve API sabitleri kalıyor
+
+# --- Opsiyonel climate (termostat) entity'si ---
+# Kesinlikle kullanıcı tercihi: varsayılan kapalı (CONF_CLIMATE_ENABLED
+# yoksa/False ise climate.py hiçbir entity oluşturmaz). Birçok model bir
+# havuz ısı pompası (kontrol edilen değer su sıcaklığı, oda değil) ve
+# bazı modellerde Tuya'nın kendi app'i zaten dahili bir oda termostatı
+# döngüsü çalıştırıyor olabilir — bu yüzden HA tarafında ikinci bir
+# kontrol döngüsü ancak kullanıcı açıkça isterse oluşturulmalı. Üç alan
+# da model_mapping'teki DÜZ (raw olmayan) bir dict key'i — switch.py/
+# number.py/sensor.py'nin zaten okuduğu aynı DP'ler, ayrı bir veri yolu
+# değil.
+CONF_CLIMATE_ENABLED = "climate_enabled"
+CONF_CLIMATE_POWER_CODE = "climate_power_code"
+CONF_CLIMATE_CURRENT_TEMP_CODE = "climate_current_temp_code"
+CONF_CLIMATE_TARGET_TEMP_CODE = "climate_target_temp_code"
