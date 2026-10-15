@@ -22,14 +22,14 @@
                     "local_key": "Local Key",
                     "protocol": "Protokol Versiyonu"
                 },
-                "description": "Yerel cihaz bağlantı bilgilerini girin\n\nNot: Cihaz Home Assistant ile aynı yerel ağda olmalı",
+                "description": "Yerel cihaz bağlantı bilgilerini girin\n\nNot: Cihaz Home Assistant ile aynı yerel ağda olmalı\n\nBundan sonra bu cihaz için opsiyonel bir termostat (climate) kartı sorulacak — varsayılan kapalı, isterseniz atlayabilirsiniz.",
                 "title": "Yerel Cihaz Kurulumu"
             },
             "cloud_options": {
                 "data": {
                     "scan_interval": "Sensör Yenileme Süresi (dakika)"
                 },
-                "description": "Cloud bağlantısı için sensör yenileme süresini ayarlayın\n\nDüşük değerler = daha hızlı güncellemeler ama daha çok API çağrısı",
+                "description": "Cloud bağlantısı için sensör yenileme süresini ayarlayın\n\nDüşük değerler = daha hızlı güncellemeler ama daha çok API çağrısı\n\nBundan sonra bu cihaz için opsiyonel bir termostat (climate) kartı sorulacak — varsayılan kapalı, isterseniz atlayabilirsiniz.",
                 "title": "Cloud Yapılandırması"
             },
             "cloud_qr": {
@@ -77,8 +77,11 @@
     "options": {
         "step": {
             "init": {
-                "data": {},
-                "description": "Cihaz ayarlarını yapılandırın",
+                "description": "Neyi yapılandırmak istiyorsunuz?",
+                "menu_options": {
+                    "connection_options": "Bağlantı Ayarları",
+                    "climate_options": "Termostat (Climate) Kartı"
+                },
                 "title": "Tuya Isı Pompası Yapılandırması"
             },
             "cloud_options": {
