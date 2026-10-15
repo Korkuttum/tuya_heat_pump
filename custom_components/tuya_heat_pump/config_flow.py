@@ -218,6 +218,17 @@ def _climate_options_schema(model_mapping: dict | None, current: dict) -> vol.Sc
 
     none_option = [selector.SelectOptionDict(value="", label="— none / leave blank —")]
 
+    # Min/max always apply (direct or virtual mode alike -- climate.py no
+    # longer locks them to the device's own reported range, since some
+    # model files only have a generic placeholder like 0-100). Here they
+    # just get a sensible SUGGESTED default: the currently-selected
+    # target DP's own min/max if it has one, otherwise the generic
+    # DEFAULT_CLIMATE_*_TEMP constants -- always editable either way.
+    current_target_code = current.get(CONF_CLIMATE_TARGET_TEMP_CODE) or defaults.get("target", "")
+    target_cfg_for_range = model_mapping.get("numbers", {}).get(current_target_code, {})
+    suggested_min_temp = target_cfg_for_range.get("min_value", DEFAULT_CLIMATE_MIN_TEMP)
+    suggested_max_temp = target_cfg_for_range.get("max_value", DEFAULT_CLIMATE_MAX_TEMP)
+
     return vol.Schema(
         {
             vol.Optional(
@@ -280,7 +291,7 @@ def _climate_options_schema(model_mapping: dict | None, current: dict) -> vol.Sc
             ),
             vol.Optional(
                 CONF_CLIMATE_MIN_TEMP,
-                default=current.get(CONF_CLIMATE_MIN_TEMP, DEFAULT_CLIMATE_MIN_TEMP),
+                default=current.get(CONF_CLIMATE_MIN_TEMP, suggested_min_temp),
             ): selector.NumberSelector(
                 selector.NumberSelectorConfig(
                     min=-20, max=100, step=1, mode=selector.NumberSelectorMode.BOX,
@@ -289,7 +300,7 @@ def _climate_options_schema(model_mapping: dict | None, current: dict) -> vol.Sc
             ),
             vol.Optional(
                 CONF_CLIMATE_MAX_TEMP,
-                default=current.get(CONF_CLIMATE_MAX_TEMP, DEFAULT_CLIMATE_MAX_TEMP),
+                default=current.get(CONF_CLIMATE_MAX_TEMP, suggested_max_temp),
             ): selector.NumberSelector(
                 selector.NumberSelectorConfig(
                     min=-20, max=100, step=1, mode=selector.NumberSelectorMode.BOX,

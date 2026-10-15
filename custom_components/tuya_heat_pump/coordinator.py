@@ -46,6 +46,7 @@ from .const import (
 import tinytuya
 from .model_loader import load_model_mapping, async_load_model_mapping
 from .raw_codec import encode_raw_field
+from .conversion import Conversion
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -656,6 +657,51 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         API sorgusu tetikliyoruz."""
         await self.async_request_refresh()
 
+    def _find_conversion_expr(self, code: str) -> str | None:
+        """This code's own read-side `conversion` expression, looked up
+        across every (non-raw) entity-type dict in this model's mapping.
+        None if not found (raw-field entries, unknown codes, or a DP with
+        no explicit conversion)."""
+        if not self.model_mapping:
+            return None
+        for entity_type in ('sensors', 'binary_sensors', 'switches', 'numbers', 'selects', 'texts'):
+            for key, cfg in self.model_mapping.get(entity_type, {}).items():
+                if 'field_index' in cfg:
+                    continue
+                if cfg.get('code', key) == code:
+                    return cfg.get('conversion')
+        return None
+
+    def _resolve_cache_value(self, code: str, value: Any, display_value: Any) -> Any:
+        """What to actually cache (in _sent_value_cache and self.data) right
+        after a write, so the NEXT read -- which always re-applies this DP's
+        own read-side `conversion` -- reproduces the right value.
+
+        Most DPs here have no read-side scale (conversion is identity), so
+        `display_value` (the entity's own native value) is already correct
+        -- `value` would be wrong there (bkz. issue #53's original
+        write-only-scale fix, e.g. Power World R290). A few DPs scale on
+        BOTH read and write (e.g. conversion "value / 10" + api_conversion
+        "int(value * 10)") -- there, the real wire value (`value`) is what
+        a future poll will report, and caching `display_value` there made
+        the read-side conversion apply a second time (e.g. 26 -> 2.6).
+
+        No model file needs to declare which case it is -- we just check
+        whether applying this code's own read conversion to `value`
+        reproduces `display_value`; if so `value` is the right thing to
+        cache, otherwise fall back to today's `display_value` behavior."""
+        if value == display_value:
+            return display_value
+
+        conversion_expr = self._find_conversion_expr(code)
+        if conversion_expr is not None:
+            try:
+                if Conversion(conversion_expr).convert(value) == display_value:
+                    return value
+            except Exception:
+                pass
+        return display_value
+
     def _apply_sent_cache(self, new_data: dict):
         """Gelen veride eski değer varsa, son gönderilen değeri zorla uygula."""
         current_time = time.time()
@@ -1035,7 +1081,14 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     # cache'e yazıyoruz ki _apply_sent_cache (aşağıdaki
                     # poll'da çağrılıyor) Tuya cloud'un henüz yetişmediği
                     # bir "eski değer" döndürmesi durumunda bunu düzeltebilsin.
-                    self._sent_value_cache[code] = (display_value, time.time())
+                    # _resolve_cache_value: bu DP'nin kendi read-conversion'ına
+                    # göre value/display_value'dan HANGİSİNİN gelecekteki
+                    # gerçek poll'u doğru yansıtacağını seçiyor (bkz. issue
+                    # #53'ün "sadece yazarken ölçekli" DP'leri VE "hem okuma
+                    # hem yazma ölçekli" DP'leri aynı anda doğru kapsaması
+                    # için).
+                    cache_value = self._resolve_cache_value(code, value, display_value)
+                    self._sent_value_cache[code] = (cache_value, time.time())
                     # Optimistic update: local moddaki ile aynı sebep —
                     # cihazdan/Tuya cloud'undan gerçek yankıyı beklemeden
                     # entity'ye YENİ değeri hemen yansıtıyoruz. Bu olmadan
@@ -1045,12 +1098,9 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     # hâlâ eski değeri döndürebilir, bu da UI'da "kapandı,
                     # sonra tekrar açıldı" gibi görünen bir titreşime ve
                     # Activity geçmişinde yanlış/eksik bir olay sırasına
-                    # yol açıyordu. display_value kullanıyoruz (bkz. issue
-                    # #53) — code'un entity'si api_conversion uyguluyorsa
-                    # value zaten "tel" (cihaza giden) değeri, entity'nin
-                    # kendi native değeri değil.
+                    # yol açıyordu.
                     if self.data and code in self.data:
-                        self.data[code]['value'] = display_value
+                        self.data[code]['value'] = cache_value
                         self.data[code]['timestamp'] = int(time.time() * 1000)
                         self.async_update_listeners()
                     await asyncio.sleep(2)
@@ -1086,8 +1136,12 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     task.cancel()
                     _LOGGER.debug("Önceki debounce iptal edildi: %s", code)
                
-                # Son gönderilen değeri cache'e yaz
-                self._sent_value_cache[code] = (display_value, time.time())
+                # Son gönderilen değeri cache'e yaz — _resolve_cache_value
+                # bu DP'nin kendi read-conversion'ına göre value/display_value'
+                # dan hangisinin gelecekteki gerçek poll'u doğru yansıtacağını
+                # seçiyor (bkz. cloud taraftaki aynı çağrının yorumu).
+                cache_value = self._resolve_cache_value(code, value, display_value)
+                self._sent_value_cache[code] = (cache_value, time.time())
 
                 # Optimistic update: cihazdan echo/status beklemeden
                 # entity'lere YENİ değeri hemen göster. Bunu yapmazsak
@@ -1098,10 +1152,8 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 # titreşim görür. self.data burada hemen güncellenince bu
                 # titreşim tamamen ortadan kalkıyor; _apply_sent_cache zaten
                 # cihazdan gerçekten farklı bir echo gelirse bunu koruyor.
-                # display_value kullanıyoruz (bkz. issue #53) — aynı sebep
-                # cloud tarafındaki optimistic update ile.
                 if self.data and code in self.data:
-                    self.data[code]['value'] = display_value
+                    self.data[code]['value'] = cache_value
                     self.data[code]['timestamp'] = int(time.time() * 1000)
                     self.async_update_listeners()
 

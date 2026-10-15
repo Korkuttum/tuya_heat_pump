@@ -210,19 +210,18 @@ class TuyaHeatpumpClimate(ClimateEntity, RestoreEntity):
             features |= ClimateEntityFeature.TARGET_TEMPERATURE
         self._attr_supported_features = features
 
+        # Min/max always come from Options (pre-filled there from the
+        # device's own reported range when a target is picked, but the
+        # user can override it either way — some model files only have a
+        # generic placeholder range, e.g. 0-100, that isn't the real
+        # usable range for that specific device). Only the step stays
+        # tied to the device's own real hardware increment in direct mode.
+        self._attr_min_temp = min_temp
+        self._attr_max_temp = max_temp
         if self._target_code:
-            # Direct mode: the real range/step the device itself reports.
             self._attr_target_temperature_step = self._target_config.get("step", 1)
-            if "min_value" in self._target_config:
-                self._attr_min_temp = self._target_config["min_value"]
-            if "max_value" in self._target_config:
-                self._attr_max_temp = self._target_config["max_value"]
         else:
-            # Virtual mode: no device-reported range, use what the user
-            # picked in Options.
             self._attr_target_temperature_step = 0.5
-            self._attr_min_temp = min_temp
-            self._attr_max_temp = max_temp
 
     def _resolve_code(self, code: str, config: dict) -> str:
         """The real Tuya DP code to use for coordinator.data lookups and

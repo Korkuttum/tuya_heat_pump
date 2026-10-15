@@ -123,8 +123,13 @@ CONF_CLIMATE_MODE_SELECT_CODE = "climate_mode_select_code"
 CONF_CLIMATE_HEAT_VALUE = "climate_heat_value"
 CONF_CLIMATE_COOL_VALUE = "climate_cool_value"
 
-# Sadece "virtual" modda kullanılır (bkz. yukarı) — direct modda bunların
-# yerine her zaman cihazın kendi target DP'sindeki min/max/step kullanılır.
+# Tolerans ve min. çevrim süresi sadece "virtual" modda kullanılır (bkz.
+# yukarı). Min/maks hedef sıcaklık ise HER İKİ modda da kullanılır — bazı
+# model dosyalarında cihazın kendi target DP'si için sadece genel/
+# placeholder bir aralık (örn. 0-100) tanımlı olabiliyor, bu yüzden
+# kullanıcı burada her zaman geçersiz kılabilsin diye direct modda da
+# zorunlu kılınmıyor (Options formunda sadece cihazın kendi değeri bir
+# ÖNERİ olarak önceden dolduruluyor — bkz. config_flow.py).
 CONF_CLIMATE_TOLERANCE = "climate_tolerance"
 CONF_CLIMATE_MIN_CYCLE_MINUTES = "climate_min_cycle_minutes"
 CONF_CLIMATE_MIN_TEMP = "climate_min_temp"

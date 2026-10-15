@@ -42,7 +42,7 @@
             },
             "climate_options": {
                 "title": "Optional: Climate (Thermostat) Card",
-                "description": "Completely optional and OFF by default — most models here are pool heat pumps where the temperature being controlled is the water, not the room, and on some models Tuya's own app already runs its own room-temperature control internally. Only turn this on if you actually want a Home Assistant thermostat card for this device, and you don't already have a separate physical/hardware thermostat or app-side control doing the same job.\n\nPower (required): the switch the card turns on/off.\nCurrent/Target temperature (optional): pick your device's own fields if it has them, otherwise leave blank.\nMode select (optional): only if your device can both heat AND cool via a mode field — pick it to get a Cool option too (you'll be asked which of its values means heat/cool next).\n\nTolerance, minimum cycle, min/max temperature: only used when your device has NO settable target temperature above — in that case the card manages the power switch itself (like Home Assistant's own Generic Thermostat), and these protect the compressor from short-cycling. Ignored otherwise.\n\nEverything here is pre-filled with a suggestion where your device's own data makes one obvious, but every field stays editable, and you can revisit all of this later from the integration's own Options.",
+                "description": "Completely optional and OFF by default — most models here are pool heat pumps where the temperature being controlled is the water, not the room, and on some models Tuya's own app already runs its own room-temperature control internally. Only turn this on if you actually want a Home Assistant thermostat card for this device, and you don't already have a separate physical/hardware thermostat or app-side control doing the same job.\n\nPower (required): the switch the card turns on/off.\nCurrent/Target temperature (optional): pick your device's own fields if it has them, otherwise leave blank.\nMode select (optional): only if your device can both heat AND cool via a mode field — pick it to get a Cool option too (you'll be asked which of its values means heat/cool next).\n\nTolerance and minimum cycle duration: only used when your device has NO settable target temperature above — in that case the card manages the power switch itself (like Home Assistant's own Generic Thermostat), and these protect the compressor from short-cycling. Ignored otherwise.\n\nMin/max temperature: used either way, as the range for the target temperature slider. Pre-filled from your device's own reported range when you pick a target above (some model files only have a generic placeholder range here, e.g. 0-100), but always editable.\n\nEverything here is pre-filled with a suggestion where your device's own data makes one obvious, but every field stays editable, and you can revisit all of this later from the integration's own Options.",
                 "data": {
                     "climate_enabled": "Enable climate card",
                     "climate_power_code": "Power switch",
@@ -51,8 +51,8 @@
                     "climate_mode_select_code": "Mode select (optional — only if your device can also cool)",
                     "climate_tolerance": "Tolerance (only used without a target temperature above)",
                     "climate_min_cycle_minutes": "Minimum on/off cycle duration, minutes (compressor protection; only used without a target temperature above)",
-                    "climate_min_temp": "Minimum target temperature (only used without a target temperature above)",
-                    "climate_max_temp": "Maximum target temperature (only used without a target temperature above)"
+                    "climate_min_temp": "Minimum target temperature",
+                    "climate_max_temp": "Maximum target temperature"
                 }
             },
             "climate_mode_values": {
@@ -103,7 +103,7 @@
             },
             "climate_options": {
                 "title": "Optional: Climate (Thermostat) Card",
-                "description": "Completely optional and OFF by default — most models here are pool heat pumps where the temperature being controlled is the water, not the room, and on some models Tuya's own app already runs its own room-temperature control internally. Only turn this on if you actually want a Home Assistant thermostat card for this device, and you don't already have a separate physical/hardware thermostat or app-side control doing the same job.\n\nPower (required): the switch the card turns on/off.\nCurrent/Target temperature (optional): pick your device's own fields if it has them, otherwise leave blank.\nMode select (optional): only if your device can both heat AND cool via a mode field — pick it to get a Cool option too (you'll be asked which of its values means heat/cool next).\n\nTolerance, minimum cycle, min/max temperature: only used when your device has NO settable target temperature above — in that case the card manages the power switch itself (like Home Assistant's own Generic Thermostat), and these protect the compressor from short-cycling. Ignored otherwise.",
+                "description": "Completely optional and OFF by default — most models here are pool heat pumps where the temperature being controlled is the water, not the room, and on some models Tuya's own app already runs its own room-temperature control internally. Only turn this on if you actually want a Home Assistant thermostat card for this device, and you don't already have a separate physical/hardware thermostat or app-side control doing the same job.\n\nPower (required): the switch the card turns on/off.\nCurrent/Target temperature (optional): pick your device's own fields if it has them, otherwise leave blank.\nMode select (optional): only if your device can both heat AND cool via a mode field — pick it to get a Cool option too (you'll be asked which of its values means heat/cool next).\n\nTolerance and minimum cycle duration: only used when your device has NO settable target temperature above — in that case the card manages the power switch itself (like Home Assistant's own Generic Thermostat), and these protect the compressor from short-cycling. Ignored otherwise.\n\nMin/max temperature: used either way, as the range for the target temperature slider. Pre-filled from your device's own reported range when you pick a target above (some model files only have a generic placeholder range here, e.g. 0-100), but always editable.",
                 "data": {
                     "climate_enabled": "Enable climate card",
                     "climate_power_code": "Power switch",
@@ -112,8 +112,8 @@
                     "climate_mode_select_code": "Mode select (optional — only if your device can also cool)",
                     "climate_tolerance": "Tolerance (only used without a target temperature above)",
                     "climate_min_cycle_minutes": "Minimum on/off cycle duration, minutes (compressor protection; only used without a target temperature above)",
-                    "climate_min_temp": "Minimum target temperature (only used without a target temperature above)",
-                    "climate_max_temp": "Maximum target temperature (only used without a target temperature above)"
+                    "climate_min_temp": "Minimum target temperature",
+                    "climate_max_temp": "Maximum target temperature"
                 }
             },
             "climate_mode_values": {
