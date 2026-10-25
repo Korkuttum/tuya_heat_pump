@@ -3,6 +3,7 @@
 MODEL_NAME = "Alps Exclusive Heat Pump (f3w5t8)"
 # ====================================================
 # Alps Exclusive (f3w5t8 variant) @jorisijji, issue #70
+# Also sold as: Michl SMP0/V2 -- confirmed by @WW-home, issue #54
 # ====================================================
 # This is a DIFFERENT Tuya modelId from the Alps Exclusive already
 # supported (du1wh4) — same brand, different internal hardware batch.
