@@ -12,26 +12,27 @@
 
 | No | Brand | | No | Brand | | No | Brand |
 |---|---|---|---|---|---|---|---|
-| 1 | Arçelik (Beko, Grundig) | | 21 | EnviroSun HP+ | | 41 | MyCond BeeThermic |
-| 2 | Alsavo by Zealux | | 22 | Evoheat 40T | | 42 | NMT MIA13 |
-| 3 | ACIQ | | 23 | Fairland | | 43 | Poolex Dreamline |
-| 4 | Adlar Castra | | 24 | Fairland Inverter Plus | | 44 | Poolsana |
-| 5 | Adlar Castra Domestic | | 25 | GRAT | | 45 | Power World |
-| 6 | Alps Exclusive | | 26 | Heative Next | | 46 | Power World PW030 |
-| 7 | Alps Exclusive (f3w5t8 variant) | | 27 | Inventor Xforce | | 47 | Power World R290 Full DC |
-| 8 | Aqua Clear Turbo Silence AXR13 | | 28 | IPS Pool Systems | | 48 | Pure Blue Onyx |
-| 9 | AquaForte Mr. Perfect | | 29 | ITS | | 49 | Reclaim Eco R290 |
-| 10 | Aquark | | 30 | Ivapool | | 50 | Rinnai Enviroflo GR (EHPG280VM) |
-| 11 | Aquastrong | | 31 | Kensol | | 51 | Rotenso |
-| 12 | Aquatech X6 | | 32 | Klimalife | | 52 | Sannover Stelios 2 |
-| 13 | Aquatech X6 320L | | 33 | Kushiro (Luqstoff) | | 53 | SolarEast |
-| 14 | Argo Apollo 12HP | | 34 | Lunna LV LT1530 (Nordic LV LT1530) | | 54 | SolarEast BLN |
-| 15 | Climalution -5G | | 35 | Macon/Arctic | | 55 | Swim&Fun Fjord |
-| 16 | Cordivari Vestalis | | 36 | Madimack InverELITE V4 | | 56 | U-Energy |
-| 17 | Della | | 37 | Mango | | 57 | Water TechniX |
-| 18 | Ecologic Ecopool | | 38 | Michl SMP0/V2 | | 58 | W'eau |
-| 19 | Ecolynx | | 39 | Mitte Aerotermia | | 59 | W'eau WFI-007 |
-| 20 | Effecta Air-IQ R290 | | 40 | Mr. Silent FC25 (Aquara Pool Inverter) | | 60 | Wopoltop |
+| 1 | Arçelik (Beko, Grundig) | | 22 | EnviroSun HP+ | | 43 | NMT MIA13 |
+| 2 | Alsavo by Zealux | | 23 | Evoheat 40T | | 44 | Poolex Dreamline |
+| 3 | ACIQ | | 24 | Fairland | | 45 | Poolsana |
+| 4 | Adlar Castra | | 25 | Fairland Inverter Plus | | 46 | Power World |
+| 5 | Adlar Castra Domestic | | 26 | GRAT | | 47 | Power World PW030 |
+| 6 | Alps Exclusive | | 27 | Heative Next | | 48 | Power World R290 Full DC |
+| 7 | Alps Exclusive (f3w5t8 variant) | | 28 | Inventor Xforce | | 49 | Pure Blue Onyx |
+| 8 | Aqua Clear Turbo Silence AXR13 | | 29 | IPS Pool Systems | | 50 | Reclaim Eco R290 |
+| 9 | AquaForte Mr. Perfect | | 30 | ITS | | 51 | Rinnai Enviroflo GR (EHPG280VM) |
+| 10 | Aquark | | 31 | Ivapool | | 52 | Rotenso |
+| 11 | Aquastrong | | 32 | Kensol | | 53 | Sannover Stelios 2 |
+| 12 | Aquatech X6 | | 33 | Klimalife | | 54 | SolarEast |
+| 13 | Aquatech X6 320L | | 34 | Kushiro (Luqstoff) | | 55 | SolarEast BLN |
+| 14 | Argo Apollo 12HP | | 35 | Lunna LV LT1530 (Nordic LV LT1530) | | 56 | Swim&Fun Fjord |
+| 15 | Climalution -5G | | 36 | Macon/Arctic | | 57 | U-Energy |
+| 16 | Cordivari Vestalis | | 37 | Madimack InverELITE V4 | | 58 | Water TechniX |
+| 17 | Della | | 38 | Mango | | 59 | W'eau |
+| 18 | Ecologic Ecopool | | 39 | Michl SMP0/V2 | | 60 | W'eau WFI-007 |
+| 19 | Ecolynx | | 40 | Mitte Aerotermia | | 61 | Wopoltop |
+| 20 | Effecta Air-IQ R290 | | 41 | Mr. Silent FC25 (Aquara Pool Inverter) | | | |
+| 21 | Elterm 18CHW-RMS | | 42 | MyCond BeeThermic | | | |
 ---
 
 This project allows you to control and monitor your Tuya heat pump device through Home Assistant — supports Cloud, Local (LAN push), and optional real-time MQTT push on top of Cloud mode.
@@ -115,19 +116,6 @@ On top of Cloud mode, you can optionally enable real-time MQTT push via the Tuya
 - During setup (Cloud mode), enter your **User Code** and complete the **QR scan** with the Smart Life / Tuya app when prompted.
 - This step is entirely optional — skip it and the integration works exactly as before.
 - If the push token ever becomes invalid, you'll see a clickable **Repair** notification under *Settings > System > Repairs* to reconnect.
-
-### Optional: Climate (Thermostat) Card
-
-An optional `climate` entity (a Home Assistant thermostat card) for your heat pump — **off by default**, nothing changes for existing setups unless you turn it on yourself.
-
-- Enable it either at the end of initial device setup, or anytime later from the integration's own **Configure → Climate (Thermostat) Card**.
-- You pick which of your device's own fields it should use (power switch, current/target temperature, and an optional heat/cool mode field) — every field comes pre-filled with a suggestion based on your device's own data where one is obvious, but stays fully editable and can be left blank.
-- Two modes, chosen automatically from what you map:
-  - **Direct** — if your device has its own settable target temperature, the card writes straight to it (the device already runs its own closed control loop, the card is just a UI for it).
-  - **Virtual** — if it doesn't (most models here are pool heat pumps, where water, not room air, is the controlled value), the card behaves like Home Assistant's own Generic Thermostat: it keeps the target in Home Assistant and drives the power switch itself based on current vs. target, with a configurable tolerance and a minimum on/off cycle duration to protect the compressor from short-cycling.
-- Optional cooling support for heat pumps that can both heat and cool through a mode field.
-
-> ⚠️ **Why off by default:** some devices' own Tuya app already runs its own closed-loop room-temperature control internally, and some users have a separate physical/hardware thermostat — in both cases, a second Home Assistant-side control loop on top can fight with the existing one over the same setting. So nothing is created unless you explicitly turn it on and map it yourself.
 
 ---
 
