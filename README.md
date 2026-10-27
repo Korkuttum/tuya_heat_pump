@@ -116,6 +116,19 @@ On top of Cloud mode, you can optionally enable real-time MQTT push via the Tuya
 - This step is entirely optional — skip it and the integration works exactly as before.
 - If the push token ever becomes invalid, you'll see a clickable **Repair** notification under *Settings > System > Repairs* to reconnect.
 
+### Optional: Climate (Thermostat) Card
+
+An optional `climate` entity (a Home Assistant thermostat card) for your heat pump — **off by default**, nothing changes for existing setups unless you turn it on yourself.
+
+- Enable it either at the end of initial device setup, or anytime later from the integration's own **Configure → Climate (Thermostat) Card**.
+- You pick which of your device's own fields it should use (power switch, current/target temperature, and an optional heat/cool mode field) — every field comes pre-filled with a suggestion based on your device's own data where one is obvious, but stays fully editable and can be left blank.
+- Two modes, chosen automatically from what you map:
+  - **Direct** — if your device has its own settable target temperature, the card writes straight to it (the device already runs its own closed control loop, the card is just a UI for it).
+  - **Virtual** — if it doesn't (most models here are pool heat pumps, where water, not room air, is the controlled value), the card behaves like Home Assistant's own Generic Thermostat: it keeps the target in Home Assistant and drives the power switch itself based on current vs. target, with a configurable tolerance and a minimum on/off cycle duration to protect the compressor from short-cycling.
+- Optional cooling support for heat pumps that can both heat and cool through a mode field.
+
+> ⚠️ **Why off by default:** some devices' own Tuya app already runs its own closed-loop room-temperature control internally, and some users have a separate physical/hardware thermostat — in both cases, a second Home Assistant-side control loop on top can fight with the existing one over the same setting. So nothing is created unless you explicitly turn it on and map it yourself.
+
 ---
 
 ## Notes
