@@ -203,3 +203,108 @@ NUMBER_TYPES.update({
         "icon": "mdi:fan",
     },
 })
+
+# --- merge into NUMBER_TYPES (@NAP141's own raw_explorer.py pass, issue
+# #108 -- same "mixed-width field" situation as 0403fanmaxcool/
+# 0428silentspeedmax above: raw_explorer auto-detected this as ONE
+# int32_be field at r_141 field_index 20, but he confirmed by testing
+# that only the lower 16 bits carry the real value (the upper half reads
+# 10, well outside 40-80; the lower half reads 40, right at his tested
+# minimum) -- so it's split into a proper int16_be field (int32 index 20
+# -> byte offset 80-81 -> int16 field_index 41) instead of the single
+# misleading int32 reading) ---
+NUMBER_TYPES = globals().get("NUMBER_TYPES", {})
+NUMBER_TYPES.update({
+    "0342_silentfreqmax": {
+        "dp_id": 141,
+        "code": "0342_silentfreqmax",
+        "raw_source": "r_141",
+        "field_index": 41,
+        "encoding": "int16_be",
+        "min_value": 40,
+        "max_value": 80,
+        "step": 1,
+        "name": "03.42 SilentFreqMax",
+        "unit": "Hz",
+        "icon": "mdi:sine-wave",
+    },
+})
+
+# --- merge into SELECT_TYPES (@NAP141's own raw_explorer.py pass, issue
+# #108 -- same mixed-width situation again, this time in r_140 ("01 User
+# Parameters"). raw_explorer auto-detected each as ONE int32_be field;
+# he confirmed by testing in the Tuya app which 16-bit half of each
+# actually holds the value (checked here against his own dump too --
+# the other half reads out of range or less plausible in each case):
+#   - 01.06 Power Mode: int32 field_index 2, real value in the LOWER
+#     half (byte offset 10-11 -> int16 field_index 5; reads 2 = "Silent",
+#     in range, vs. 25 out of range on the other half)
+#   - 01.07 Mode Silent: int32 field_index 3, real value in the UPPER
+#     half (byte offset 12-13 -> int16 field_index 6; reads 0 = "Disable",
+#     in range, vs. 22 out of range on the other half) -- not one of his
+#     four requested items, but came out of the same pass
+#   - 01.47 Heat Curve: int32 field_index 23, real value in the UPPER
+#     half (byte offset 92-93 -> int16 field_index 46; reads 14 =
+#     "CURVE#6H", a plausible active selection, vs. 0 on the other half)
+# ---
+SELECT_TYPES = globals().get("SELECT_TYPES", {})
+SELECT_TYPES.update({
+    "0106_power_mode": {
+        "dp_id": 140,
+        "code": "0106_power_mode",
+        "raw_source": "r_140",
+        "field_index": 5,
+        "encoding": "int16_be",
+        "options": {
+            "0": "Standard",
+            "1": "Strong",
+            "2": "Silent",
+            "3": "Auto",
+        },
+        "name": "01.06 Power Mode",
+        "icon": "mdi:tune",
+    },
+    "0107_mode_silent": {
+        "dp_id": 140,
+        "code": "0107_mode_silent",
+        "raw_source": "r_140",
+        "field_index": 6,
+        "encoding": "int16_be",
+        "options": {
+            "0": "Disable",
+            "1": "Night",
+            "2": "AllDay",
+        },
+        "name": "01.07 Mode Silent",
+        "icon": "mdi:volume-mute",
+    },
+    "0147_heat_curve": {
+        "dp_id": 140,
+        "code": "0147_heat_curve",
+        "raw_source": "r_140",
+        "field_index": 46,
+        "encoding": "int16_be",
+        "options": {
+            "0": "DISABLE",
+            "1": "CURVE#1L",
+            "2": "CURVE#2L",
+            "3": "CURVE#3L",
+            "4": "CURVE#4L",
+            "5": "CURVE#5L",
+            "6": "CURVE#6L",
+            "7": "CURVE#7L",
+            "8": "CURVE#8L",
+            "9": "CURVE#1H",
+            "10": "CURVE#2H",
+            "11": "CURVE#3H",
+            "12": "CURVE#4H",
+            "13": "CURVE#5H",
+            "14": "CURVE#6H",
+            "15": "CURVE#7H",
+            "16": "CURVE#8H",
+            "17": "CURVE#9",
+        },
+        "name": "01.47 Heat Curve",
+        "icon": "mdi:chart-line",
+    },
+})
