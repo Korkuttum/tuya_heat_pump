@@ -363,7 +363,15 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
     # LOCAL LISTENER
     # ============================================================================
 
-    _LOCK_ACQUIRE_TIMEOUT = 4
+    # 4s'den 10s'e çıkarıldı (issue #106, @frank-ru): bazı cihazların Wi-Fi
+    # modülü periyodik olarak (gözlemlenen: ~60-70sn'de bir, birkaç saniye
+    # sürüyor, en kötü ölçülen 8.1sn) kısa süreliğine receive()'a cevap
+    # vermeyi kesiyor -- cihaz asıl offline değil, kendi firmware'i meşgul.
+    # Eski 4sn eşik bu pencereden daha kısa olduğu için kilidi tutan
+    # heartbeat/receive çağrısı zaman zaman timeout'a uğrayıp bu poll'u
+    # "Local socket lock alınamadı" ile başarısız kılıyordu -- 10sn, ölçülen
+    # en kötü durumu güvenli bir payla kapsıyor.
+    _LOCK_ACQUIRE_TIMEOUT = 10
     # Local modda update_interval None (bkz. __init__) -- HA'nın periyodik
     # poll'u hiç çalışmaz, _listen_loop TEK veri kaynağıdır ve SADECE
     # cihazın kendiliğinden push ettiği DP'leri görür. Cihaz bir DP'yi
@@ -1399,7 +1407,30 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 data = self._process_local_dps(status['dps'])
                 self._apply_sent_cache(data)
                 return data
-          
+
+            except TimeoutError as err:
+                # issue #106 (@frank-ru): a "Local socket lock alınamadı"
+                # timeout here means the device's own Wi-Fi module was
+                # briefly busy (not off the network -- cloud still showed
+                # it online throughout, and the AP logged no disconnect),
+                # self-resolving within seconds every time. Marking the
+                # device OFFLINE and every entity "unavailable" for that
+                # was overly aggressive; as long as we already have a
+                # previous poll's data, skip this one and keep showing it
+                # -- the next poll (or the listener's own push) catches up
+                # once the lock is free again. A real connection failure
+                # (lock never freed, or no prior data yet) still falls
+                # through to the general except below.
+                if self.data and "Local socket lock" in str(err):
+                    _LOGGER.debug("Local poll skipped (%s), keeping last data", err)
+                    return self.data
+                self.is_online = False
+                if self._previous_online != self.is_online:
+                    _LOGGER.info("Online status değişti: OFFLINE (local exception: %s)", err)
+                    self._previous_online = self.is_online
+                self.async_update_listeners()
+                raise UpdateFailed(f"Local error: {str(err)}")
+
             except Exception as err:
                 self.is_online = False
                 if self._previous_online != self.is_online:
