@@ -2,6 +2,14 @@
     "config": {
         "step": {
             "user": {
+                "description": "How would you like to set this up?",
+                "menu_options": {
+                    "setup_sharing": "✨ New (recommended): Just a User Code + QR scan",
+                    "setup_access_key": "Old method: Tuya IoT Cloud Platform (Access ID/Key)"
+                },
+                "title": "Tuya Heat Pump Setup"
+            },
+            "setup_access_key": {
                 "data": {
                     "access_id": "Access ID",
                     "access_key": "Access Key",
@@ -14,7 +22,43 @@
                     "user_code": "Found in the Tuya app under Me → Settings → Account and Security → User Code. If provided, you'll be asked to scan a QR code after this step to try instant (MQTT push) updates. Note: how well this works varies by device — some devices get everything instantly, others are limited by Tuya's own restrictions (in that case the integration automatically keeps using regular polling instead, nothing breaks)."
                 },
                 "description": "Enter your Tuya IoT Platform credentials and select connection type\n\n• Cloud: Recommended for most users, works over the internet\n• Local: Faster response, no API limits, requires device on local network\n\nFor MQTT (instant updates, optional): find the User Code in your Tuya app under Me → Settings → Account and Security → User Code and enter it below. How well this works varies by device — some devices get everything instantly, others are limited by Tuya's own restrictions (the integration automatically falls back to regular polling in that case). Leave it blank to skip this step entirely — everything else works exactly the same either way.",
-                "title": "Tuya Heat Pump Setup"
+                "title": "Tuya Heat Pump Setup (Old Method)"
+            },
+            "setup_sharing": {
+                "data": {
+                    "user_code": "User Code"
+                },
+                "description": "No Tuya developer account or IoT Cloud project needed — just the User Code from the Tuya Smart / Smart Life app.\n\nFind it under: Me → Settings → Account and Security → User Code.\n\nYou'll scan a QR code next, then pick your device from a list of everything on this account.",
+                "title": "User Code + QR Login"
+            },
+            "sharing_qr": {
+                "data": {
+                    "qr": "QR Code"
+                },
+                "description": "Step 1: Open the Tuya Smart or Smart Life app on your phone → tap + in the top right corner → Scan → scan the QR code shown below.\n\nStep 2: Once the app confirms it worked, come back here and click Submit.\n\nIf the QR code expires before you scan it, just click Submit to get a new one.",
+                "title": "Scan to Sign In"
+            },
+            "sharing_device_pick": {
+                "data": {
+                    "device_id": "Device"
+                },
+                "description": "Every device on this account is listed below — pick the heat pump you want to add.",
+                "title": "Pick Your Device"
+            },
+            "sharing_connection_type": {
+                "data": {
+                    "connection_type": "Connection Type"
+                },
+                "description": "Cloud: works over the internet, status/commands/instant updates all go through the same sign-in you just did — nothing else to enter.\n\nLocal: direct connection over your local network — faster, works without internet once set up. Your device's Local Key was already found automatically; next we'll try to find its local network address too.",
+                "title": "Connection Type"
+            },
+            "sharing_local_ip": {
+                "data": {
+                    "ip": "Device IP Address",
+                    "protocol": "Protocol Version"
+                },
+                "description": "Your device's Local Key was already found automatically from your account — nothing to enter there.\n\nWe tried to find its local network address automatically too: {scan_result}\n\nIf that's wrong or empty, enter the correct local IP address yourself — your router's device list is the easiest place to find it. Both this device and Home Assistant need to be on the same local network.",
+                "title": "Local Network Address"
             },
             "local": {
                 "data": {
@@ -71,7 +115,8 @@
             "qr_request_failed": "Could not request a QR code from Tuya. Check your User Code and try again."
         },
         "abort": {
-            "already_configured": "⚠️ This device is already configured! Please check Settings > Devices & Services."
+            "already_configured": "⚠️ This device is already configured! Please check Settings > Devices & Services.",
+            "no_devices_found": "No devices found on this account — make sure your heat pump shows up in the Tuya Smart / Smart Life app first."
         }
     },
     "options": {
@@ -80,9 +125,24 @@
                 "description": "What would you like to configure?",
                 "menu_options": {
                     "connection_options": "Connection Settings",
-                    "climate_options": "Climate (Thermostat) Card"
+                    "climate_options": "Climate (Thermostat) Card",
+                    "switch_to_sharing": "✨ Switch to QR Login (adds instant updates automatically)"
                 },
                 "title": "Tuya Heat Pump Configuration"
+            },
+            "switch_to_sharing": {
+                "data": {
+                    "user_code": "User Code"
+                },
+                "description": "This replaces your Access ID/Key with a simple User Code + QR sign-in — status, commands and instant updates all go through it afterward, and your Access ID/Key is no longer used by this device. Your device itself stays exactly the same, nothing needs to be re-picked.\n\nFind your User Code in the Tuya Smart / Smart Life app under: Me → Settings → Account and Security → User Code.",
+                "title": "Switch to User Code + QR Login"
+            },
+            "switch_to_sharing_qr": {
+                "data": {
+                    "qr": "QR Code"
+                },
+                "description": "Step 1: Open the Tuya Smart or Smart Life app on your phone → tap + in the top right corner → Scan → scan the QR code shown below.\n\nStep 2: Once the app confirms it worked, come back here and click Submit.\n\nIf the QR code expires before you scan it, just click Submit to get a new one.",
+                "title": "Scan to Sign In"
             },
             "cloud_options": {
                 "data": {

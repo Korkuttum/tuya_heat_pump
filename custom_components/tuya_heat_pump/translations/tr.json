@@ -2,6 +2,14 @@
     "config": {
         "step": {
             "user": {
+                "description": "Bunu nasıl kurmak istersiniz?",
+                "menu_options": {
+                    "setup_sharing": "✨ Yeni (önerilen): Sadece User Code + QR taratma",
+                    "setup_access_key": "Eski yöntem: Tuya IoT Cloud Platform (Access ID/Key)"
+                },
+                "title": "Tuya Isı Pompası Kurulumu"
+            },
+            "setup_access_key": {
                 "data": {
                     "access_id": "Access ID",
                     "access_key": "Access Key",
@@ -14,7 +22,43 @@
                     "user_code": "Tuya uygulamasında şu yoldan bulunur: Profil → Ayarlar → Hesap ve Güvenlik → User Code. Girilirse, bu adımdan sonra bir QR kod okutmanız istenecek — anlık (MQTT push) güncellemeleri dener. Not: bu özelliğin faydası cihazdan cihaza değişir — bazı cihazlarda tüm veriler anlık gelir, bazılarında ise Tuya'nın kendi kısıtlaması yüzünden sınırlı kalır (bu durumda entegrasyon otomatik olarak normal periyodik sorgulamaya devam eder, hiçbir şey bozulmaz)."
                 },
                 "description": "Tuya IoT Platform bilgilerinizi girin ve bağlantı türünü seçin\n\n• Cloud: Çoğu kullanıcı için önerilir, internet üzerinden çalışır\n• Local: Daha hızlı, API limiti yok, cihaz yerel ağda olmalı\n\nMQTT (anlık güncelleme, opsiyonel) için: Tuya uygulamanızda Profil → Ayarlar → Hesap ve Güvenlik → User Code yoluyla kodu bulup aşağıya girin. Bu özelliğin faydası cihazdan cihaza değişir — bazı cihazlarda tüm veriler anlık gelir, bazılarında Tuya'nın kendi kısıtlaması yüzünden sınırlı kalır (böyle durumda entegrasyon otomatik olarak periyodik sorgulamaya devam eder). Boş bırakırsanız bu adım tamamen atlanır — geri kalan her şey aynen çalışır.",
-                "title": "Tuya Isı Pompası Kurulumu"
+                "title": "Tuya Isı Pompası Kurulumu (Eski Yöntem)"
+            },
+            "setup_sharing": {
+                "data": {
+                    "user_code": "User Code"
+                },
+                "description": "Tuya geliştirici hesabına ya da IoT Cloud projesine gerek yok — sadece Tuya Smart / Smart Life uygulamasındaki User Code yeterli.\n\nŞurada bulunur: Profil → Ayarlar → Hesap ve Güvenlik → User Code.\n\nSıradaki adımda bir QR kod taratacaksınız, sonra bu hesaptaki tüm cihazlardan birini seçeceksiniz.",
+                "title": "User Code + QR ile Giriş"
+            },
+            "sharing_qr": {
+                "data": {
+                    "qr": "QR Kod"
+                },
+                "description": "1. Adım: Telefonunuzda Tuya Smart ya da Smart Life uygulamasını açın → sağ üstteki + işaretine dokunun → Scan → aşağıdaki QR kodu tarayın.\n\n2. Adım: Uygulama onayladıktan sonra buraya dönüp Gönder'e (Submit) basın.\n\nQR kod süresi dolarsa, tekrar Gönder'e basmanız yeter, yeni bir tane alırsınız.",
+                "title": "Giriş İçin Tarayın"
+            },
+            "sharing_device_pick": {
+                "data": {
+                    "device_id": "Cihaz"
+                },
+                "description": "Bu hesaptaki tüm cihazlar aşağıda listelendi — eklemek istediğiniz ısı pompasını seçin.",
+                "title": "Cihazınızı Seçin"
+            },
+            "sharing_connection_type": {
+                "data": {
+                    "connection_type": "Bağlantı Türü"
+                },
+                "description": "Cloud: internet üzerinden çalışır, durum okuma/komut gönderme/anlık güncelleme hepsi az önce yaptığınız girişle olur — başka bir şey girmenize gerek yok.\n\nLocal: yerel ağınız üzerinden direkt bağlantı — daha hızlı, kurulumdan sonra internete gerek kalmaz. Cihazınızın Local Key'i zaten otomatik bulundu; sırada yerel ağ adresini de bulmayı deneyeceğiz.",
+                "title": "Bağlantı Türü"
+            },
+            "sharing_local_ip": {
+                "data": {
+                    "ip": "Cihaz IP Adresi",
+                    "protocol": "Protokol Versiyonu"
+                },
+                "description": "Cihazınızın Local Key'i hesabınızdan otomatik olarak zaten bulundu — onu girmenize gerek yok.\n\nYerel ağ adresini de otomatik bulmayı denedik: {scan_result}\n\nYanlışsa veya boşsa, doğru yerel IP adresini kendiniz girin — en kolay yol router'ınızın cihaz listesine bakmaktır. Bu cihaz ve Home Assistant aynı yerel ağda olmalı.",
+                "title": "Yerel Ağ Adresi"
             },
             "local": {
                 "data": {
@@ -71,7 +115,8 @@
             "qr_request_failed": "Tuya'dan QR kod istenemedi. User Code'unuzu kontrol edip tekrar deneyin."
         },
         "abort": {
-            "already_configured": "⚠️ Bu cihaz zaten eklenmiş! Lütfen Ayarlar > Cihazlar ve Servisler'den kontrol edin."
+            "already_configured": "⚠️ Bu cihaz zaten eklenmiş! Lütfen Ayarlar > Cihazlar ve Servisler'den kontrol edin.",
+            "no_devices_found": "Bu hesapta hiç cihaz bulunamadı — ısı pompanızın önce Tuya Smart / Smart Life uygulamasında göründüğünden emin olun."
         }
     },
     "options": {
@@ -80,9 +125,24 @@
                 "description": "Neyi yapılandırmak istiyorsunuz?",
                 "menu_options": {
                     "connection_options": "Bağlantı Ayarları",
-                    "climate_options": "Termostat (Climate) Kartı"
+                    "climate_options": "Termostat (Climate) Kartı",
+                    "switch_to_sharing": "✨ QR ile Girişe Geç (anlık güncellemeleri otomatik ekler)"
                 },
                 "title": "Tuya Isı Pompası Yapılandırması"
+            },
+            "switch_to_sharing": {
+                "data": {
+                    "user_code": "User Code"
+                },
+                "description": "Bu, Access ID/Key'inizi basit bir User Code + QR girişiyle değiştirir — bundan sonra durum okuma/komut gönderme/anlık güncelleme hepsi bu girişle olur, Access ID/Key'iniz bu cihaz için artık kullanılmaz. Cihazınızın kendisi tamamen aynı kalır, yeniden seçmenize gerek yok.\n\nUser Code'unuzu Tuya Smart / Smart Life uygulamasında şurada bulabilirsiniz: Profil → Ayarlar → Hesap ve Güvenlik → User Code.",
+                "title": "User Code + QR ile Girişe Geç"
+            },
+            "switch_to_sharing_qr": {
+                "data": {
+                    "qr": "QR Kod"
+                },
+                "description": "1. Adım: Telefonunuzda Tuya Smart ya da Smart Life uygulamasını açın → sağ üstteki + işaretine dokunun → Scan → aşağıdaki QR kodu tarayın.\n\n2. Adım: Uygulama onayladıktan sonra buraya dönüp Gönder'e (Submit) basın.\n\nQR kod süresi dolarsa, tekrar Gönder'e basmanız yeter, yeni bir tane alırsınız.",
+                "title": "Giriş İçin Tarayın"
             },
             "cloud_options": {
                 "data": {
