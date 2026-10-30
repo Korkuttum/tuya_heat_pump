@@ -27,9 +27,6 @@ from .const import (
     PROTOCOL_OPTIONS,
     CONF_USER_CODE,
     CONF_SHARING_TOKEN_INFO,
-    CONF_AUTH_METHOD,
-    AUTH_METHOD_ACCESS_KEY,
-    AUTH_METHOD_SHARING,
     CONF_CLIMATE_ENABLED,
     CONF_CLIMATE_POWER_CODE,
     CONF_CLIMATE_CURRENT_TEMP_CODE,
@@ -47,7 +44,7 @@ from .const import (
     DEFAULT_CLIMATE_MAX_TEMP,
 )
 from .coordinator import TuyaScaleDataUpdateCoordinator
-from .sharing_mqtt import SharingQRLogin, SharingMQTT, async_build_manager
+from .sharing_mqtt import SharingQRLogin
 import tinytuya
 
 _LOGGER = logging.getLogger(__name__)
@@ -416,24 +413,6 @@ STEP_LOCAL_OPTIONS_SCHEMA = vol.Schema(
     }
 )
 
-def _scan_for_device_ip(device_id: str) -> str | None:
-    """tinytuya'nın LAN broadcast taramasıyla bu device_id'nin şu anki
-    gerçek yerel IP'sini bulmaya çalışır. Sharing session'ın kendi
-    `ip` alanı KULLANILAMAZ -- bu Tuya cloud'un gördüğü WAN/genel IP,
-    yerel ağ adresi değil (canlı testte doğrulandı: o IP'ye direkt
-    bağlanma denemesi "Device Unreachable" veriyor). Senkron ve birkaç
-    saniye sürebilir -- çağıran taraf executor job içinde çalıştırmalı."""
-    try:
-        found = tinytuya.deviceScan(verbose=False, poll=False)
-    except Exception as err:
-        _LOGGER.debug("LAN taraması başarısız: %s", err)
-        return None
-    for ip, info in found.items():
-        if info.get("gwId") == device_id or info.get("id") == device_id:
-            return ip
-    return None
-
-
 async def validate_input(hass: HomeAssistant, data: dict, connection_type: str) -> dict:
     """Validate the user input allows us to connect."""
     # Kurulum doğrulaması için vekil ConfigEntry. Gerçek entry henüz
@@ -456,30 +435,7 @@ async def validate_input(hass: HomeAssistant, data: dict, connection_type: str) 
 
     coordinator = TuyaScaleDataUpdateCoordinator(hass, mock_config)
 
-    if connection_type == "cloud" and coordinator.auth_method == AUTH_METHOD_SHARING:
-        # Access ID/Key yok -- _get_token()/get_device_info()'nun eski
-        # imzalı-istek mantığı burada hiç çağrılamaz (access_id None
-        # olduğu için "unsupported operand type(s) for +=: 'NoneType'
-        # and 'str'" ile çöker, bkz. coordinator._calculate_sign).
-        # Bunun yerine sharing oturumunun GERÇEKTEN kurulabildiğini
-        # doğruluyoruz -- bu, get_device_model()'in kendi (başarısız
-        # olursa sessizce "default"a düşen) best-effort denemesinden
-        # FARKLI: burada başarısızlık CannotConnect olarak fırlatılmalı,
-        # yoksa kurulum, bağlanamayan bir cihazla sessizce tamamlanır.
-        try:
-            if coordinator.sharing_mqtt is None:
-                coordinator.sharing_mqtt = SharingMQTT(hass, coordinator)
-            if not await coordinator.sharing_mqtt.async_connect():
-                raise CannotConnect("Sharing oturumu kurulamadı")
-        except CannotConnect:
-            raise
-        except Exception as err:
-            _LOGGER.error("Sharing validation error: %s", err)
-            raise CannotConnect("Cannot connect via sharing session") from err
-
-        title = f"Tuya Heat Pump ({data[CONF_DEVICE_ID]})"
-
-    elif connection_type == "cloud":
+    if connection_type == "cloud":
         try:
             # Token ve device info almayı dene
             if not coordinator.access_token:
@@ -532,9 +488,6 @@ async def validate_input(hass: HomeAssistant, data: dict, connection_type: str) 
 class TuyaHeatpumpOptionsFlow(config_entries.OptionsFlow):
     """Handle options."""
 
-    _qr_login = None  # SharingQRLogin instance'ı — switch_to_sharing akışı için
-    _sharing_user_code = None
-
     def __init__(self, config_entry):
         """Initialize options flow."""
         self._config_entry = config_entry
@@ -546,84 +499,10 @@ class TuyaHeatpumpOptionsFlow(config_entries.OptionsFlow):
         card are independent sections now: editing one never touches or
         re-asks about the other (previously connection settings silently
         chained into climate questions every time, and saving local
-        connection details could wipe out already-saved climate options).
-
-        v3.0.0: Cloud + auth_method="access_key" kurulumlara (hem eski
-        hem yeni) bir üçüncü seçenek eklendi -- "QR'a geç": #111'de
-        konuşulan "mevcut cloud kurulumuna sonradan MQTT ekleme"
-        ihtiyacını da aynı anda çözüyor, çünkü sharing'e geçince MQTT
-        zaten otomatik gelir."""
-        menu_options = ["connection_options", "climate_options"]
-        auth_method = self._config_entry.data.get(CONF_AUTH_METHOD, AUTH_METHOD_ACCESS_KEY)
-        if auth_method == AUTH_METHOD_ACCESS_KEY and self.connection_type == "cloud":
-            menu_options.append("switch_to_sharing")
+        connection details could wipe out already-saved climate options)."""
         return self.async_show_menu(
             step_id="init",
-            menu_options=menu_options,
-        )
-
-    async def async_step_switch_to_sharing(self, user_input=None):
-        """Mevcut Cloud+Access-ID/Key kurulumunu auth_method="sharing"'e
-        çevirir -- device_id SABİT kalır (zaten biliniyor, yeniden
-        seçtirmeye gerek yok), sadece User Code + QR isteniyor."""
-        errors = {}
-        if user_input is not None:
-            self._sharing_user_code = user_input[CONF_USER_CODE]
-            return await self.async_step_switch_to_sharing_qr()
-
-        return self.async_show_form(
-            step_id="switch_to_sharing",
-            data_schema=vol.Schema({vol.Required(CONF_USER_CODE): str}),
-            errors=errors,
-        )
-
-    async def async_step_switch_to_sharing_qr(self, user_input=None):
-        """QR göster, onay bekle. Başarılıysa entry.data'yı auth_method=
-        sharing'e çevirip reload tetikler -- coordinator bir dahaki
-        kurulumda (zaten cached_model_id varsa model tespitini tekrar
-        yapmadan) _async_start_mqtt() üzerinden sharing oturumunu
-        kendisi kurar."""
-        errors = {}
-        if self._qr_login is None:
-            self._qr_login = SharingQRLogin(self.hass)
-
-        if user_input is not None:
-            success, token_info = await self._qr_login.async_check_login(
-                self._sharing_user_code
-            )
-            if success and token_info:
-                updated_data = {
-                    **self._config_entry.data,
-                    CONF_AUTH_METHOD: AUTH_METHOD_SHARING,
-                    CONF_USER_CODE: self._sharing_user_code,
-                    CONF_SHARING_TOKEN_INFO: token_info,
-                }
-                self.hass.config_entries.async_update_entry(
-                    self._config_entry, data=updated_data
-                )
-                # Sadece entry.data değişti, options aynı kalıyor --
-                # climate ayarları (varsa) dokunulmadan korunuyor.
-                return self.async_create_entry(title="", data=dict(self._config_entry.options))
-            errors["base"] = "qr_not_confirmed"
-
-        qr_response = await self._qr_login.async_request_qr(self._sharing_user_code)
-        if not qr_response.get("success"):
-            errors["base"] = "qr_request_failed"
-            schema = vol.Schema({})
-        else:
-            schema = vol.Schema(
-                {
-                    vol.Optional("qr"): selector.QrCodeSelector(
-                        config=selector.QrCodeSelectorConfig(
-                            data=self._qr_login.qr_token,
-                            scale=5,
-                            error_correction_level=selector.QrErrorCorrectionLevel.QUARTILE,
-                        )
-                    )
-                }
-            )
-        return self.async_show_form(
-            step_id="switch_to_sharing_qr", data_schema=schema, errors=errors
+            menu_options=["connection_options", "climate_options"],
         )
 
     async def async_step_connection_options(self, user_input=None):
@@ -785,35 +664,14 @@ class TuyaHeatpumpConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     _pending_climate_options = None
     _model_mapping = None  # validate_input'tan gelen, climate dropdown'ları için
 
-    # --- v3.0.0: "sharing" (User Code + QR, Access ID/Key'e gerek yok)
-    # kurulum akışı boyunca taşınan geçici durum. Bkz. async_step_setup_
-    # sharing ve devamındaki adımlar.
-    _sharing_user_code = None
-    _sharing_token_info = None
-    _sharing_manager = None  # tuya_sharing.Manager -- cihaz listesi için
-    _sharing_device_id = None
-    _sharing_local_key = None
-
     async def async_step_user(
         self, user_input: dict[str, any] | None = None
     ) -> FlowResult:
-        """İlk ekran: yeni, basit yol (sadece User Code + QR, Access
-        ID/Key'e hiç gerek yok) önce gösteriliyor -- kullanıcıyı buna
-        yönlendiriyoruz. Eski Access ID/Key yolu hâlâ burada, kaldırılmadı."""
-        return self.async_show_menu(
-            step_id="user",
-            menu_options=["setup_sharing", "setup_access_key"],
-        )
-
-    async def async_step_setup_access_key(
-        self, user_input: dict[str, any] | None = None
-    ) -> FlowResult:
-        """Eski yöntemin tamamı — eski async_step_user'ın içeriği,
-        davranışı hiç değişmedi."""
+        """Handle the initial step."""
         errors = {}
 
         if user_input is not None:
-            self.user_data = {**user_input, CONF_AUTH_METHOD: AUTH_METHOD_ACCESS_KEY}
+            self.user_data = user_input
             self.connection_type = user_input[CONF_CONNECTION_TYPE]
             if self.connection_type == "cloud":
                 return await self.async_step_cloud_options()
@@ -821,255 +679,8 @@ class TuyaHeatpumpConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return await self.async_step_local()
 
         return self.async_show_form(
-            step_id="setup_access_key", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
+            step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
         )
-
-    # ============================================================================
-    # v3.0.0: "sharing" kurulum akışı (sadece User Code + QR) — yeni, önerilen yol
-    # ============================================================================
-
-    async def async_step_setup_sharing(
-        self, user_input: dict[str, any] | None = None
-    ) -> FlowResult:
-        """User Code iste — QR'a geçmeden önceki ilk adım."""
-        errors = {}
-        if user_input is not None:
-            self._sharing_user_code = user_input[CONF_USER_CODE]
-            return await self.async_step_sharing_qr()
-
-        return self.async_show_form(
-            step_id="setup_sharing",
-            data_schema=vol.Schema({vol.Required(CONF_USER_CODE): str}),
-            errors=errors,
-        )
-
-    async def async_step_sharing_qr(
-        self, user_input: dict[str, any] | None = None
-    ) -> FlowResult:
-        """QR göster, onay bekle. Başarılıysa (async_step_cloud_qr'ın
-        aksine) doğrudan entry oluşturmaya geçmiyoruz -- önce bu hesabın
-        TÜM cihazlarını listeleyip kullanıcıya seçtiriyoruz (bkz.
-        async_step_sharing_device_pick)."""
-        errors = {}
-
-        if self._qr_login is None:
-            self._qr_login = SharingQRLogin(self.hass)
-
-        if user_input is not None:
-            success, token_info = await self._qr_login.async_check_login(
-                self._sharing_user_code
-            )
-            if success and token_info:
-                self._sharing_token_info = token_info
-                try:
-                    self._sharing_manager = await async_build_manager(
-                        self.hass, self._sharing_user_code, token_info
-                    )
-                except Exception:
-                    _LOGGER.exception("Sharing: Manager kurulamadı")
-                    errors["base"] = "unknown"
-                else:
-                    return await self.async_step_sharing_device_pick()
-            else:
-                errors["base"] = "qr_not_confirmed"
-
-        qr_response = await self._qr_login.async_request_qr(self._sharing_user_code)
-        if not qr_response.get("success"):
-            _LOGGER.warning("QR kod istegi basarisiz: %s", qr_response)
-            errors["base"] = "qr_request_failed"
-            schema = vol.Schema({})
-        else:
-            schema = vol.Schema(
-                {
-                    vol.Optional("qr"): selector.QrCodeSelector(
-                        config=selector.QrCodeSelectorConfig(
-                            data=self._qr_login.qr_token,
-                            scale=5,
-                            error_correction_level=selector.QrErrorCorrectionLevel.QUARTILE,
-                        )
-                    )
-                }
-            )
-
-        return self.async_show_form(
-            step_id="sharing_qr",
-            data_schema=schema,
-            errors=errors,
-        )
-
-    async def async_step_sharing_device_pick(
-        self, user_input: dict[str, any] | None = None
-    ) -> FlowResult:
-        """Hesaptaki TÜM cihazları listele (sadece ısı pompaları değil --
-        hangi cihazın ısı pompası olduğunu kategori adından biz
-        bilemeyiz, kullanıcı kendi seçsin)."""
-        errors = {}
-        devices = self._sharing_manager.device_map if self._sharing_manager else {}
-
-        if not devices:
-            return self.async_abort(reason="no_devices_found")
-
-        if user_input is not None:
-            device_id = user_input[CONF_DEVICE_ID]
-            device = devices.get(device_id)
-            if device is None:
-                errors["base"] = "unknown"
-            else:
-                self._sharing_device_id = device_id
-                self._sharing_local_key = getattr(device, "local_key", None)
-                return await self.async_step_sharing_connection_type()
-
-        options = [
-            selector.SelectOptionDict(
-                value=device_id,
-                label=f"{getattr(device, 'name', device_id)} ({getattr(device, 'category', '?')})",
-            )
-            for device_id, device in devices.items()
-        ]
-        schema = vol.Schema(
-            {
-                vol.Required(CONF_DEVICE_ID): selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=options, mode=selector.SelectSelectorMode.DROPDOWN
-                    )
-                )
-            }
-        )
-        return self.async_show_form(
-            step_id="sharing_device_pick", data_schema=schema, errors=errors
-        )
-
-    async def async_step_sharing_connection_type(
-        self, user_input: dict[str, any] | None = None
-    ) -> FlowResult:
-        """Local mi Cloud mu? Cloud ise bu AYNI oturum durum okuma/komut/
-        push için kullanılır (Access ID/Key yok); Local ise sadece
-        local_key (zaten elimizde) + IP (sıradaki adımda LAN taraması)
-        için kullanıldı, asıl kontrol tinytuya ile olacak."""
-        if user_input is not None:
-            self.connection_type = user_input[CONF_CONNECTION_TYPE]
-            if self.connection_type == "cloud":
-                return await self._finish_sharing_cloud()
-            return await self.async_step_sharing_local_ip()
-
-        schema = vol.Schema(
-            {
-                vol.Required(CONF_CONNECTION_TYPE, default="cloud"): selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=[
-                            selector.SelectOptionDict(
-                                value="cloud",
-                                label="Cloud (status/commands/push over this same session)",
-                            ),
-                            selector.SelectOptionDict(
-                                value="local",
-                                label="Local (direct LAN control — faster, no internet needed after setup)",
-                            ),
-                        ],
-                        mode=selector.SelectSelectorMode.DROPDOWN,
-                    )
-                )
-            }
-        )
-        return self.async_show_form(step_id="sharing_connection_type", data_schema=schema)
-
-    async def async_step_sharing_local_ip(
-        self, user_input: dict[str, any] | None = None
-    ) -> FlowResult:
-        """local_key zaten elimizde (sharing oturumundan) -- sadece IP
-        gerekiyor. Önce tinytuya'nın LAN broadcast taramasıyla otomatik
-        bulmayı deniyoruz (sharing oturumunun kendi `ip` alanı WAN/genel
-        IP, kullanılamaz -- canlı testte doğrulandı); bulunamazsa
-        kullanıcı elle giriyor."""
-        errors = {}
-
-        if user_input is not None:
-            full_data = {
-                CONF_DEVICE_ID: self._sharing_device_id,
-                CONF_AUTH_METHOD: AUTH_METHOD_SHARING,
-                CONF_CONNECTION_TYPE: "local",
-                CONF_IP: user_input[CONF_IP],
-                CONF_LOCAL_KEY: self._sharing_local_key,
-                CONF_PROTOCOL: user_input[CONF_PROTOCOL],
-                CONF_USER_CODE: self._sharing_user_code,
-                CONF_SHARING_TOKEN_INFO: self._sharing_token_info,
-            }
-            try:
-                info = await validate_input(self.hass, full_data, "local")
-                await self.async_set_unique_id(full_data[CONF_DEVICE_ID])
-                try:
-                    self._abort_if_unique_id_configured()
-                except Exception:
-                    return self.async_abort(reason="already_configured")
-
-                self._pending_entry_title = info["title"]
-                self._pending_entry_data = full_data
-                self._model_mapping = info.get("model_mapping") or {}
-                return await self.async_step_climate_options()
-            except CannotConnect:
-                errors["base"] = "cannot_connect"
-            except Exception:
-                _LOGGER.exception("Unexpected exception (sharing local)")
-                errors["base"] = "unknown"
-
-        scanned_ip = await self.hass.async_add_executor_job(
-            _scan_for_device_ip, self._sharing_device_id
-        )
-        ip_field = (
-            vol.Required(CONF_IP, default=scanned_ip)
-            if scanned_ip
-            else vol.Required(CONF_IP)
-        )
-        schema = vol.Schema(
-            {
-                ip_field: str,
-                vol.Required(CONF_PROTOCOL, default="3.4"): selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=PROTOCOL_OPTIONS,
-                        mode=selector.SelectSelectorMode.DROPDOWN,
-                    )
-                ),
-            }
-        )
-        return self.async_show_form(
-            step_id="sharing_local_ip",
-            data_schema=schema,
-            errors=errors,
-            description_placeholders={
-                "scan_result": scanned_ip or "not found automatically — please enter it manually"
-            },
-        )
-
-    async def _finish_sharing_cloud(self) -> FlowResult:
-        """Cloud yolunda IP/local_key'e hiç ihtiyaç yok -- doğrudan
-        validate_input'a geçiyoruz (aynı mock-coordinator mekanizması,
-        auth_method="sharing" sayesinde coordinator.get_device_model()
-        otomatik olarak doğru dalı seçiyor)."""
-        full_data = {
-            CONF_DEVICE_ID: self._sharing_device_id,
-            CONF_AUTH_METHOD: AUTH_METHOD_SHARING,
-            CONF_CONNECTION_TYPE: "cloud",
-            CONF_USER_CODE: self._sharing_user_code,
-            CONF_SHARING_TOKEN_INFO: self._sharing_token_info,
-            CONF_SCAN_INTERVAL: DEFAULT_SCAN_INTERVAL,
-        }
-        try:
-            info = await validate_input(self.hass, full_data, "cloud")
-            await self.async_set_unique_id(full_data[CONF_DEVICE_ID])
-            try:
-                self._abort_if_unique_id_configured()
-            except Exception:
-                return self.async_abort(reason="already_configured")
-
-            self._pending_entry_title = info["title"]
-            self._pending_entry_data = full_data
-            self._model_mapping = info.get("model_mapping") or {}
-            return await self.async_step_climate_options()
-        except CannotConnect:
-            return self.async_abort(reason="cannot_connect")
-        except Exception:
-            _LOGGER.exception("Unexpected exception (sharing cloud)")
-            return self.async_abort(reason="unknown")
 
     async def async_step_cloud_options(self, user_input=None) -> FlowResult:
         errors = {}
