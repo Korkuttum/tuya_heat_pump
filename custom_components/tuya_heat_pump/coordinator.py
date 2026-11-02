@@ -623,12 +623,12 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             self._mqtt_set_active(True)
         elif started:
             # MQTT bağlandı ama bu cihazın DP'lerinin bir kısmını/hiçbirini
-            # göremiyor (senin ısı pompan gibi — sadece 'switch' görünüyor).
-            # Poll'u KESİNLİKLE duraklatmıyoruz — aksi halde sensör gibi
-            # MQTT'de hiç görünmeyen değerler asla güncellenmez, sonsuza
-            # dek bayat kalır. Push burada sadece "bir şey oldu, hemen
-            # tazele" bonus tetikleyicisi olarak kullanılmaya devam eder
-            # (bkz. SharingMQTT._on_push / _mqtt_trigger_refresh),
+            # standart sette göremiyor. Poll'u KESİNLİKLE duraklatmıyoruz —
+            # aksi halde standart set dışı değerler asla periyodik olarak
+            # tazelenmez. Push gelen her DP'yi (standart set dışı olsa
+            # bile) koşulsuz uyguluyor, AYRICA "bir şey oldu, hemen
+            # tazele" bonus tetikleyicisi olarak da kullanılıyor (bkz.
+            # SharingMQTT._on_raw_message / _mqtt_trigger_refresh),
             # normal periyodik poll ise hiç değişmeden aynen sürer.
             _LOGGER.info(
                 "MQTT bağlandı ama bu cihazın DP'lerini tam kapsamıyor — "
@@ -661,17 +661,22 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
 
     def _mqtt_apply_push(self, new_data: dict) -> None:
         """sharing_mqtt.py'den (zaten event loop thread'ine güvenli
-        şekilde geçmiş olarak, call_soon_threadsafe ile) çağrılır — bu
-        cihaz için MQTT'nin TÜM gerekli DP'leri kapsadığı doğrulanmış
-        (SharingMQTT._sufficient), yani gelen veriye doğrudan güvenilir."""
+        şekilde geçmiş olarak, call_soon_threadsafe ile) çağrılır — gelen
+        her DP, "yeterli/yetersiz" ayrımına BAKILMAKSIZIN koşulsuz
+        uygulanır (bkz. sharing_mqtt.py._on_raw_message). "Yeterlilik"
+        sadece periyodik poll'u duraklatıp duraklatmama kararında
+        kullanılıyor — MQTT'nin gördüğü her DP, kapsama ne olursa olsun
+        doğru ve güvenilir bir anlık güncelleme."""
         merged = {**(self.data or {}), **new_data}
         self.async_set_updated_data(merged)
 
     async def _mqtt_trigger_refresh(self) -> None:
-        """sharing_mqtt.py'den çağrılır — bu cihaz için MQTT'nin
-        gördüğü DP kümesi YETERSİZ, o yüzden push'un İÇERİĞİNE hiç
-        bakmadan, sadece "bir şey değişti" sinyali olarak alıp tam bir
-        API sorgusu tetikliyoruz."""
+        """sharing_mqtt.py'den çağrılır — bu cihaz için MQTT'nin gördüğü
+        DP kümesi YETERSİZ (bkz. SharingMQTT.sufficient), o yüzden her
+        push'ta (_mqtt_apply_push'a EK olarak, onun yerine değil) "bir
+        şey değişti" sinyali olarak da alıp tam bir API sorgusu
+        tetikliyoruz — push'un hiç tanımadığımız/görmediğimiz DP'leri de
+        bu şekilde eninde sonunda periyodik pollün kapsamına giriyor."""
         await self.async_request_refresh()
 
     def _find_conversion_expr(self, code: str) -> str | None:

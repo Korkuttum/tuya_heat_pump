@@ -15,13 +15,37 @@ Nasıl çalışır (özet):
   2. Bağlantı kurulunca, cihazın Tuya'nın "Standard Instruction Set"i
      üzerinden gördüğü DP'ler (device.function/status_range) bizim
      model dosyamızın ihtiyaç duyduğu DP kümesiyle karşılaştırılır:
-       - Hepsi mevcutsa -> bu cihaz için periyodik poll DURAKLATILIR,
-         gelen push verisi doğrudan uygulanır.
-       - Bir tanesi bile eksikse -> periyodik poll AYNEN DEVAM EDER,
-         gelen push sadece "değişti, hemen tazele" tetikleyicisi
-         olarak kullanılır (içeriğine bakılmaz).
+       - Hepsi mevcutsa -> bu cihaz için periyodik poll DURAKLATILIR.
+       - Bir tanesi bile eksikse -> periyodik poll AYNEN DEVAM EDER.
+     Bu "yeterli/yetersiz" ayrımı SADECE poll'u duraklat/devam
+     kararında kullanılır — gelen push'un İÇERİĞİ her durumda,
+     koşulsuz olarak uygulanır (bkz. "ham mesaj" notu aşağıda);
+     yetersizse AYRICA "bir şey değişti, tam sorgu da at" tetikleyicisi
+     olarak kullanılır.
   3. MQTT bağlantısı koparsa, periyodik poll otomatik olarak eski
      haline döner — hiçbir zaman veri akışı tamamen kesilmez.
+
+ÖNEMLİ — ham mesaj dinleyicisi (issue #111): `manager.add_device_
+listener()` (SDK'nın kendi yüksek seviye API'si) KULLANILMIYOR, çünkü
+SDK'nın kendi `_on_device_report()`'u, cihaz `support_local=True` ise
+gelen DP'yi `device.local_strategy`'de YOKSA sessizce atlıyor — bazı
+cihazlarda (örn. #111'de bildirilen e1k5wjuc modeli) bu, Tuya'nın
+"Standard Instruction Set"i dışındaki (üreticiye özel) DP'lerin HİÇBİRİNİN
+görülmemesine, dolayısıyla `update_device()`'in HİÇ tetiklenmemesine
+(push'un tamamen etkisiz kalmasına, sadece periyodik poll'un çalışmasına)
+yol açıyordu. Bunun yerine `manager.mq.add_message_listener()` ile
+İKİNCİ, ham bir dinleyici ekleniyor — bu, SDK'nın kendi filtrelemesini
+BYPASS ediyor, ham `{dpId veya code, value}` çiftlerini doğrudan görüyoruz.
+dpId -> code çözümü `coordinator.dp_mapping` (model dosyasının kendi
+tanımladığı, local moddaki _process_local_dps() ile AYNI eşleme)
+üzerinden yapılıyor. `support_local=False` cihazlarda zaten SDK sunucu
+tarafında çözülmüş `code` ile geliyor (filtre hiç devreye girmiyor); bu
+yüzden dinleyicimiz HER İKİ şekli de (`dpId` VE doğrudan `code`) işliyor.
+
+refresh_mq() her çağrıldığında `manager.mq` nesnesini BAŞTAN kuruyor (eski
+mq.stop() edilip atılıyor) — yani her reconnect'te ham dinleyiciyi de
+YENİDEN kaydetmek gerekiyor, yoksa sessizce düşer. _register_raw_listener()
+bu yüzden her refresh_mq() çağrısından sonra ayrıca çağrılıyor.
 
 Bu dosyadaki hiçbir şey, CONF_USER_CODE config_entry.data'da
 tanımlanmadığı sürece devreye girmez — yani mevcut kurulumların
@@ -38,6 +62,8 @@ from homeassistant.core import HomeAssistant
 from .const import DOMAIN, TUYA_SHARING_CLIENT_ID, TUYA_SHARING_SCHEMA
 
 _LOGGER = logging.getLogger(__name__)
+
+PROTOCOL_DEVICE_REPORT = 4
 
 
 def _unwrap_login_result(result: Any) -> tuple[bool, dict | None]:
@@ -213,7 +239,6 @@ class SharingMQTT:
         ir.async_delete_issue(self._hass, DOMAIN, ISSUE_ID_TOKEN_INVALID)
 
         try:
-            listener = _PushDeviceListener(self)
             token_listener = _PersistTokenListener(self._hass, self._coordinator)
 
             def _build_manager():
@@ -227,7 +252,6 @@ class SharingMQTT:
                 )
 
             self._manager = await self._hass.async_add_executor_job(_build_manager)
-            self._manager.add_device_listener(listener)
 
             await self._hass.async_add_executor_job(self._manager.update_device_cache)
 
@@ -251,6 +275,7 @@ class SharingMQTT:
                     pass
 
             await self._hass.async_add_executor_job(self._manager.refresh_mq)
+            self._register_raw_listener()
             await asyncio.sleep(3)
 
             # Yeterlilik kontrolünü BURAYA (refresh_mq + bekleme sonrasına)
@@ -311,6 +336,7 @@ class SharingMQTT:
                 _LOGGER.info("MQTT: bir kez yeniden bağlanma deneniyor...")
                 try:
                     await self._hass.async_add_executor_job(self._manager.refresh_mq)
+                    self._register_raw_listener()
                     await asyncio.sleep(3)
                     mq = getattr(self._manager, "mq", None)
                     client = getattr(mq, "client", None) if mq else None
@@ -333,51 +359,72 @@ class SharingMQTT:
             except Exception:
                 pass
 
-    def _on_push(self, device, updated_status_properties: list[str]) -> None:
-        """tuya_sharing'in ARKA PLAN THREAD'İNDEN çağrılıyor — HA event
-        loop'una güvenli geçiş şart (call_soon_threadsafe /
-        run_coroutine_threadsafe kullanmadan coordinator'a dokunmak
-        thread-safety ihlali olur)."""
-        if device.id != self._coordinator.device_id:
-            return  # Manager tum hesabi dinliyor, bizi ilgilendirmeyen cihaz
+    def _register_raw_listener(self) -> None:
+        """manager.mq.add_message_listener() ile ham dinleyiciyi kaydeder.
+        refresh_mq() HER çağrıldığında manager.mq'yu baştan kurduğu için
+        (eski mq.stop() edilip atılıyor), bu her refresh_mq() çağrısından
+        SONRA tekrar çağrılmalı — yoksa reconnect sonrası dinleyici
+        sessizce düşer."""
+        mq = getattr(self._manager, "mq", None)
+        if mq is not None:
+            mq.add_message_listener(self._on_raw_message)
 
-        if self._sufficient:
-            new_data = {
-                code: {"value": device.status[code]}
-                for code in updated_status_properties
-                if code in device.status
-            }
+    def _on_raw_message(self, msg: dict) -> None:
+        """manager.mq'ya ham dinleyici olarak eklenen fonksiyon (bkz.
+        modül docstring'indeki "ham mesaj dinleyicisi" notu, issue #111)
+        — tuya_sharing'in arka plan MQTT thread'inden çağrılıyor, HA
+        event loop'una güvenli geçiş şart (call_soon_threadsafe /
+        run_coroutine_threadsafe kullanmadan coordinator'a dokunmak
+        thread-safety ihlali olur).
+
+        SDK'nın kendi filtrelemesini (local_strategy dpId kontrolü)
+        BYPASS ediyoruz — bu yüzden gelen item iki şekilden birinde
+        olabilir (bkz. tuya_sharing/manager.py _on_device_report):
+          - support_local=True cihaz: {"dpId": int, "value": ...} —
+            dpId'yi coordinator.dp_mapping üzerinden code'a çözüyoruz
+            (model dosyasının kendi eşlemesi, local moddakiyle AYNI
+            kaynak — bulut thing model'ine hiç ihtiyaç yok).
+          - support_local=False cihaz: {"code": str, "value": ...} —
+            zaten sunucu tarafında çözülmüş, dpId hiç yok.
+        İçerik HER ZAMAN koşulsuz uygulanır — "yeterli/yetersiz" ayrımı
+        sadece periyodik poll'u duraklat/devam kararında kullanılıyor,
+        push'un içeriğine güvenip güvenmeme kararında DEĞİL."""
+        try:
+            if msg.get("protocol") != PROTOCOL_DEVICE_REPORT:
+                return
+            data = msg.get("data", {}) or {}
+            if data.get("devId") != self._coordinator.device_id:
+                return
+
+            dp_mapping = getattr(self._coordinator, "dp_mapping", None) or {}
+            new_data: dict[str, Any] = {}
+            for item in data.get("status", []) or []:
+                if "value" not in item:
+                    continue
+                code = item.get("code")
+                if code is None:
+                    dp_id = item.get("dpId")
+                    if dp_id is None:
+                        continue
+                    code = dp_mapping.get(dp_id)
+                    if code is None:
+                        continue
+                new_data[code] = {"value": item["value"]}
+
             if new_data:
                 self._hass.loop.call_soon_threadsafe(
                     self._coordinator._mqtt_apply_push, new_data
                 )
-        else:
-            asyncio.run_coroutine_threadsafe(
-                self._coordinator._mqtt_trigger_refresh(), self._hass.loop
-            )
-
-
-class _PushDeviceListener:
-    """tuya_sharing.SharingDeviceListener'ı burada import etmek yerine
-    (modül yükleme sırasına bağımlılık oluşmasın diye) async_start()
-    içinde dinamik import ediyoruz — bu sınıf onun somut halini
-    çalışma zamanında oluşturuyor."""
-
-    def __new__(cls, owner: "SharingMQTT"):
-        from tuya_sharing import SharingDeviceListener
-
-        class _Impl(SharingDeviceListener):
-            def update_device(self, device, updated_status_properties=None, dp_timestamps=None) -> None:
-                if updated_status_properties:
-                    owner._on_push(device, updated_status_properties)
-
-            def add_device(self, device) -> None:
-                pass
-
-            def remove_device(self, device_id: str) -> None:
-                pass
-
-        return _Impl()
+            if not self._sufficient:
+                # Yetersiz kapsamada push, İÇERİĞİNE bakılmaksızın ayrıca
+                # "bir şey değişti, tam bir sorgu tetikle" sinyali olarak
+                # da kullanılıyor — new_data boş olsa (örn. tamamen
+                # tanınmayan bir DP) bile.
+                asyncio.run_coroutine_threadsafe(
+                    self._coordinator._mqtt_trigger_refresh(), self._hass.loop
+                )
+        except Exception as err:
+            _LOGGER.debug("MQTT ham mesaj işlenirken hata: %s", err)
 
 
 class _PersistTokenListener:
