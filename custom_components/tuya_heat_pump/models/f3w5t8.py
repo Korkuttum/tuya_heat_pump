@@ -134,6 +134,29 @@ BINARY_SENSOR_TYPES = {
         "device_class": "problem",
         "conversion": "value != 0",
     },
+    # Producing Hot Water (dp 102, status_parameter_group_2 field 5) --
+    # issue #110 (@Markus8510). Identified from a 24-minute continuous
+    # raw_explorer.py recording (473 polls, ~3s apart) covering a live
+    # DHW-to-heating transition: this field changed EXACTLY ONCE in the
+    # whole recording, 1 -> 0, at the same moment (within ~3s) that
+    # tank-top (DHW) temperature stopped rising and tank-middle (heating)
+    # temperature started climbing. It also matches two independent
+    # reference snapshots taken a week earlier and labelled by hand:
+    # 1 while the device was confirmed making hot water, 0 while
+    # confirmed heating. A second field (dp 140 / parameter_group_23
+    # field 6: 0 -> 100 at the same transition, also matching both
+    # labelled snapshots) independently corroborates this but isn't
+    # exposed separately to avoid a redundant entity.
+    "producing_hot_water": {
+        "dp_id": 102,
+        "code": "producing_hot_water",
+        "raw_source": "status_parameter_group_2",
+        "field_index": 5,
+        "encoding": "int32_be",
+        "name": "Producing Hot Water",
+        "icon": "mdi:water-thermometer",
+        "conversion": "value == 1",
+    },
 }
 
 # ====================================================
