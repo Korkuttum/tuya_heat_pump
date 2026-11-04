@@ -129,6 +129,10 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         self._listener_task = None
         self._heartbeat_task = None
         self._fallback_poll_task = None
+        # MQTT "yetersiz" cihazlarda her ham push'un ayrı bir Cloud API
+        # çağrısına dönüşmesini (bkz. _mqtt_trigger_refresh) kullanıcının
+        # kendi poll süresiyle sınırlamak için son tetikleme zamanı.
+        self._last_mqtt_trigger_refresh = 0.0
         # Debounce için (local)
         self._pending_commands = {}  # code → (value, task)
         self._debounce_delay = 1.0   # 1 saniye
@@ -676,7 +680,21 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         push'ta (_mqtt_apply_push'a EK olarak, onun yerine değil) "bir
         şey değişti" sinyali olarak da alıp tam bir API sorgusu
         tetikliyoruz — push'un hiç tanımadığımız/görmediğimiz DP'leri de
-        bu şekilde eninde sonunda periyodik pollün kapsamına giriyor."""
+        bu şekilde eninde sonunda periyodik pollün kapsamına giriyor.
+
+        Debounce: kullanıcının kendi ayarladığı poll süresinden
+        (self.update_interval) daha sık tetiklenmez. Standart-dışı
+        DP'lerini sık güncelleyen cihazlarda her ham push'un ayrı bir
+        Cloud API çağrısına dönüşmesi, kullanıcının aylık API kotasını
+        hızla eritebiliyordu — bu, push'un İÇERİĞİNİ uygulamayı
+        (_mqtt_apply_push, her zaman koşulsuz çalışır) etkilemiyor,
+        sadece bu EKSTRA tam-sorguyu kullanıcının zaten beklediği
+        sıklıkla sınırlıyor."""
+        interval = self.update_interval.total_seconds() if self.update_interval else 60.0
+        now = time.monotonic()
+        if now - self._last_mqtt_trigger_refresh < interval:
+            return
+        self._last_mqtt_trigger_refresh = now
         await self.async_request_refresh()
 
     def _find_conversion_expr(self, code: str) -> str | None:
