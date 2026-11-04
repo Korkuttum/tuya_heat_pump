@@ -17,6 +17,8 @@ PLATFORMS = [
 ]
 
 DEFAULT_SCAN_INTERVAL = 3
+# MQTT aktifken (cloud + tuya_sharing) guvenlik amacli seyrek poll araligi (dk).
+MQTT_SAFETY_POLL_MINUTES = 30
 CONF_SCAN_INTERVAL = "scan_interval"
 
 # Configuration

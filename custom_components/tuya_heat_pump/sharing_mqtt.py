@@ -287,13 +287,15 @@ class SharingMQTT:
             # tekrar çekiyoruz, ihtimal dahilinde daha guncel bir
             # snapshot icin.
             device = self._manager.device_map.get(self._coordinator.device_id) or device
-            self._sufficient = _device_covers_codes(
-                device, _collect_required_codes(self._coordinator.model_mapping)
-            )
+            # Ham dinleyici dpId'yi model dp_mapping ile kodladığı için
+            # standart talimat setine (device.function/status_range)
+            # bakmaya gerek yok: model dp_mapping doluysa push yeterli
+            # sayılır ve sık poll yerine seyrek güvenlik poll'u kullanılır.
+            self._sufficient = bool(getattr(self._coordinator, "dp_mapping", None))
             _LOGGER.info(
                 "MQTT: cihaz %s için DP kapsama durumu: %s",
                 self._coordinator.device_id,
-                "yeterli (poll duraklatılacak)" if self._sufficient else "yetersiz (poll devam edecek, push sadece tetikleyici)",
+                "yeterli (sık poll kapatılacak, seyrek güvenlik poll'u)" if self._sufficient else "yetersiz (dp_mapping boş, poll devam edecek)",
             )
 
             mq = getattr(self._manager, "mq", None)
@@ -310,19 +312,42 @@ class SharingMQTT:
             _LOGGER.warning("MQTT başlatılamadı (%s). Periyodik poll ile devam.", err)
             return False
 
+    @staticmethod
+    def _client_is_connected(mq) -> bool:
+        client = getattr(mq, "client", None) if mq else None
+        return bool(client and getattr(client, "is_connected", lambda: False)())
+
     async def _health_check_loop(self) -> None:
-        """Hafif, seyrek bir bağlantı kontrolü — agresif değil (bugün
-        local modda öğrendiğimiz dersle tutarlı: sık kontrol gereksiz
-        yük). Kopma tespit edilirse BİR KEZ yeniden bağlanmayı dener,
-        olmazsa pes edip coordinator'a "MQTT yok" der."""
+        """Hafif bir bağlantı kontrolü (yalnızca yerel bir bayrak okur,
+        ağ trafiği yaratmaz) — 60 sn'de bir.
+
+        - Bağlantı koptuysa: sık poll'u hemen geri açar (coordinator).
+        - Yeniden bağlanmayı GERİ ÇEKİLMELİ aralıklarla (1, 2, 5, sonra
+          her 10 dk) SÜRESİZ dener — eskiden tek deneme yapıp pes
+          ediyordu ve HA restart'a kadar MQTT bir daha hiç dönmüyordu.
+        - Bağlantı (SDK'nın kendi otomatik yeniden bağlanmasıyla)
+          kendiliğinden geri gelirse bunu fark edip güvenlik poll'una
+          döner ve kopukluk sırasında kaçan değişiklikler için bir
+          kerelik refresh yapar.
+        """
+        backoff = (60, 120, 300, 600)
+        failures = 0
+        next_retry_at = 0.0
+        loop = asyncio.get_running_loop()
         while True:
-            await asyncio.sleep(300)  # 5 dakikada bir kontrol
+            await asyncio.sleep(60)
             mq = getattr(self._manager, "mq", None)
-            client = getattr(mq, "client", None) if mq else None
-            is_connected = bool(client and getattr(client, "is_connected", lambda: False)())
+            is_connected = self._client_is_connected(mq)
 
             if is_connected:
-                self._reconnect_attempted = False
+                failures = 0
+                if not self._connected:
+                    self._connected = True
+                    _LOGGER.info("MQTT: bağlantı geri geldi.")
+                    if self._sufficient:
+                        self._coordinator._mqtt_set_active(True)
+                    # Kopukluk sırasında kaçan değişiklikler için bir kez tazele.
+                    self._hass.async_create_task(self._coordinator.async_request_refresh())
                 continue
 
             if self._connected:
@@ -330,27 +355,34 @@ class SharingMQTT:
                 self._connected = False
                 if self._sufficient:
                     self._coordinator._mqtt_set_active(False)
+                next_retry_at = 0.0
 
-            if not self._reconnect_attempted:
-                self._reconnect_attempted = True
-                _LOGGER.info("MQTT: bir kez yeniden bağlanma deneniyor...")
-                try:
-                    await self._hass.async_add_executor_job(self._manager.refresh_mq)
-                    self._register_raw_listener()
-                    await asyncio.sleep(3)
-                    mq = getattr(self._manager, "mq", None)
-                    client = getattr(mq, "client", None) if mq else None
-                    if client:
-                        self._connected = True
-                        if self._sufficient:
-                            self._coordinator._mqtt_set_active(True)
-                        _LOGGER.info("MQTT: yeniden bağlanma başarılı.")
-                except Exception as err:
-                    _LOGGER.warning("MQTT: yeniden bağlanma denemesi başarısız (%s).", err)
+            now = loop.time()
+            if now < next_retry_at:
+                continue
+
+            _LOGGER.info("MQTT: yeniden bağlanma deneniyor (deneme %d)...", failures + 1)
+            try:
+                await self._hass.async_add_executor_job(self._manager.refresh_mq)
+                self._register_raw_listener()
+                await asyncio.sleep(5)
+                if self._client_is_connected(getattr(self._manager, "mq", None)):
+                    failures = 0
+                    self._connected = True
+                    if self._sufficient:
+                        self._coordinator._mqtt_set_active(True)
+                    self._hass.async_create_task(self._coordinator.async_request_refresh())
+                    _LOGGER.info("MQTT: yeniden bağlanma başarılı.")
+                    continue
+            except Exception as err:
+                _LOGGER.warning("MQTT: yeniden bağlanma denemesi başarısız (%s).", err)
+            failures += 1
+            next_retry_at = loop.time() + backoff[min(failures - 1, len(backoff) - 1)]
 
     async def async_stop(self) -> None:
         if self._health_check_task:
             self._health_check_task.cancel()
+        self._coordinator._mqtt_cancel_safety_poll()
         mq = getattr(self._manager, "mq", None) if self._manager else None
         stop = getattr(mq, "stop", None) if mq else None
         if callable(stop):

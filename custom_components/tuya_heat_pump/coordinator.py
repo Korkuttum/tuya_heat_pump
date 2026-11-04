@@ -9,6 +9,8 @@ import json
 import asyncio
 import threading
 from datetime import datetime, timedelta
+
+from homeassistant.helpers.event import async_track_time_interval
 from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import (
@@ -21,6 +23,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from .const import (
     DOMAIN,
     DEFAULT_SCAN_INTERVAL,
+    MQTT_SAFETY_POLL_MINUTES,
     CONF_SCAN_INTERVAL,
     REGIONS,
     TOKEN_PATH,
@@ -104,6 +107,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         # duraklatılan periyodik poll'un eski değerini saklamak için.
         self.sharing_mqtt = None
         self._pre_mqtt_update_interval = None
+        self._mqtt_safety_unsub = None
         # entry.data'ya sadece token/cache yazmak için async_update_entry
         # çağrıldığında (örn. sharing_mqtt.py'nin token yenilemesi ~2
         # saatte bir), __init__.py'deki add_update_listener bunu gerçek
@@ -623,21 +627,16 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         self.sharing_mqtt = SharingMQTT(self.hass, self)
         started = await self.sharing_mqtt.async_start()
         if started and self.sharing_mqtt.sufficient:
-            # MQTT bu cihazın TÜM DP'lerini görebiliyor -> poll'a gerek yok.
+            # MQTT ham dinleyicisi (dpId -> model dp_mapping) bu cihazın
+            # TÜM DP'lerini görebiliyor -> sık poll'a gerek yok; sadece
+            # seyrek bir güvenlik poll'u kalır (bkz. _mqtt_set_active).
             self._mqtt_set_active(True)
         elif started:
-            # MQTT bağlandı ama bu cihazın DP'lerinin bir kısmını/hiçbirini
-            # standart sette göremiyor. Poll'u KESİNLİKLE duraklatmıyoruz —
-            # aksi halde standart set dışı değerler asla periyodik olarak
-            # tazelenmez. Push gelen her DP'yi (standart set dışı olsa
-            # bile) koşulsuz uyguluyor, AYRICA "bir şey oldu, hemen
-            # tazele" bonus tetikleyicisi olarak da kullanılıyor (bkz.
-            # SharingMQTT._on_raw_message / _mqtt_trigger_refresh),
-            # normal periyodik poll ise hiç değişmeden aynen sürer.
+            # Model dp_mapping boş: ham push'ları kodlayamıyoruz, o yüzden
+            # periyodik poll normal sıklıkta sürer.
             _LOGGER.info(
-                "MQTT bağlandı ama bu cihazın DP'lerini tam kapsamıyor — "
-                "periyodik poll (%s) duraklatılmadan devam ediyor, "
-                "push sadece ek tetikleyici olarak kullanılacak.",
+                "MQTT bağlandı ama model dp_mapping boş — periyodik poll (%s) "
+                "normal şekilde devam ediyor.",
                 self.update_interval,
             )
         else:
@@ -647,21 +646,48 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             )
 
     def _mqtt_set_active(self, active: bool) -> None:
-        """MQTT bağlantısı sağlıklıyken (active=True) periyodik poll'u
-        duraklatır; koparsa (active=False) eski haline döndürüp bir
-        kerelik anlık yenileme tetikler. sharing_mqtt.py'nin hem
-        ilk bağlantı kurulumunda hem de kopma/yeniden bağlanma sağlık
-        kontrolünde çağırdığı tek yer burası."""
+        """MQTT bağlantısı sağlıklıyken (active=True) sık periyodik
+        poll'u kapatıp yerine SEYREK bir güvenlik poll'u koyar; koparsa
+        (active=False) eski haline döndürüp bir kerelik anlık yenileme
+        tetikler. sharing_mqtt.py'nin hem ilk bağlantı kurulumunda hem de
+        kopma/yeniden bağlanma sağlık kontrolünde çağırdığı tek yer burası.
+
+        Güvenlik poll'u update_interval'e DEĞİL ayrı bir zamanlayıcıya
+        bağlı: async_set_updated_data() (her MQTT push'unda çağrılıyor)
+        HA'nın planlı sonraki poll'unu her seferinde sıfırlıyor; ölçümler
+        saniyede bir geldiğinden update_interval tabanlı bir poll hiç
+        tetiklenmezdi. Başlangıç değerleri (ayar DP'leri) MQTT'den
+        gelmediği için ilk refresh zaten restart'ta yapılıyor."""
+        self._mqtt_cancel_safety_poll()
+
         if active:
             if self._pre_mqtt_update_interval is None:
                 self._pre_mqtt_update_interval = self.update_interval
+            # Kullanıcı daha seyrek bir aralık seçtiyse onu aşağı çekme.
+            safety = timedelta(minutes=MQTT_SAFETY_POLL_MINUTES)
+            if self._pre_mqtt_update_interval and self._pre_mqtt_update_interval > safety:
+                safety = self._pre_mqtt_update_interval
             self.update_interval = None
-            _LOGGER.info("MQTT aktif — periyodik poll duraklatıldı.")
+
+            async def _safety_poll(_now) -> None:
+                await self.async_request_refresh()
+
+            self._mqtt_safety_unsub = async_track_time_interval(
+                self.hass, _safety_poll, safety
+            )
+            _LOGGER.info(
+                "MQTT aktif — sık periyodik poll kapatıldı, güvenlik poll'u %s.", safety
+            )
         else:
             if self._pre_mqtt_update_interval is not None:
                 self.update_interval = self._pre_mqtt_update_interval
             _LOGGER.info("MQTT pasif — periyodik poll (%s) devam ediyor.", self.update_interval)
             self.hass.async_create_task(self.async_request_refresh())
+
+    def _mqtt_cancel_safety_poll(self) -> None:
+        if self._mqtt_safety_unsub is not None:
+            self._mqtt_safety_unsub()
+            self._mqtt_safety_unsub = None
 
     def _mqtt_apply_push(self, new_data: dict) -> None:
         """sharing_mqtt.py'den (zaten event loop thread'ine güvenli
