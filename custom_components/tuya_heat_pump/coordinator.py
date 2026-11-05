@@ -11,6 +11,8 @@ import threading
 from datetime import datetime, timedelta
 
 from homeassistant.helpers.event import async_track_time_interval
+
+from .online_tracker import OnlineTracker
 from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import (
@@ -24,6 +26,7 @@ from .const import (
     DOMAIN,
     DEFAULT_SCAN_INTERVAL,
     MQTT_SAFETY_POLL_MINUTES,
+    CONF_OFFLINE_TIMEOUT,
     CONF_SCAN_INTERVAL,
     REGIONS,
     TOKEN_PATH,
@@ -97,6 +100,16 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         self.device_name = DEFAULT_NAME
         self.is_online = True
         self._previous_online = True
+        # Cloud/MQTT/local "son görülme" takibi ve online kararı (bkz.
+        # online_tracker.py). Tuya'nın kendi `online` bilgisine güvenilmez.
+        self.online = OnlineTracker(
+            override_minutes=config_entry.options.get(CONF_OFFLINE_TIMEOUT, 0),
+            poll_interval_s=scan_interval.total_seconds() if scan_interval else 180,
+        )
+        # Cloud API'ye ulaşılabiliyor mu? (Ulaşılamamak cihazın OFFLINE
+        # olduğu anlamına gelmez: kota dolması, internet kesintisi vb.)
+        self.cloud_reachable = True
+        self._online_timer_unsub = None
         self.model_id = None
         self.model_mapping = None
         self.dp_mapping = {}
@@ -537,6 +550,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 data = await self.hass.async_add_executor_job(self._local_receive)
                 if data and 'dps' in data:
                     _LOGGER.debug("Instant update received: %s", data['dps'])
+                    self.online.note_local(time.time())
                     new_data = self._process_local_dps(data['dps'])
                     if new_data:
                         self._apply_sent_cache(new_data)
@@ -688,6 +702,65 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         if self._mqtt_safety_unsub is not None:
             self._mqtt_safety_unsub()
             self._mqtt_safety_unsub = None
+
+    # ------------------------------------------------------------------
+    # Online takibi (cloud / MQTT) — bkz. online_tracker.py
+    # ------------------------------------------------------------------
+
+    def _refresh_online_state(self) -> None:
+        """Tracker'ın kararını is_online'a yansıtır; değiştiyse sensörleri
+        hemen günceller. Local modda is_online kendi yolundan yönetilir."""
+        if self.connection_type != "cloud":
+            return
+        now = time.time()
+        online = self.online.is_online(now)
+        if online is None or online == self.is_online:
+            return
+        self.is_online = online
+        self._previous_online = online
+        _LOGGER.info(
+            "Online status değişti: %s (silence %s min, timeout %s min)",
+            "ONLINE" if online else "OFFLINE",
+            int((self.online.silence_s(now) or 0) // 60),
+            int(self.online.timeout_s() // 60),
+        )
+        self.async_update_listeners()
+
+    def _start_online_timer(self) -> None:
+        """Dakikada bir online durumunu yeniden değerlendirir: MQTT modunda
+        poll çok seyrek, süre dolsa bile durum bu olmadan değişmezdi."""
+        if self._online_timer_unsub is not None or self.connection_type != "cloud":
+            return
+        on_unload = getattr(self.config_entry, "async_on_unload", None)
+        if on_unload is None:
+            # config_flow doğrulaması gerçek bir entry yerine vekil nesne veriyor
+            return
+        self._online_timer_unsub = async_track_time_interval(
+            self.hass, self._online_tick, timedelta(seconds=60)
+        )
+        on_unload(self._cancel_online_timer)
+
+    def _cancel_online_timer(self) -> None:
+        if self._online_timer_unsub is not None:
+            self._online_timer_unsub()
+            self._online_timer_unsub = None
+
+    async def _online_tick(self, _now) -> None:
+        self._refresh_online_state()
+        sm = self.sharing_mqtt
+        if sm is not None and sm.connected and self.online.should_verify(time.time()):
+            # Konuşkan bir cihaz beklenmedik şekilde sustu: MQTT akışı mı
+            # bozuk, cihaz mı gitti? Tek bir bulut sorgusu bunu netleştirir
+            # (bulutta yeni DP zamanı varsa cihaz yaşıyor demektir).
+            self.online.mark_verified(time.time())
+            _LOGGER.info("Chatty device went silent — running one verification poll.")
+            await self.async_request_refresh()
+
+    def _mqtt_note_message(self, last_ts, count) -> None:
+        """sharing_mqtt.py'den (event loop thread'inde): bu cihazdan bir MQTT
+        mesajı geldi. last_ts: cihazın raporlama zamanı (ms) ya da None."""
+        self.online.note_message(last_ts, time.time(), count)
+        self._refresh_online_state()
 
     def _mqtt_apply_push(self, new_data: dict) -> None:
         """sharing_mqtt.py'den (zaten event loop thread'ine güvenli
@@ -1326,8 +1399,8 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     return await self._async_update_data()
                
                 if response.status_code != 200:
-                    self.is_online = False
-                    _LOGGER.info("Online status değişti: OFFLINE (HTTP %s)", response.status_code)
+                    self.cloud_reachable = False
+                    _LOGGER.info("Cloud API unreachable (HTTP %s) — device online status unchanged", response.status_code)
                     self.async_update_listeners()
                     raise UpdateFailed(f"HTTP error {response.status_code}")
                
@@ -1338,35 +1411,26 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                         self.access_token = None
                         self._token_expires_at = 0.0
                         return await self._async_update_data()
-                    self.is_online = False
-                    _LOGGER.info("Online status değişti: OFFLINE (API error: %s)", msg)
+                    self.cloud_reachable = False
+                    _LOGGER.info("Cloud API error (%s) — device online status unchanged", msg)
                     self.async_update_listeners()
                     raise UpdateFailed(f"API error: {msg}")
                
                 current_time = int(time.time() * 1000)
                 properties = result.get('result', {}).get('properties', [])
                
+                # Online kararı artık "son görülme" zamanından türetiliyor
+                # (bkz. online_tracker.py): bulut poll'u, cihazın her DP'yi en
+                # son raporladığı zamanı veriyor. Tuya'nın kendi `online`
+                # alanına güvenilmez. Bulut hatası cihazı OFFLINE yapmaz.
+                self.cloud_reachable = True
                 if properties:
                     latest_timestamp = max(prop.get('time', 0) for prop in properties)
-                    time_diff = current_time - latest_timestamp
-                   
-                    scan_interval_ms = self.update_interval.total_seconds() * 1000 if self.update_interval else 180000
-                    tolerance_ms = scan_interval_ms + (60 * 1000)  # +1 dakika
-                   
-                    if time_diff > tolerance_ms:
-                        self.is_online = False
-                        _LOGGER.info("Device OFFLINE - data %s seconds old", time_diff // 1000)
-                    else:
-                        self.is_online = True
-                        _LOGGER.debug("Device ONLINE - fresh data (%s seconds old)", time_diff // 1000)
+                    self.online.note_cloud(latest_timestamp, time.time())
                 else:
-                    self.is_online = False
-                    _LOGGER.info("Device OFFLINE - no properties")
-               
-                if self._previous_online != self.is_online:
-                    _LOGGER.info("Online status değişti: %s", "ONLINE" if self.is_online else "OFFLINE")
-                    self._previous_online = self.is_online
-               
+                    _LOGGER.info("Cloud returned no properties — online status unchanged")
+                self._refresh_online_state()
+                self._start_online_timer()
                 self.async_update_listeners()
                
                 data = {}
@@ -1389,10 +1453,8 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 return data
                
             except Exception as err:
-                self.is_online = False
-                if self._previous_online != self.is_online:
-                    _LOGGER.info("Online status değişti: OFFLINE (exception: %s)", err)
-                    self._previous_online = self.is_online
+                self.cloud_reachable = False
+                _LOGGER.info("Cloud request failed (%s) — device online status unchanged", err)
                 self.async_update_listeners()
                 raise UpdateFailed(f"Error: {str(err)}")
       
@@ -1425,6 +1487,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                         self.async_update_listeners()
                         raise UpdateFailed("No 'dps' in local status response after retry")
               
+                self.online.note_local(time.time())
                 self.is_online = True
                 if self._previous_online != self.is_online:
                     _LOGGER.info("Online status değişti: ONLINE")

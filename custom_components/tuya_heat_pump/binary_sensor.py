@@ -1,6 +1,7 @@
 """Binary sensor platform for Tuya Heatpump."""
 from __future__ import annotations
 import logging
+import time
 from typing import Any
 
 from homeassistant.components.binary_sensor import BinarySensorEntity
@@ -93,6 +94,24 @@ class TuyaHeatpumpOnlineSensor(BinarySensorEntity):
         """Return if entity is available."""
         # Online sensörü her zaman available olmalı
         return True
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Why the sensor shows what it shows (bkz. online_tracker.py)."""
+        coordinator = self.coordinator
+        attrs: dict[str, Any] = {
+            "connection": coordinator.connection_type,
+            "cloud_reachable": coordinator.cloud_reachable,
+        }
+        mqtt = getattr(coordinator, "sharing_mqtt", None)
+        if mqtt is not None:
+            attrs["mqtt_connected"] = bool(mqtt.connected)
+        tracked = coordinator.online.attributes(time.time())
+        if coordinator.connection_type != "cloud":
+            tracked.pop("offline_timeout_minutes", None)
+            tracked.pop("chatty", None)
+        attrs.update(tracked)
+        return attrs
 
     @property
     def icon(self) -> str:

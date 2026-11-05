@@ -38,6 +38,7 @@ from .const import (
     CONF_CLIMATE_MIN_CYCLE_MINUTES,
     CONF_CLIMATE_MIN_TEMP,
     CONF_CLIMATE_MAX_TEMP,
+    CONF_OFFLINE_TIMEOUT,
     DEFAULT_CLIMATE_TOLERANCE,
     DEFAULT_CLIMATE_MIN_CYCLE_MINUTES,
     DEFAULT_CLIMATE_MIN_TEMP,
@@ -201,6 +202,51 @@ def _detect_climate_defaults(model_mapping: dict) -> dict:
     return defaults
 
 
+def _saved(current: dict, key: str, default):
+    """The value the user saved for `key`, or `default` if it was never saved.
+
+    A saved empty string means the user deliberately picked "none". The old
+    `current.get(key) or default` treated that as "never saved", so the
+    auto-detected suggestion came straight back every time the form was
+    opened and a deliberate "none" could never be kept."""
+    if key in current and current[key] is not None:
+        return current[key]
+    return default
+
+
+def _with_saved_option(options: list, saved) -> list:
+    """Make sure a saved value stays selectable. If the model mapping is not
+    available (the integration is not loaded, for example while the Tuya API
+    is unreachable) or the value no longer exists in it, a dropdown whose
+    default is not among its options makes the whole form unsubmittable."""
+    if not saved or any(opt["value"] == saved for opt in options):
+        return options
+    return options + [
+        selector.SelectOptionDict(value=saved, label=f"{saved} (not in current model)")
+    ]
+
+
+def _validate_climate_options(options: dict) -> str | None:
+    """Error key for the climate form, or None. Only matters when enabled."""
+    if not options.get(CONF_CLIMATE_ENABLED):
+        return None
+    low, high = options.get(CONF_CLIMATE_MIN_TEMP), options.get(CONF_CLIMATE_MAX_TEMP)
+    try:
+        if low is not None and high is not None and float(low) >= float(high):
+            return "invalid_temp_range"
+    except (TypeError, ValueError):
+        return "invalid_temp_range"
+    return None
+
+
+def _validate_mode_values(values: dict) -> str | None:
+    """Error key for the heat/cool values form, or None."""
+    heat, cool = values.get(CONF_CLIMATE_HEAT_VALUE), values.get(CONF_CLIMATE_COOL_VALUE)
+    if heat and cool and heat == cool:
+        return "same_mode_values"
+    return None
+
+
 def _climate_options_schema(model_mapping: dict | None, current: dict) -> vol.Schema:
     """Build the climate_options form schema from a model's own DPs,
     pre-filled with the auto-detected defaults (or, on an already
@@ -224,7 +270,7 @@ def _climate_options_schema(model_mapping: dict | None, current: dict) -> vol.Sc
     # just get a sensible SUGGESTED default: the currently-selected
     # target DP's own min/max if it has one, otherwise the generic
     # DEFAULT_CLIMATE_*_TEMP constants -- always editable either way.
-    current_target_code = current.get(CONF_CLIMATE_TARGET_TEMP_CODE) or defaults.get("target", "")
+    current_target_code = _saved(current, CONF_CLIMATE_TARGET_TEMP_CODE, defaults.get("target", ""))
     target_cfg_for_range = model_mapping.get("numbers", {}).get(current_target_code, {})
     suggested_min_temp = target_cfg_for_range.get("min_value", DEFAULT_CLIMATE_MIN_TEMP)
     suggested_max_temp = target_cfg_for_range.get("max_value", DEFAULT_CLIMATE_MAX_TEMP)
@@ -237,37 +283,37 @@ def _climate_options_schema(model_mapping: dict | None, current: dict) -> vol.Sc
             ): selector.BooleanSelector(),
             vol.Optional(
                 CONF_CLIMATE_POWER_CODE,
-                default=current.get(CONF_CLIMATE_POWER_CODE) or defaults.get("power", ""),
+                default=_saved(current, CONF_CLIMATE_POWER_CODE, defaults.get("power", "")),
             ): selector.SelectSelector(
                 selector.SelectSelectorConfig(
-                    options=none_option + power_options,
+                    options=none_option + _with_saved_option(power_options, current.get(CONF_CLIMATE_POWER_CODE)),
                     mode=selector.SelectSelectorMode.DROPDOWN,
                 )
             ),
             vol.Optional(
                 CONF_CLIMATE_CURRENT_TEMP_CODE,
-                default=current.get(CONF_CLIMATE_CURRENT_TEMP_CODE) or defaults.get("current", ""),
+                default=_saved(current, CONF_CLIMATE_CURRENT_TEMP_CODE, defaults.get("current", "")),
             ): selector.SelectSelector(
                 selector.SelectSelectorConfig(
-                    options=none_option + current_temp_options,
+                    options=none_option + _with_saved_option(current_temp_options, current.get(CONF_CLIMATE_CURRENT_TEMP_CODE)),
                     mode=selector.SelectSelectorMode.DROPDOWN,
                 )
             ),
             vol.Optional(
                 CONF_CLIMATE_TARGET_TEMP_CODE,
-                default=current.get(CONF_CLIMATE_TARGET_TEMP_CODE) or defaults.get("target", ""),
+                default=_saved(current, CONF_CLIMATE_TARGET_TEMP_CODE, defaults.get("target", "")),
             ): selector.SelectSelector(
                 selector.SelectSelectorConfig(
-                    options=none_option + target_temp_options,
+                    options=none_option + _with_saved_option(target_temp_options, current.get(CONF_CLIMATE_TARGET_TEMP_CODE)),
                     mode=selector.SelectSelectorMode.DROPDOWN,
                 )
             ),
             vol.Optional(
                 CONF_CLIMATE_MODE_SELECT_CODE,
-                default=current.get(CONF_CLIMATE_MODE_SELECT_CODE) or defaults.get("mode_select", ""),
+                default=_saved(current, CONF_CLIMATE_MODE_SELECT_CODE, defaults.get("mode_select", "")),
             ): selector.SelectSelector(
                 selector.SelectSelectorConfig(
-                    options=none_option + mode_select_options,
+                    options=none_option + _with_saved_option(mode_select_options, current.get(CONF_CLIMATE_MODE_SELECT_CODE)),
                     mode=selector.SelectSelectorMode.DROPDOWN,
                 )
             ),
@@ -314,27 +360,43 @@ def _climate_options_schema(model_mapping: dict | None, current: dict) -> vol.Sc
 def _climate_mode_values_schema(select_cfg: dict, current: dict) -> vol.Schema:
     """Second step, shown only if a mode select was picked above — lets
     the user confirm/correct which of ITS real option values means heat
-    and which means cool."""
+    and which means cool.
+
+    A previously saved value is only used as the default while it is still
+    one of this select's own options. After the user picks a different
+    select, the old heat/cool values belong to the previous one; offering
+    them as a default made the form impossible to submit."""
     value_options = _select_value_option_list(select_cfg)
-    defaults = _guess_heat_cool_values(select_cfg)
+    raw_keys = _select_raw_keys(select_cfg)
+    guesses = _guess_heat_cool_values(select_cfg)
+
+    def _default(key: str, guess_key: str) -> str:
+        saved = current.get(key)
+        # Without a model mapping (raw_keys empty) trust the saved value.
+        if saved and (not raw_keys or saved in raw_keys):
+            return saved
+        return guesses.get(guess_key, "")
+
+    heat_default = _default(CONF_CLIMATE_HEAT_VALUE, "heat_value")
+    cool_default = _default(CONF_CLIMATE_COOL_VALUE, "cool_value")
 
     return vol.Schema(
         {
             vol.Optional(
                 CONF_CLIMATE_HEAT_VALUE,
-                default=current.get(CONF_CLIMATE_HEAT_VALUE) or defaults.get("heat_value", ""),
+                default=heat_default,
             ): selector.SelectSelector(
                 selector.SelectSelectorConfig(
-                    options=value_options,
+                    options=_with_saved_option(value_options, heat_default),
                     mode=selector.SelectSelectorMode.DROPDOWN,
                 )
             ),
             vol.Optional(
                 CONF_CLIMATE_COOL_VALUE,
-                default=current.get(CONF_CLIMATE_COOL_VALUE) or defaults.get("cool_value", ""),
+                default=cool_default,
             ): selector.SelectSelector(
                 selector.SelectSelectorConfig(
-                    options=value_options,
+                    options=_with_saved_option(value_options, cool_default),
                     mode=selector.SelectSelectorMode.DROPDOWN,
                 )
             ),
@@ -512,25 +574,56 @@ class TuyaHeatpumpOptionsFlow(config_entries.OptionsFlow):
         else:
             return await self.async_step_local_options()
 
+    def _mqtt_hint(self) -> str:
+        """Explains what the refresh interval means for THIS entry."""
+        if self._config_entry.data.get(CONF_USER_CODE):
+            return (
+                "MQTT (User Code + QR) is enabled for this device: values arrive "
+                "instantly by push, so this interval is only a FALLBACK used while "
+                "MQTT is disconnected."
+            )
+        return (
+            "MQTT is not enabled for this device, so this is the normal polling "
+            "interval."
+        )
+
     async def async_step_cloud_options(self, user_input=None):
         """Manage cloud options."""
         if user_input is not None:
             data = {**self._config_entry.options, **user_input}
             return self.async_create_entry(title="", data=data)
 
+        options = self._config_entry.options
+        # The interval chosen during setup lives in entry.data; the form used
+        # to ignore it and show the global default, and saving then silently
+        # replaced the user's own choice with that default.
+        current_interval = options.get(
+            CONF_SCAN_INTERVAL,
+            self._config_entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
+        )
         return self.async_show_form(
             step_id="cloud_options",
+            description_placeholders={"mqtt_hint": self._mqtt_hint()},
             data_schema=vol.Schema(
                 {
                     vol.Optional(
                         CONF_SCAN_INTERVAL,
-                        default=self._config_entry.options.get(
-                            CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
-                        )
+                        default=current_interval,
                     ): selector.NumberSelector(
                         selector.NumberSelectorConfig(
                             min=1,
                             max=60,
+                            step=1,
+                            mode=selector.NumberSelectorMode.BOX
+                        )
+                    ),
+                    vol.Optional(
+                        CONF_OFFLINE_TIMEOUT,
+                        default=options.get(CONF_OFFLINE_TIMEOUT, 0),
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            min=0,
+                            max=10080,
                             step=1,
                             mode=selector.NumberSelectorMode.BOX
                         )
@@ -610,34 +703,57 @@ class TuyaHeatpumpOptionsFlow(config_entries.OptionsFlow):
         room air) and some already run their own closed-loop room
         control internally, so a second HA-side control loop should
         only exist if the user explicitly asks for it."""
+        errors = {}
+        saved = dict(self._config_entry.options)
+        current = saved
+
         if user_input is not None:
-            data = {**self._config_entry.options, **user_input}
-            # Sadece gerçekten etkinleştirilmişse VE bir mode-select
-            # seçilmişse heat/cool sorusuna geç — kapatırken (enabled
-            # False) dropdown'daki eski değer hâlâ dolu olsa bile bir
-            # daha sormamalı.
-            if user_input.get(CONF_CLIMATE_ENABLED) and user_input.get(CONF_CLIMATE_MODE_SELECT_CODE):
-                self._pending_options = data
-                return await self.async_step_climate_mode_values()
-            return self.async_create_entry(title="", data=data)
+            data = {**saved, **user_input}
+            error = _validate_climate_options(data)
+            if error:
+                # Show the form again with what the user typed, not the old values.
+                errors["base"] = error
+                current = data
+            else:
+                new_select = user_input.get(CONF_CLIMATE_MODE_SELECT_CODE) or ""
+                # Saved heat/cool values belong to the select they were saved
+                # for; drop them when the select changes or is cleared.
+                if not new_select or new_select != saved.get(CONF_CLIMATE_MODE_SELECT_CODE):
+                    data.pop(CONF_CLIMATE_HEAT_VALUE, None)
+                    data.pop(CONF_CLIMATE_COOL_VALUE, None)
+                # Sadece gerçekten etkinleştirilmişse VE bir mode-select
+                # seçilmişse heat/cool sorusuna geç — kapatırken (enabled
+                # False) dropdown'daki eski değer hâlâ dolu olsa bile bir
+                # daha sormamalı.
+                if user_input.get(CONF_CLIMATE_ENABLED) and new_select:
+                    self._pending_options = data
+                    return await self.async_step_climate_mode_values()
+                return self.async_create_entry(title="", data=data)
 
         coordinator = self.hass.data.get(DOMAIN, {}).get(self._config_entry.entry_id)
         model_mapping = coordinator.model_mapping if coordinator else {}
 
         return self.async_show_form(
             step_id="climate_options",
-            data_schema=_climate_options_schema(
-                model_mapping, current=self._config_entry.options
-            ),
+            data_schema=_climate_options_schema(model_mapping, current=current),
+            errors=errors,
         )
 
     async def async_step_climate_mode_values(self, user_input=None):
         """Second step, only reached if a mode select was picked above —
         confirm/correct which of ITS real option values means heat and
         which means cool."""
+        errors = {}
+        current = self._pending_options
+
         if user_input is not None:
             data = {**self._pending_options, **user_input}
-            return self.async_create_entry(title="", data=data)
+            error = _validate_mode_values(data)
+            if error:
+                errors["base"] = error
+                current = data
+            else:
+                return self.async_create_entry(title="", data=data)
 
         coordinator = self.hass.data.get(DOMAIN, {}).get(self._config_entry.entry_id)
         model_mapping = coordinator.model_mapping if coordinator else {}
@@ -646,9 +762,8 @@ class TuyaHeatpumpOptionsFlow(config_entries.OptionsFlow):
 
         return self.async_show_form(
             step_id="climate_mode_values",
-            data_schema=_climate_mode_values_schema(
-                select_cfg, current=self._config_entry.options
-            ),
+            data_schema=_climate_mode_values_schema(select_cfg, current=current),
+            errors=errors,
         )
 
 
@@ -716,8 +831,21 @@ class TuyaHeatpumpConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
 
+        if (self.user_data or {}).get(CONF_USER_CODE):
+            mqtt_hint = (
+                "You entered a User Code, so the next step shows a QR code to enable "
+                "MQTT (recommended). With MQTT this interval is only a FALLBACK used "
+                "while MQTT is disconnected."
+            )
+        else:
+            mqtt_hint = (
+                "Without MQTT (no User Code) this is the normal polling interval."
+            )
         return self.async_show_form(
-            step_id="cloud_options", data_schema=STEP_CLOUD_OPTIONS_SCHEMA, errors=errors
+            step_id="cloud_options",
+            data_schema=STEP_CLOUD_OPTIONS_SCHEMA,
+            errors=errors,
+            description_placeholders={"mqtt_hint": mqtt_hint},
         )
 
     async def async_step_cloud_qr(self, user_input=None) -> FlowResult:
@@ -826,41 +954,57 @@ class TuyaHeatpumpConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         value, not room air) and some already run their own closed-loop
         room control internally, so a second HA-side control loop
         should only exist if the user explicitly asks for one."""
+        errors = {}
+        current: dict = {}
         if user_input is not None:
-            self._pending_climate_options = dict(user_input)
-            # Sadece gerçekten etkinleştirilmişse VE bir mode-select
-            # seçilmişse heat/cool sorusuna geç.
-            if user_input.get(CONF_CLIMATE_ENABLED) and user_input.get(CONF_CLIMATE_MODE_SELECT_CODE):
-                return await self.async_step_climate_mode_values()
-            return self.async_create_entry(
-                title=self._pending_entry_title,
-                data=self._pending_entry_data,
-                options=self._pending_climate_options,
-            )
+            error = _validate_climate_options(user_input)
+            if error:
+                errors["base"] = error
+                current = dict(user_input)
+            else:
+                self._pending_climate_options = dict(user_input)
+                # Sadece gerçekten etkinleştirilmişse VE bir mode-select
+                # seçilmişse heat/cool sorusuna geç.
+                if user_input.get(CONF_CLIMATE_ENABLED) and user_input.get(CONF_CLIMATE_MODE_SELECT_CODE):
+                    return await self.async_step_climate_mode_values()
+                return self.async_create_entry(
+                    title=self._pending_entry_title,
+                    data=self._pending_entry_data,
+                    options=self._pending_climate_options,
+                )
 
         return self.async_show_form(
             step_id="climate_options",
-            data_schema=_climate_options_schema(self._model_mapping, current={}),
+            data_schema=_climate_options_schema(self._model_mapping, current=current),
+            errors=errors,
         )
 
     async def async_step_climate_mode_values(self, user_input=None) -> FlowResult:
         """Second step, only reached if a mode select was picked above —
         confirm/correct which of ITS real option values means heat and
         which means cool."""
+        errors = {}
+        current: dict = {}
         if user_input is not None:
-            options = {**self._pending_climate_options, **user_input}
-            return self.async_create_entry(
-                title=self._pending_entry_title,
-                data=self._pending_entry_data,
-                options=options,
-            )
+            error = _validate_mode_values(user_input)
+            if error:
+                errors["base"] = error
+                current = dict(user_input)
+            else:
+                options = {**self._pending_climate_options, **user_input}
+                return self.async_create_entry(
+                    title=self._pending_entry_title,
+                    data=self._pending_entry_data,
+                    options=options,
+                )
 
         mode_select_code = self._pending_climate_options.get(CONF_CLIMATE_MODE_SELECT_CODE)
         select_cfg = (self._model_mapping or {}).get("selects", {}).get(mode_select_code, {})
 
         return self.async_show_form(
             step_id="climate_mode_values",
-            data_schema=_climate_mode_values_schema(select_cfg, current={}),
+            data_schema=_climate_mode_values_schema(select_cfg, current=current),
+            errors=errors,
         )
 
     @staticmethod

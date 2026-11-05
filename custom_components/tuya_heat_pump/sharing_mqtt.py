@@ -55,6 +55,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from typing import Any
 
 from homeassistant.core import HomeAssistant
@@ -184,6 +185,8 @@ class SharingMQTT:
         self._connected = False
         self._reconnect_attempted = False
         self._health_check_task: asyncio.Task | None = None
+        self._started_at = 0.0
+        self._last_connect_refresh = 0.0
 
     @property
     def connected(self) -> bool:
@@ -305,6 +308,7 @@ class SharingMQTT:
                 return False
 
             self._connected = True
+            self._started_at = time.monotonic()
             self._health_check_task = self._hass.loop.create_task(self._health_check_loop())
             return True
 
@@ -400,6 +404,41 @@ class SharingMQTT:
         mq = getattr(self._manager, "mq", None)
         if mq is not None:
             mq.add_message_listener(self._on_raw_message)
+            self._hook_on_connect(mq)
+
+    def _hook_on_connect(self, mq) -> None:
+        """paho istemcisinin on_connect geri çağrısına (zincirleyerek) bağlanır:
+        SDK bağlantıyı KENDİ KENDİNE (60 sn'lik sağlık kontrolümüzün göremeyeceği
+        kadar kısa sürede) yeniden kurarsa, aradaki değişiklikler kaçmış
+        olabilir; her yeniden bağlanmada bir kerelik tazeleme yaparız.
+        Başarısız olursa sessizce atlanır, sağlık kontrolü yine çalışır."""
+        client = getattr(mq, "client", None)
+        if client is None or getattr(client, "_th_on_connect_hooked", False):
+            return
+        try:
+            original = getattr(client, "on_connect", None)
+            loop = self._hass.loop
+
+            def _wrapped(*args, **kwargs):
+                try:
+                    if callable(original):
+                        return original(*args, **kwargs)
+                finally:
+                    loop.call_soon_threadsafe(self._on_stream_connected)
+
+            client.on_connect = _wrapped
+            client._th_on_connect_hooked = True
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.debug("MQTT on_connect kancası kurulamadı: %s", err)
+
+    def _on_stream_connected(self) -> None:
+        now = time.monotonic()
+        # Başlangıç sorgusu zaten yeni yapıldı; çok sık tekrarı da engelle.
+        if now - self._started_at < 30 or now - self._last_connect_refresh < 60:
+            return
+        self._last_connect_refresh = now
+        _LOGGER.info("MQTT: akış yeniden bağlandı — kaçan değişiklikler için bir kez tazeleniyor.")
+        self._hass.async_create_task(self._coordinator.async_request_refresh())
 
     def _on_raw_message(self, msg: dict) -> None:
         """manager.mq'ya ham dinleyici olarak eklenen fonksiyon (bkz.
@@ -427,6 +466,20 @@ class SharingMQTT:
             data = msg.get("data", {}) or {}
             if data.get("devId") != self._coordinator.device_id:
                 return
+
+            # Bu cihazdan GELEN HER mesaj (tanınmayan DP'ler dahil) "cihaz
+            # yaşıyor" kanıtıdır: son görülme zamanını güncelle.
+            status_items = data.get("status", []) or []
+            stamps = [
+                it.get("t") for it in status_items
+                if isinstance(it, dict) and isinstance(it.get("t"), (int, float))
+            ]
+            self._hass.loop.call_soon_threadsafe(
+                self._coordinator._mqtt_note_message,
+                max(stamps) if stamps else None,
+                len(status_items) or 1,
+            )
+
 
             dp_mapping = getattr(self._coordinator, "dp_mapping", None) or {}
             new_data: dict[str, Any] = {}
@@ -500,7 +553,11 @@ class _PersistTokenListener:
             # add_update_listener'ın bunu tetiklememesi için bayrağı
             # önceden set ediyoruz (bkz. coordinator.skip_next_reload).
             coordinator.skip_next_reload = True
-            hass.config_entries.async_update_entry(entry, data=new_data)
+            # Veri gerçekten değişmediyse HA güncelleme dinleyicisini HİÇ
+            # çağırmaz; bayrak takılı kalıp bir sonraki GERÇEK ayar
+            # değişikliğinin yutulmasına yol açardı.
+            if not hass.config_entries.async_update_entry(entry, data=new_data):
+                coordinator.skip_next_reload = False
 
         class _Impl(SharingTokenListener):
             def update_token(self, token_info: dict) -> None:

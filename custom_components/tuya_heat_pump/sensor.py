@@ -4,7 +4,8 @@ import logging
 from typing import Any
 
 from homeassistant.core import HomeAssistant
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
+from homeassistant.const import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.restore_state import RestoreEntity
@@ -29,6 +30,9 @@ async def async_setup_entry(
     
     sensors = []
     pending = []
+
+    # Diagnostic: when we last got a real signal from the device
+    sensors.append(TuyaHeatpumpLastSeenSensor(coordinator))
     
     sensor_configs = coordinator.model_mapping.get("sensors", {})
     
@@ -387,3 +391,45 @@ class TuyaEnergySensor(SensorEntity, RestoreEntity):
         if self.coordinator.model_id:
             attrs["tuya_model_id"] = self.coordinator.model_id
         return attrs
+
+
+class TuyaHeatpumpLastSeenSensor(SensorEntity):
+    """When did we last get a real signal from the device (cloud poll, MQTT
+    push or local answer)? Rounded to the minute so a 1 Hz MQTT stream does
+    not rewrite the state every second. Handy for automations such as
+    "the thermostat has not been seen for 24 hours"."""
+
+    _attr_has_entity_name = True
+    _attr_name = "Last Seen"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_icon = "mdi:eye-check-outline"
+
+    def __init__(self, coordinator: TuyaScaleDataUpdateCoordinator) -> None:
+        self.coordinator = coordinator
+        slug = coordinator.device_name.lower().replace(" ", "_").replace("-", "_")
+        self._attr_unique_id = f"{slug}_last_seen"
+        self._attr_device_info = coordinator.device_info
+
+    @property
+    def device_info(self):
+        return self.coordinator.device_info
+
+    @property
+    def available(self) -> bool:
+        return True
+
+    @property
+    def native_value(self):
+        from datetime import datetime, timezone
+
+        last_seen = self.coordinator.online.last_seen
+        if last_seen is None:
+            return None
+        return datetime.fromtimestamp(int(last_seen // 60) * 60, timezone.utc)
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            self.coordinator.async_add_listener(self.async_write_ha_state)
+        )

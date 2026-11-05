@@ -28,9 +28,9 @@
             },
             "cloud_options": {
                 "title": "Cloud Configuration",
-                "description": "Configure sensor refresh interval\n\nLower values = faster updates but more API calls\n\nAfter this, you'll also be asked about an optional climate (thermostat) card for this device — it's off by default, feel free to skip it.",
+                "description": "Configure how often sensor values are refreshed from the Tuya Cloud API.\n\n{mqtt_hint}\n\nLower values = faster updates but more API calls.\n\nAfter this, you'll also be asked about an optional climate (thermostat) card for this device — it's off by default, feel free to skip it.",
                 "data": {
-                    "scan_interval": "Sensor Refresh Interval (minutes)"
+                    "scan_interval": "Refresh Interval (minutes)"
                 }
             },
             "cloud_qr": {
@@ -69,7 +69,9 @@
             "invalid_auth": "Invalid authentication",
             "unknown": "Unexpected error",
             "qr_not_confirmed": "QR code not scanned/confirmed yet in the app — try again, or scan it now if you haven't",
-            "qr_request_failed": "Could not request a QR code from Tuya. Check your User Code and try again."
+            "qr_request_failed": "Could not request a QR code from Tuya. Check your User Code and try again.",
+            "invalid_temp_range": "The minimum temperature must be lower than the maximum.",
+            "same_mode_values": "Heat and cool must use two different values."
         },
         "abort": {
             "already_configured": "Device is already configured"
@@ -87,9 +89,10 @@
             },
             "cloud_options": {
                 "title": "Cloud Device Settings",
-                "description": "Configure sensor refresh interval\n\nLower values = faster updates but more API calls",
+                "description": "Configure how often sensor values are refreshed from the Tuya Cloud API.\n\n{mqtt_hint}\n\nLower values = faster updates but more API calls.",
                 "data": {
-                    "scan_interval": "Sensor Refresh Interval (minutes)"
+                    "scan_interval": "Refresh Interval (minutes)",
+                    "offline_timeout_minutes": "Mark device offline after (minutes, 0 = automatic)"
                 }
             },
             "local_options": {
@@ -124,6 +127,10 @@
                     "climate_cool_value": "Value that means Cool"
                 }
             }
+        },
+        "error": {
+            "invalid_temp_range": "The minimum temperature must be lower than the maximum.",
+            "same_mode_values": "Heat and cool must use two different values."
         }
     },
     "issues": {

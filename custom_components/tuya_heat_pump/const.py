@@ -17,8 +17,12 @@ PLATFORMS = [
 ]
 
 DEFAULT_SCAN_INTERVAL = 3
-# MQTT aktifken (cloud + tuya_sharing) guvenlik amacli seyrek poll araligi (dk).
-MQTT_SAFETY_POLL_MINUTES = 30
+# MQTT aktifken (cloud + tuya_sharing) SADECE ek guvenlik agi olan cok seyrek poll
+# araligi (dk). MQTT bagliyken asil veri MQTT'den gelir; poll baslangicta, MQTT
+# kopup/yeniden kurulunca ve sessiz kalan konuskan cihazlar icin yapilir.
+MQTT_SAFETY_POLL_MINUTES = 360
+# Options: cihaz bu kadar dakika sessiz kalirsa OFFLINE sayilir (0 = otomatik).
+CONF_OFFLINE_TIMEOUT = "offline_timeout_minutes"
 CONF_SCAN_INTERVAL = "scan_interval"
 
 # Configuration
