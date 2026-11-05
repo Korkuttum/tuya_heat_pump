@@ -27,9 +27,9 @@
             },
             "cloud_options": {
                 "data": {
-                    "scan_interval": "Sensör Yenileme Süresi (dakika)"
+                    "scan_interval": "Yenileme Süresi (dakika)"
                 },
-                "description": "Cloud bağlantısı için sensör yenileme süresini ayarlayın\n\nDüşük değerler = daha hızlı güncellemeler ama daha çok API çağrısı\n\nBundan sonra bu cihaz için opsiyonel bir termostat (climate) kartı sorulacak — varsayılan kapalı, isterseniz atlayabilirsiniz.",
+                "description": "Sensör değerlerinin Tuya Cloud API'sinden ne sıklıkla yenileneceğini ayarlayın.\n\n{mqtt_hint}\n\nDüşük değerler = daha hızlı güncelleme ama daha çok API çağrısı.\n\nBundan sonra bu cihaz için opsiyonel bir termostat (climate) kartı sorulacak — varsayılan kapalı, isterseniz atlayabilirsiniz.",
                 "title": "Cloud Yapılandırması"
             },
             "cloud_qr": {
@@ -68,7 +68,9 @@
             "invalid_auth": "Geçersiz kimlik doğrulama",
             "unknown": "Beklenmeyen hata",
             "qr_not_confirmed": "QR kod henüz uygulamada taranmadı/onaylanmadı — tekrar deneyin, ya da henüz taramadıysanız şimdi tarayın",
-            "qr_request_failed": "Tuya'dan QR kod istenemedi. User Code'unuzu kontrol edip tekrar deneyin."
+            "qr_request_failed": "Tuya'dan QR kod istenemedi. User Code'unuzu kontrol edip tekrar deneyin.",
+            "invalid_temp_range": "Minimum sıcaklık maksimumdan küçük olmalı.",
+            "same_mode_values": "Isıtma ve soğutma için iki farklı değer seçilmeli."
         },
         "abort": {
             "already_configured": "⚠️ Bu cihaz zaten eklenmiş! Lütfen Ayarlar > Cihazlar ve Servisler'den kontrol edin."
@@ -86,9 +88,10 @@
             },
             "cloud_options": {
                 "data": {
-                    "scan_interval": "Sensör Yenileme Süresi (dakika)"
+                    "scan_interval": "Yenileme Süresi (dakika)",
+                    "offline_timeout_minutes": "Cihazı şu kadar dakika sessizlikten sonra çevrimdışı say (0 = otomatik)"
                 },
-                "description": "Sensör yenileme süresini ayarlayın\n\nDüşük değerler = daha hızlı güncellemeler ama daha çok API çağrısı",
+                "description": "Sensör değerlerinin Tuya Cloud API'sinden ne sıklıkla yenileneceğini ayarlayın.\n\n{mqtt_hint}\n\nDüşük değerler = daha hızlı güncelleme ama daha çok API çağrısı.",
                 "title": "Cloud Cihaz Ayarları"
             },
             "local_options": {
@@ -123,6 +126,10 @@
                 "description": "Yukarıda bir mod-seçim alanı seçtiniz. Bu alanın kendi değerlerinden hangisinin Isıtma, hangisinin Soğutma anlamına geldiğini onaylayın — bariz bir eşleşme varsa önceden seçili geliyor, ama cihazınızla karşılaştırıp kontrol edin.",
                 "title": "Termostat Kartı: Isıtma/Soğutma Değerleri"
             }
+        },
+        "error": {
+            "invalid_temp_range": "Minimum sıcaklık maksimumdan küçük olmalı.",
+            "same_mode_values": "Isıtma ve soğutma için iki farklı değer seçilmeli."
         }
     },
     "entity": {
