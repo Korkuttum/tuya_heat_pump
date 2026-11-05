@@ -64,6 +64,7 @@ async def async_load_model_mapping(hass: HomeAssistant, model_id: str = None) ->
                 "numbers": getattr(model_module, "NUMBER_TYPES", {}),
                 "selects": getattr(model_module, "SELECT_TYPES", {}),
                 "texts": getattr(model_module, "TEXT_TYPES", {}),
+                "climate_hints": getattr(model_module, "CLIMATE_HINTS", {}),
                 "model_id": model_id,
                 "model_name": getattr(model_module, "MODEL_NAME", f"Model {model_id}")
             }
@@ -88,6 +89,7 @@ def _create_empty_mapping(model_id: str) -> Dict[str, Any]:
         "numbers": {},
         "selects": {},
         "texts": {},
+        "climate_hints": {},
         "model_id": model_id,
         "model_name": "Unknown Model"
     }
@@ -119,6 +121,7 @@ def load_model_mapping(model_id: str = None) -> Dict[str, Any]:
                     "numbers": getattr(_default_module, "NUMBER_TYPES", {}),
                     "selects": getattr(_default_module, "SELECT_TYPES", {}),
                     "texts": getattr(_default_module, "TEXT_TYPES", {}),
+                    "climate_hints": getattr(_default_module, "CLIMATE_HINTS", {}),
                     "model_id": model_id,
                     "model_name": "Default Model"
                 }
@@ -141,6 +144,7 @@ def load_model_mapping(model_id: str = None) -> Dict[str, Any]:
                 "numbers": getattr(module, "NUMBER_TYPES", {}),
                 "selects": getattr(module, "SELECT_TYPES", {}),
                 "texts": getattr(module, "TEXT_TYPES", {}),
+                "climate_hints": getattr(module, "CLIMATE_HINTS", {}),
                 "model_id": model_id,
                 "model_name": getattr(module, "MODEL_NAME", f"Model {model_id}")
             }
@@ -160,6 +164,7 @@ def load_model_mapping(model_id: str = None) -> Dict[str, Any]:
                     "numbers": getattr(module, "NUMBER_TYPES", {}),
                     "selects": getattr(module, "SELECT_TYPES", {}),
                     "texts": getattr(module, "TEXT_TYPES", {}),
+                    "climate_hints": getattr(module, "CLIMATE_HINTS", {}),
                     "model_id": model_id,
                     "model_name": getattr(module, "MODEL_NAME", f"Model {model_id}")
                 }
@@ -183,6 +188,7 @@ def load_model_mapping(model_id: str = None) -> Dict[str, Any]:
         "numbers": {},
         "selects": {},
         "texts": {},
+        "climate_hints": {},
         "model_id": model_id,
         "model_name": "Unknown Model"
     }

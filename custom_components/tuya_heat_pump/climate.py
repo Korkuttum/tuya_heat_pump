@@ -127,6 +127,10 @@ async def async_setup_entry(
             heat_value = None
             cool_value = None
 
+    hints = model_mapping.get("climate_hints") or {}
+    action_hint = _resolve_action_hint(hints)
+    preset_hint = _resolve_preset_hint(hints, model_mapping)
+
     tolerance = options.get(CONF_CLIMATE_TOLERANCE, DEFAULT_CLIMATE_TOLERANCE)
     min_cycle_minutes = options.get(CONF_CLIMATE_MIN_CYCLE_MINUTES, DEFAULT_CLIMATE_MIN_CYCLE_MINUTES)
     min_temp = options.get(CONF_CLIMATE_MIN_TEMP, DEFAULT_CLIMATE_MIN_TEMP)
@@ -140,12 +144,43 @@ async def async_setup_entry(
             target_code, target_config,
             mode_select_code, mode_select_config, heat_value, cool_value,
             tolerance, min_cycle_minutes, min_temp, max_temp,
+            action_hint=action_hint, preset_hint=preset_hint,
         )
     ])
     _LOGGER.info(
         "Adding climate entity (power=%s, current=%s, target=%s, mode_select=%s)",
         power_code, current_code, target_code, mode_select_code,
     )
+
+
+def _resolve_action_hint(hints: dict) -> dict | None:
+    """Model-provided DP that says whether the device is really heating
+    (see CLIMATE_HINTS in a model file). None = not provided."""
+    hint = hints.get("action") if isinstance(hints, dict) else None
+    if not isinstance(hint, dict) or not hint.get("code"):
+        return None
+    return {
+        "code": hint["code"],
+        "heating": list(hint.get("heating") or []),
+        "cooling": list(hint.get("cooling") or []),
+        "idle": list(hint.get("idle") or []),
+    }
+
+
+def _resolve_preset_hint(hints: dict, model_mapping: dict) -> dict | None:
+    """Model-provided select DP whose raw values become climate presets."""
+    hint = hints.get("preset") if isinstance(hints, dict) else None
+    if not isinstance(hint, dict) or not hint.get("code"):
+        return None
+    config = (model_mapping.get("selects") or {}).get(hint["code"])
+    if config is None:
+        return None
+    options = config.get("options", {})
+    available = list(options.keys()) if isinstance(options, dict) else list(options or [])
+    values = [v for v in (hint.get("values") or available) if v in available]
+    if not values:
+        return None
+    return {"code": hint["code"], "config": config, "values": values}
 
 
 class TuyaHeatpumpClimate(ClimateEntity, RestoreEntity):
@@ -166,8 +201,12 @@ class TuyaHeatpumpClimate(ClimateEntity, RestoreEntity):
         heat_value: str | None, cool_value: str | None,
         tolerance: float, min_cycle_minutes: float,
         min_temp: float, max_temp: float,
+        action_hint: dict | None = None,
+        preset_hint: dict | None = None,
     ) -> None:
         """Initialize the climate entity."""
+        self._action_hint = action_hint
+        self._preset_hint = preset_hint
         self.coordinator = coordinator
         self._power_code = power_code
         self._power_config = power_config or {}
@@ -208,6 +247,9 @@ class TuyaHeatpumpClimate(ClimateEntity, RestoreEntity):
         has_target_control = bool(self._target_code) or bool(self._current_code)
         if has_target_control:
             features |= ClimateEntityFeature.TARGET_TEMPERATURE
+        if self._preset_hint:
+            features |= ClimateEntityFeature.PRESET_MODE
+            self._attr_preset_modes = list(self._preset_hint["values"])
         self._attr_supported_features = features
 
         # Min/max always come from Options (pre-filled there from the
@@ -322,7 +364,52 @@ class TuyaHeatpumpClimate(ClimateEntity, RestoreEntity):
             return None
         if not is_on:
             return HVACAction.OFF
+        # The device reports what it is really doing (model CLIMATE_HINTS):
+        # a real thermostat is "on" but idle most of the time.
+        if self._action_hint:
+            raw = self._read_raw_string(self._action_hint["code"])
+            if raw is not None:
+                if raw in self._action_hint["heating"]:
+                    return HVACAction.HEATING
+                if raw in self._action_hint["cooling"]:
+                    return HVACAction.COOLING
+                if raw in self._action_hint["idle"]:
+                    return HVACAction.IDLE
         return HVACAction.COOLING if self.hvac_mode == HVACMode.COOL else HVACAction.HEATING
+
+    def _read_raw_string(self, code: str) -> str | None:
+        """Raw string value of any DP code in coordinator.data (whether or
+        not the model exposes it as an entity)."""
+        if not self.coordinator.data or code not in self.coordinator.data:
+            return None
+        value = self.coordinator.data[code].get("value")
+        return value if isinstance(value, str) else None
+
+    @property
+    def preset_mode(self) -> str | None:
+        """Current preset (model CLIMATE_HINTS), None if unknown."""
+        if not self._preset_hint:
+            return None
+        raw = self._read_raw_string(self._preset_hint["code"])
+        return raw if raw in self._preset_hint["values"] else None
+
+    async def async_set_preset_mode(self, preset_mode: str) -> None:
+        """Write the preset select DP."""
+        if not self._preset_hint or preset_mode not in self._preset_hint["values"]:
+            raise HomeAssistantError(f"Unsupported preset: {preset_mode}")
+        config = self._preset_hint["config"]
+        api_value = preset_mode
+        if (api_conversion := config.get("api_conversion")) is not None:
+            try:
+                api_value = Conversion(api_conversion).convert(preset_mode)
+            except Exception as err:
+                _LOGGER.warning("API conversion failed for climate preset: %s", err)
+        success = await self.coordinator.send_command(
+            self._resolve_code(self._preset_hint["code"], config), api_value
+        )
+        if not success:
+            raise HomeAssistantError("Could not change the preset.")
+        await self.coordinator.async_request_refresh()
 
     @property
     def current_temperature(self) -> float | None:
@@ -360,6 +447,11 @@ class TuyaHeatpumpClimate(ClimateEntity, RestoreEntity):
             attrs["tuya_target_temp_code"] = self._resolve_code(
                 self._target_code, self._target_config
             )
+        if self._action_hint:
+            attrs["tuya_status_code"] = self._action_hint["code"]
+            attrs["tuya_status_value"] = self._read_raw_string(self._action_hint["code"])
+        if self._preset_hint:
+            attrs["tuya_preset_code"] = self._preset_hint["code"]
         if self._mode_select_code:
             attrs["tuya_mode_select_code"] = self._resolve_code(
                 self._mode_select_code, self._mode_select_config
@@ -493,7 +585,7 @@ class TuyaHeatpumpClimate(ClimateEntity, RestoreEntity):
         # Direct mode: hvac_mode maps straight onto the power switch (+
         # the mode-select, if the device has a heat/cool mode mapped).
         if hvac_mode == HVACMode.OFF:
-            await self._async_power(False)
+            await self._async_power(False, respect_min_cycle=False)
             return
 
         if hvac_mode == HVACMode.COOL and self._cool_value:
@@ -501,7 +593,7 @@ class TuyaHeatpumpClimate(ClimateEntity, RestoreEntity):
         elif hvac_mode == HVACMode.HEAT and self._mode_select_code and self._heat_value:
             await self._async_set_mode_select(self._heat_value)
 
-        await self._async_power(True)
+        await self._async_power(True, respect_min_cycle=False)
 
     async def async_turn_on(self) -> None:
         """Turn the heat pump on, resuming its last heat/cool mode."""
@@ -515,7 +607,7 @@ class TuyaHeatpumpClimate(ClimateEntity, RestoreEntity):
             # power — rewriting the mode here would be redundant, and
             # async_set_hvac_mode(HEAT) would wrongly force HEAT even if
             # the device was last in COOL.
-            await self._async_power(True)
+            await self._async_power(True, respect_min_cycle=False)
 
     async def async_turn_off(self) -> None:
         """Turn the heat pump off."""

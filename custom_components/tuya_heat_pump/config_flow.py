@@ -199,6 +199,22 @@ def _detect_climate_defaults(model_mapping: dict) -> dict:
         defaults["mode_select"] = mode_select_key
         defaults.update(_guess_heat_cool_values(selects[mode_select_key]))
 
+    # A model file can name the right DPs itself (CLIMATE_HINTS.defaults);
+    # that beats the generic guesses above, but only for codes that exist.
+    hints = model_mapping.get("climate_hints") or {}
+    hinted = hints.get("defaults") if isinstance(hints, dict) else None
+    if isinstance(hinted, dict):
+        pools = {
+            "power": switches,
+            "target": numbers,
+            "current": {**sensors, **numbers},
+            "mode_select": selects,
+        }
+        for key, pool in pools.items():
+            code = hinted.get(key)
+            if code and code in pool and "field_index" not in pool[code]:
+                defaults[key] = code
+
     return defaults
 
 
@@ -279,7 +295,11 @@ def _climate_options_schema(model_mapping: dict | None, current: dict) -> vol.Sc
         {
             vol.Optional(
                 CONF_CLIMATE_ENABLED,
-                default=current.get(CONF_CLIMATE_ENABLED, False),
+                default=_saved(
+                    current,
+                    CONF_CLIMATE_ENABLED,
+                    bool((model_mapping.get("climate_hints") or {}).get("default_enabled")),
+                ),
             ): selector.BooleanSelector(),
             vol.Optional(
                 CONF_CLIMATE_POWER_CODE,
