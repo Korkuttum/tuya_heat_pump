@@ -36,7 +36,7 @@
                     "name": "Cihaz adı (isteğe bağlı)"
                 },
                 "data_description": {
-                    "name": "Varlık kimliklerini oluşturmak için kullanılır. Boş bırakırsanız \"Tuya Heat Pump (Local) <cihaz kimliğinin son 6 karakteri>\" kullanılır."
+                    "name": "Varlık kimliklerini oluşturmak için kullanılır. Boş bırakırsanız \"Tuya Heat Pump (Local)\" ve ardından cihaz kimliğinin son 6 karakteri kullanılır."
                 }
             },
             "local": {
