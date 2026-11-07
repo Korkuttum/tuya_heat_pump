@@ -37,7 +37,7 @@
                     "name": "Device name (optional)"
                 },
                 "data_description": {
-                    "name": "Used to build entity IDs. Leave empty to use \"Tuya Heat Pump (Local) <last 6 characters of the device ID>\"."
+                    "name": "Used to build entity IDs. Leave empty to use \"Tuya Heat Pump (Local)\" followed by the last 6 characters of the device ID."
                 }
             },
             "local": {
