@@ -65,6 +65,9 @@ async def async_load_model_mapping(hass: HomeAssistant, model_id: str = None) ->
                 "selects": getattr(model_module, "SELECT_TYPES", {}),
                 "texts": getattr(model_module, "TEXT_TYPES", {}),
                 "climate_hints": getattr(model_module, "CLIMATE_HINTS", {}),
+                # False: bu model saniyede bir olcum yayan (konuskan) bir cihaz;
+                # MQTT aboneligi Tuya mesaj kotasini hizla tuketir (bkz. const.py).
+                "mqtt_push": getattr(model_module, "MQTT_PUSH", True),
                 "model_id": model_id,
                 "model_name": getattr(model_module, "MODEL_NAME", f"Model {model_id}")
             }
@@ -79,6 +82,35 @@ async def async_load_model_mapping(hass: HomeAssistant, model_id: str = None) ->
         _LOGGER.error("❌ Failed to load model %s: %s", model_id, err)
         return _create_empty_mapping(model_id)
 
+def _list_models_sync() -> list[tuple[str, str]]:
+    """(model_id, label) for every model file shipped with the integration.
+
+    Used by the manual local setup, where the cloud cannot tell us which
+    model a device is. Runs blocking imports - call from an executor."""
+    import pkgutil
+    from . import models as _models_pkg
+
+    found: list[tuple[str, str]] = []
+    for info in pkgutil.iter_modules(_models_pkg.__path__):
+        name = info.name
+        if name.startswith("_"):
+            continue
+        try:
+            module = importlib.import_module(f".models.{name}", __package__)
+            title = getattr(module, "MODEL_NAME", f"Model {name}")
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.debug("Model %s listelenemedi: %s", name, err)
+            continue
+        found.append((name, f"{title} [{name}]" if name not in title else title))
+    found.sort(key=lambda item: (item[0] == "default", item[1].lower()))
+    return found
+
+
+async def async_list_models(hass: HomeAssistant) -> list[tuple[str, str]]:
+    """Async wrapper around _list_models_sync()."""
+    return await hass.async_add_executor_job(_list_models_sync)
+
+
 def _create_empty_mapping(model_id: str) -> Dict[str, Any]:
     """Create empty mapping when no model file is found."""
     _LOGGER.warning("Creating empty mapping for model: %s", model_id)
@@ -90,6 +122,7 @@ def _create_empty_mapping(model_id: str) -> Dict[str, Any]:
         "selects": {},
         "texts": {},
         "climate_hints": {},
+        "mqtt_push": True,
         "model_id": model_id,
         "model_name": "Unknown Model"
     }
@@ -122,6 +155,7 @@ def load_model_mapping(model_id: str = None) -> Dict[str, Any]:
                     "selects": getattr(_default_module, "SELECT_TYPES", {}),
                     "texts": getattr(_default_module, "TEXT_TYPES", {}),
                     "climate_hints": getattr(_default_module, "CLIMATE_HINTS", {}),
+                    "mqtt_push": getattr(_default_module, "MQTT_PUSH", True),
                     "model_id": model_id,
                     "model_name": "Default Model"
                 }
@@ -189,6 +223,7 @@ def load_model_mapping(model_id: str = None) -> Dict[str, Any]:
         "selects": {},
         "texts": {},
         "climate_hints": {},
+        "mqtt_push": True,
         "model_id": model_id,
         "model_name": "Unknown Model"
     }

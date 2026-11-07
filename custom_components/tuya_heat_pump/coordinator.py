@@ -48,6 +48,9 @@ from .const import (
     CONF_USER_CODE,
     CONF_CACHED_ACCESS_TOKEN,
     CONF_CACHED_TOKEN_EXPIRES_AT,
+    CONF_MQTT_ALLOW_CHATTY,
+    CONF_MQTT_DISABLED_CHATTY,
+    CONF_CACHED_DEVICE_NAME,
 )
 import tinytuya
 from .model_loader import load_model_mapping, async_load_model_mapping
@@ -109,6 +112,10 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         # Cloud API'ye ulaşılabiliyor mu? (Ulaşılamamak cihazın OFFLINE
         # olduğu anlamına gelmez: kota dolması, internet kesintisi vb.)
         self.cloud_reachable = True
+        # The cloud answered with a quota error (Tuya IoT Core trial used up).
+        # Setup still goes ahead in that case, so the user can open the
+        # options and switch the device to local mode.
+        self.quota_exhausted = False
         self._online_timer_unsub = None
         self.model_id = None
         self.model_mapping = None
@@ -119,6 +126,9 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         # değişmez. self._pre_mqtt_update_interval, MQTT aktifken
         # duraklatılan periyodik poll'un eski değerini saklamak için.
         self.sharing_mqtt = None
+        self._mqtt_start_task = None
+        self._shutting_down = False
+        self._chatty_dropped = False
         self._pre_mqtt_update_interval = None
         self._mqtt_safety_unsub = None
         # entry.data'ya sadece token/cache yazmak için async_update_entry
@@ -507,6 +517,8 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         fallback-poll tasks, each holding its own socket to the device --
         call this on any setup failure, and on a normal unload, so a
         failed or replaced attempt always cleans up after itself."""
+        # Also tells a not-yet-started background MQTT start to stand down.
+        self._shutting_down = True
         for task in (self._listener_task, self._heartbeat_task, self._fallback_poll_task):
             if task is not None and not task.done():
                 task.cancel()
@@ -635,11 +647,37 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         edemez."""
         if self.connection_type != "cloud" or not self.config_entry.data.get(CONF_USER_CODE):
             return
+        if self._shutting_down:
+            return
+
+        # Tuya message quota protection (see const.py). Quiet devices keep
+        # MQTT; models known to stream every second, and devices that proved
+        # chatty earlier, stay on regular polling unless the user allows it.
+        if not self.config_entry.options.get(CONF_MQTT_ALLOW_CHATTY, False):
+            if (self.model_mapping or {}).get("mqtt_push") is False:
+                _LOGGER.info(
+                    "MQTT push is not started for model %s: this device streams a "
+                    "measurement about every second and would use up the Tuya "
+                    "message quota. Regular polling is used instead (you can allow "
+                    "MQTT in the connection options).",
+                    self.model_id,
+                )
+                return
+            if self.config_entry.data.get(CONF_MQTT_DISABLED_CHATTY):
+                _LOGGER.info(
+                    "MQTT push stays off for %s: it was switched off earlier because "
+                    "the device sends too many messages. Regular polling is used.",
+                    self.device_id,
+                )
+                return
 
         from .sharing_mqtt import SharingMQTT
 
         self.sharing_mqtt = SharingMQTT(self.hass, self)
         started = await self.sharing_mqtt.async_start()
+        if self._shutting_down:
+            await self.sharing_mqtt.async_stop()
+            return
         if started and self.sharing_mqtt.sufficient:
             # MQTT ham dinleyicisi (dpId -> model dp_mapping) bu cihazın
             # TÜM DP'lerini görebiliyor -> sık poll'a gerek yok; sadece
@@ -761,6 +799,31 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         mesajı geldi. last_ts: cihazın raporlama zamanı (ms) ya da None."""
         self.online.note_message(last_ts, time.time(), count)
         self._refresh_online_state()
+        if (
+            self.online.stream_chatty
+            and not self._chatty_dropped
+            and self.sharing_mqtt is not None
+            and not self.config_entry.options.get(CONF_MQTT_ALLOW_CHATTY, False)
+        ):
+            self._chatty_dropped = True
+            self.hass.async_create_task(self._mqtt_drop_chatty())
+
+    async def _mqtt_drop_chatty(self) -> None:
+        """The device streams far too many messages: leave MQTT for it, go
+        back to regular polling and remember the decision, so a restart does
+        not subscribe again. Every message counts against the user's Tuya
+        message quota, so staying subscribed is not an option."""
+        _LOGGER.warning(
+            "Device %s sends a message about every second. Leaving MQTT for it to "
+            "protect the Tuya message quota; regular polling is used instead. "
+            "(Connection options: allow MQTT for chatty devices to override.)",
+            self.device_id,
+        )
+        sm = self.sharing_mqtt
+        if sm is not None:
+            await sm.async_stop()
+        self._mqtt_set_active(False)
+        self._persist_entry_data(**{CONF_MQTT_DISABLED_CHATTY: True})
 
     def _mqtt_apply_push(self, new_data: dict) -> None:
         """sharing_mqtt.py'den (zaten event loop thread'ine güvenli
@@ -770,7 +833,18 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         sadece periyodik poll'u duraklatıp duraklatmama kararında
         kullanılıyor — MQTT'nin gördüğü her DP, kapsama ne olursa olsun
         doğru ve güvenilir bir anlık güncelleme."""
-        merged = {**(self.data or {}), **new_data}
+        current = self.data or {}
+        def _same(code: str, new) -> bool:
+            old = current.get(code)
+            if isinstance(old, dict) and isinstance(new, dict):
+                return old.get("value", object()) == new.get("value", object())
+            return old == new
+
+        if current and all(_same(code, value) for code, value in new_data.items()):
+            # Nothing changed (devices repeat unchanged values): skip the
+            # whole entity update.
+            return
+        merged = {**current, **new_data}
         self.async_set_updated_data(merged)
 
     async def _mqtt_trigger_refresh(self) -> None:
@@ -980,6 +1054,39 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
     # CİHAZ BİLGİSİ
     # ============================================================================
 
+    def _known_device_name(self) -> str | None:
+        """The device name we already know without asking the cloud: the copy
+        saved in the entry, else the name Home Assistant's device registry has
+        from earlier cloud runs. Entity unique_ids are built from the name, so
+        falling back to a generic one would create duplicate entities."""
+        name = self.config_entry.data.get(CONF_CACHED_DEVICE_NAME)
+        if name:
+            return name
+        try:
+            from homeassistant.helpers import device_registry as dr
+
+            device = dr.async_get(self.hass).async_get_device(
+                identifiers={(DOMAIN, self.device_id)}
+            )
+            if device is not None and device.name:
+                return device.name
+        except Exception:  # noqa: BLE001
+            pass
+        return None
+
+    def _apply_known_device_name(self) -> None:
+        name = self._known_device_name()
+        if not name:
+            return
+        self.device_name = name
+        self.device_info = DeviceInfo(
+            identifiers={(DOMAIN, self.device_id)},
+            name=name,
+            manufacturer=DEFAULT_MANUFACTURER,
+            model=DEFAULT_MODEL,
+        )
+        _LOGGER.info("Cloud did not answer; keeping the known device name: %s", name)
+
     async def get_device_info(self) -> dict:
         """Get device information."""
         if self.connection_type == "cloud":
@@ -1016,6 +1123,13 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     device_data = result['result']
                     self.device_name = device_data.get('name', DEFAULT_NAME)
                     product_name = device_data.get('product_name', DEFAULT_MODEL)
+                    # Entity unique_ids are derived from this name, so keep a
+                    # copy for local mode (no cloud there).
+                    if (
+                        device_data.get('name')
+                        and self.config_entry.data.get(CONF_CACHED_DEVICE_NAME) != self.device_name
+                    ):
+                        self._persist_entry_data(**{CONF_CACHED_DEVICE_NAME: self.device_name})
                   
                     _LOGGER.info("Device name set to: %s", self.device_name)
                   
@@ -1028,13 +1142,20 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                     return device_data
                 else:
                     _LOGGER.warning("Failed to get device info, using default name: %s", DEFAULT_NAME)
+                    self._apply_known_device_name()
                     return {}
                   
             except Exception as err:
                 _LOGGER.error("Error getting device info: %s", str(err))
+                self._apply_known_device_name()
                 return {}
         else:
-            self.device_name = f"Tuya Heat Pump (Local) {self.device_id[-6:]}"
+            # Keep the exact cloud name when we know it: entity unique_ids
+            # are built from it, so a different name would create duplicates.
+            self.device_name = (
+                self._known_device_name()
+                or f"Tuya Heat Pump (Local) {self.device_id[-6:]}"
+            )
             self.device_info = DeviceInfo(
                 identifiers={(DOMAIN, self.device_id)},
                 name=self.device_name,
@@ -1412,6 +1533,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                         self._token_expires_at = 0.0
                         return await self._async_update_data()
                     self.cloud_reachable = False
+                    self.quota_exhausted = "quota" in msg.lower()
                     _LOGGER.info("Cloud API error (%s) — device online status unchanged", msg)
                     self.async_update_listeners()
                     raise UpdateFailed(f"API error: {msg}")
@@ -1424,6 +1546,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 # son raporladığı zamanı veriyor. Tuya'nın kendi `online`
                 # alanına güvenilmez. Bulut hatası cihazı OFFLINE yapmaz.
                 self.cloud_reachable = True
+                self.quota_exhausted = False
                 if properties:
                     latest_timestamp = max(prop.get('time', 0) for prop in properties)
                     self.online.note_cloud(latest_timestamp, time.time())

@@ -8,10 +8,13 @@ from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import selector
 
 from .const import (
     DOMAIN,
+    CONF_MQTT_ALLOW_CHATTY,
+    CONF_CACHED_DEVICE_NAME,
     CONF_ACCESS_ID,
     CONF_ACCESS_KEY,
     CONF_DEVICE_ID,
@@ -45,6 +48,7 @@ from .const import (
     DEFAULT_CLIMATE_MAX_TEMP,
 )
 from .coordinator import TuyaScaleDataUpdateCoordinator
+from .model_loader import async_list_models, async_load_model_mapping
 from .sharing_mqtt import SharingQRLogin
 import tinytuya
 
@@ -495,6 +499,44 @@ STEP_LOCAL_OPTIONS_SCHEMA = vol.Schema(
     }
 )
 
+CONF_MODEL = "model"
+CONF_NAME = "name"
+
+
+async def _async_check_local_device(
+    hass: HomeAssistant, device_id: str, ip: str, local_key: str, protocol: str
+) -> None:
+    """Ask the device for its status over the LAN. Raises CannotConnect.
+
+    Needs no cloud/API access at all - only the device id, IP, local key
+    and protocol version."""
+    try:
+        device = tinytuya.Device(
+            dev_id=device_id,
+            address=ip,
+            local_key=local_key,
+            version=float(protocol),
+        )
+        status = await hass.async_add_executor_job(device.status)
+    except Exception as err:  # noqa: BLE001
+        _LOGGER.error("Local validation error: %s", err)
+        raise CannotConnect(f"Cannot connect to local device: {err}") from err
+    if not status or "dps" not in status:
+        raise CannotConnect(f"Failed to get device status: {status!r}")
+
+
+async def _async_model_options(hass: HomeAssistant) -> list[selector.SelectOptionDict]:
+    """Dropdown entries for every model file shipped with the integration."""
+    try:
+        models = await async_list_models(hass)
+    except Exception as err:  # noqa: BLE001
+        _LOGGER.warning("Model listesi alınamadı: %s", err)
+        models = []
+    if not models:
+        models = [("default", "Tuya Heat Pump (Default) [default]")]
+    return [selector.SelectOptionDict(value=mid, label=label) for mid, label in models]
+
+
 async def validate_input(hass: HomeAssistant, data: dict, connection_type: str) -> dict:
     """Validate the user input allows us to connect."""
     # Kurulum doğrulaması için vekil ConfigEntry. Gerçek entry henüz
@@ -582,9 +624,80 @@ class TuyaHeatpumpOptionsFlow(config_entries.OptionsFlow):
         re-asks about the other (previously connection settings silently
         chained into climate questions every time, and saving local
         connection details could wipe out already-saved climate options)."""
-        return self.async_show_menu(
-            step_id="init",
-            menu_options=["connection_options", "climate_options"],
+        menu = ["connection_options", "climate_options"]
+        if self.connection_type == "cloud":
+            menu.append("switch_to_local")
+        return self.async_show_menu(step_id="init", menu_options=menu)
+
+    async def async_step_switch_to_local(self, user_input=None):
+        """Turn this (cloud) device into a local one WITHOUT touching the
+        cloud: needs only the device's IP, local key and protocol version.
+        The entry, its entities, names and automations stay exactly as they
+        are; only the way data is fetched changes.
+
+        The model is normally already saved from the cloud days; if it is
+        not, the user picks it from the list."""
+        errors = {}
+        entry = self._config_entry
+        device_id = entry.data[CONF_DEVICE_ID]
+        has_model = bool(
+            entry.data.get("cached_model_id")
+            and entry.data.get("cached_model_device_id") == device_id
+        )
+
+        if user_input is not None:
+            try:
+                await _async_check_local_device(
+                    self.hass, device_id,
+                    user_input[CONF_IP], user_input[CONF_LOCAL_KEY], user_input[CONF_PROTOCOL],
+                )
+            except CannotConnect:
+                errors["base"] = "cannot_connect"
+            else:
+                new_data = {
+                    **entry.data,
+                    CONF_CONNECTION_TYPE: "local",
+                    CONF_IP: user_input[CONF_IP],
+                    CONF_LOCAL_KEY: user_input[CONF_LOCAL_KEY],
+                    CONF_PROTOCOL: user_input[CONF_PROTOCOL],
+                }
+                if not has_model:
+                    new_data["cached_model_id"] = user_input[CONF_MODEL]
+                    new_data["cached_model_device_id"] = device_id
+                # Entity unique_ids come from the device name; without the
+                # cloud we must keep the exact name it has now.
+                if not new_data.get(CONF_CACHED_DEVICE_NAME):
+                    device = dr.async_get(self.hass).async_get_device(
+                        identifiers={(DOMAIN, device_id)}
+                    )
+                    if device is not None and device.name:
+                        new_data[CONF_CACHED_DEVICE_NAME] = device.name
+                self.hass.config_entries.async_update_entry(entry, data=new_data)
+                return self.async_create_entry(title="", data=dict(entry.options))
+
+        schema: dict = {
+            vol.Required(CONF_IP, default=(user_input or {}).get(CONF_IP, "")): str,
+            vol.Required(CONF_LOCAL_KEY, default=(user_input or {}).get(CONF_LOCAL_KEY, "")): str,
+            vol.Required(
+                CONF_PROTOCOL, default=(user_input or {}).get(CONF_PROTOCOL, "3.4")
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=PROTOCOL_OPTIONS, mode=selector.SelectSelectorMode.DROPDOWN
+                )
+            ),
+        }
+        if not has_model:
+            options = await _async_model_options(self.hass)
+            schema[vol.Required(CONF_MODEL, default=options[0]["value"])] = selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=options, mode=selector.SelectSelectorMode.DROPDOWN
+                )
+            )
+        return self.async_show_form(
+            step_id="switch_to_local",
+            data_schema=vol.Schema(schema),
+            errors=errors,
+            description_placeholders={"device_id": device_id},
         )
 
     async def async_step_connection_options(self, user_input=None):
@@ -647,6 +760,16 @@ class TuyaHeatpumpOptionsFlow(config_entries.OptionsFlow):
                             step=1,
                             mode=selector.NumberSelectorMode.BOX
                         )
+                    ),
+                    **(
+                        {
+                            vol.Optional(
+                                CONF_MQTT_ALLOW_CHATTY,
+                                default=options.get(CONF_MQTT_ALLOW_CHATTY, False),
+                            ): selector.BooleanSelector()
+                        }
+                        if self._config_entry.data.get(CONF_USER_CODE)
+                        else {}
                     ),
                 }
             ),
@@ -802,7 +925,17 @@ class TuyaHeatpumpConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(
         self, user_input: dict[str, any] | None = None
     ) -> FlowResult:
-        """Handle the initial step."""
+        """First screen: choose how to set the device up."""
+        return self.async_show_menu(
+            step_id="user",
+            menu_options=["cloud_setup", "local_manual"],
+        )
+
+    async def async_step_cloud_setup(
+        self, user_input: dict[str, any] | None = None
+    ) -> FlowResult:
+        """Set up with Tuya IoT Platform credentials (cloud, or local with the
+        model fetched from the cloud)."""
         errors = {}
 
         if user_input is not None:
@@ -814,7 +947,79 @@ class TuyaHeatpumpConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return await self.async_step_local()
 
         return self.async_show_form(
-            step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
+            step_id="cloud_setup", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
+        )
+
+    async def async_step_local_manual(
+        self, user_input: dict[str, any] | None = None
+    ) -> FlowResult:
+        """Set up a LOCAL device with no cloud/API at all: the user gives the
+        device id, IP, local key and protocol and picks the model from the
+        list (the cloud normally tells us the model; here the user does)."""
+        errors = {}
+        model_options = await _async_model_options(self.hass)
+
+        if user_input is not None:
+            device_id = user_input[CONF_DEVICE_ID].strip()
+            try:
+                await _async_check_local_device(
+                    self.hass, device_id,
+                    user_input[CONF_IP].strip(), user_input[CONF_LOCAL_KEY].strip(),
+                    user_input[CONF_PROTOCOL],
+                )
+            except CannotConnect:
+                errors["base"] = "cannot_connect"
+            else:
+                await self.async_set_unique_id(device_id)
+                try:
+                    self._abort_if_unique_id_configured()
+                except Exception:
+                    return self.async_abort(reason="already_configured")
+
+                data = {
+                    CONF_DEVICE_ID: device_id,
+                    CONF_CONNECTION_TYPE: "local",
+                    CONF_IP: user_input[CONF_IP].strip(),
+                    CONF_LOCAL_KEY: user_input[CONF_LOCAL_KEY].strip(),
+                    CONF_PROTOCOL: user_input[CONF_PROTOCOL],
+                    "cached_model_id": user_input[CONF_MODEL],
+                    "cached_model_device_id": device_id,
+                }
+                name = (user_input.get(CONF_NAME) or "").strip()
+                if name:
+                    data[CONF_CACHED_DEVICE_NAME] = name
+                self._pending_entry_title = f"Tuya Heat Pump Local ({device_id})"
+                self._pending_entry_data = data
+                mapping = await async_load_model_mapping(self.hass, user_input[CONF_MODEL])
+                self._model_mapping = mapping or {}
+                return await self.async_step_climate_options()
+
+        previous = user_input or {}
+        return self.async_show_form(
+            step_id="local_manual",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_DEVICE_ID, default=previous.get(CONF_DEVICE_ID, "")): str,
+                    vol.Required(CONF_IP, default=previous.get(CONF_IP, "")): str,
+                    vol.Required(CONF_LOCAL_KEY, default=previous.get(CONF_LOCAL_KEY, "")): str,
+                    vol.Required(
+                        CONF_PROTOCOL, default=previous.get(CONF_PROTOCOL, "3.4")
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=PROTOCOL_OPTIONS, mode=selector.SelectSelectorMode.DROPDOWN
+                        )
+                    ),
+                    vol.Required(
+                        CONF_MODEL, default=previous.get(CONF_MODEL, model_options[0]["value"])
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=model_options, mode=selector.SelectSelectorMode.DROPDOWN
+                        )
+                    ),
+                    vol.Optional(CONF_NAME, default=previous.get(CONF_NAME, "")): str,
+                }
+            ),
+            errors=errors,
         )
 
     async def async_step_cloud_options(self, user_input=None) -> FlowResult:

@@ -88,6 +88,10 @@ class OnlineTracker:
         self.last_seen: float | None = None
         self.last_seen_source: str | None = None
         self.chatty: bool = False
+        # True only when the MQTT message RATE latched chatty (not the cloud
+        # poll heuristic): this is what decides whether to drop the MQTT
+        # subscription to protect the Tuya message quota.
+        self.stream_chatty: bool = False
         self._msg_times: deque[float] = deque(maxlen=2000)
         self._last_cloud_stamp: float = 0.0
         self._cloud_streak: int = 0
@@ -121,6 +125,7 @@ class OnlineTracker:
             and self._msg_times[-1] - self._msg_times[0] >= CHATTY_MIN_SPAN_S
         ):
             self.chatty = True
+            self.stream_chatty = True
 
     def note_cloud(self, stamp: float | int | None, now: float) -> None:
         """A cloud poll finished; `stamp` is the newest DP report time in it."""

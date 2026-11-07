@@ -177,6 +177,9 @@ class SharingMQTT:
     (CONF_SHARING_TOKEN_INFO) — bu sınıf QR akışıyla ilgilenmez, sadece
     zaten onaylanmış bir girişi kullanır."""
 
+    # Class-level default so objects built without __init__ (tests) behave.
+    _stopped = False
+
     def __init__(self, hass: HomeAssistant, coordinator) -> None:
         self._hass = hass
         self._coordinator = coordinator
@@ -187,6 +190,11 @@ class SharingMQTT:
         self._health_check_task: asyncio.Task | None = None
         self._started_at = 0.0
         self._last_connect_refresh = 0.0
+        # Set by async_stop(). async_start() runs as a background task and
+        # takes several seconds; if the entry is reloaded/unloaded meanwhile,
+        # the stop used to find no mq yet and do nothing, so the new mq kept
+        # running unmanaged (a leaked second connection = double messages).
+        self._stopped = False
 
     @property
     def connected(self) -> bool:
@@ -255,8 +263,12 @@ class SharingMQTT:
                 )
 
             self._manager = await self._hass.async_add_executor_job(_build_manager)
+            if self._stopped:
+                return False
 
             await self._hass.async_add_executor_job(self._manager.update_device_cache)
+            if self._stopped:
+                return False
 
             device = self._manager.device_map.get(self._coordinator.device_id)
             if device is None:
@@ -278,8 +290,14 @@ class SharingMQTT:
                     pass
 
             await self._hass.async_add_executor_job(self._manager.refresh_mq)
+            if self._stopped:
+                await self._stop_mq()
+                return False
             self._register_raw_listener()
             await asyncio.sleep(3)
+            if self._stopped:
+                await self._stop_mq()
+                return False
 
             # Yeterlilik kontrolünü BURAYA (refresh_mq + bekleme sonrasına)
             # taşıdık — canlı testte gördük ki update_device_cache()'in
@@ -340,6 +358,8 @@ class SharingMQTT:
         loop = asyncio.get_running_loop()
         while True:
             await asyncio.sleep(60)
+            if self._stopped:
+                return
             mq = getattr(self._manager, "mq", None)
             is_connected = self._client_is_connected(mq)
 
@@ -368,6 +388,9 @@ class SharingMQTT:
             _LOGGER.info("MQTT: yeniden bağlanma deneniyor (deneme %d)...", failures + 1)
             try:
                 await self._hass.async_add_executor_job(self._manager.refresh_mq)
+                if self._stopped:
+                    await self._stop_mq()
+                    return
                 self._register_raw_listener()
                 await asyncio.sleep(5)
                 if self._client_is_connected(getattr(self._manager, "mq", None)):
@@ -384,9 +407,16 @@ class SharingMQTT:
             next_retry_at = loop.time() + backoff[min(failures - 1, len(backoff) - 1)]
 
     async def async_stop(self) -> None:
+        """Stops MQTT for good (idempotent). Also safe while async_start() is
+        still running: it checks _stopped and stops whatever it created."""
+        self._stopped = True
+        self._connected = False
         if self._health_check_task:
             self._health_check_task.cancel()
         self._coordinator._mqtt_cancel_safety_poll()
+        await self._stop_mq()
+
+    async def _stop_mq(self) -> None:
         mq = getattr(self._manager, "mq", None) if self._manager else None
         stop = getattr(mq, "stop", None) if mq else None
         if callable(stop):
@@ -461,6 +491,8 @@ class SharingMQTT:
         sadece periyodik poll'u duraklat/devam kararında kullanılıyor,
         push'un içeriğine güvenip güvenmeme kararında DEĞİL."""
         try:
+            if self._stopped:
+                return
             if msg.get("protocol") != PROTOCOL_DEVICE_REPORT:
                 return
             data = msg.get("data", {}) or {}
@@ -552,12 +584,16 @@ class _PersistTokenListener:
             # entegrasyonun reload olmasına gerek yok. __init__.py'deki
             # add_update_listener'ın bunu tetiklememesi için bayrağı
             # önceden set ediyoruz (bkz. coordinator.skip_next_reload).
-            coordinator.skip_next_reload = True
+            # The update listener reads the coordinator currently registered in
+            # hass.data; after a reload that is a NEW object, so flag that one
+            # (the captured one may be stale).
+            current = hass.data.get(DOMAIN, {}).get(entry_id) or coordinator
+            current.skip_next_reload = True
             # Veri gerçekten değişmediyse HA güncelleme dinleyicisini HİÇ
             # çağırmaz; bayrak takılı kalıp bir sonraki GERÇEK ayar
             # değişikliğinin yutulmasına yol açardı.
             if not hass.config_entries.async_update_entry(entry, data=new_data):
-                coordinator.skip_next_reload = False
+                current.skip_next_reload = False
 
         class _Impl(SharingTokenListener):
             def update_token(self, token_info: dict) -> None:

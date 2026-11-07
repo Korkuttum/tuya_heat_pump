@@ -47,6 +47,20 @@ PROTOCOL_OPTIONS = ["3.1", "3.3", "3.4", "3.5"]
 CONF_USER_CODE = "user_code"
 CONF_SHARING_TOKEN_INFO = "sharing_token_info"
 
+# MQTT mesaj kotasi korumasi (2.6.5). Tuya IoT Core ucretsiz denemesinde
+# aylik mesaj kotasi vardir; saniyede bir olcum yayan cihazlar (isi pompasi)
+# kotayi birkac gunde bitirebilir. Bu yuzden konuskan cihazlarda MQTT
+# aboneligi birakilir ve kullanici izin vermedikce yeniden acilmaz.
+#  - Options'taki bayrak: True ise koruma tamamen kapatilir (kullanici bilir).
+#  - entry.data'daki bayrak: calisirken konuskan cikan cihazda MQTT birakildi.
+CONF_MQTT_ALLOW_CHATTY = "mqtt_allow_chatty"
+CONF_MQTT_DISABLED_CHATTY = "mqtt_disabled_chatty"
+
+# Buluttan alinan cihaz adinin kopyasi. Varlik unique_id'leri cihaz adindan
+# turetildigi icin, bulut olmadan (yerel modda) ayni ad kullanilmazsa tum
+# varlik kimlikleri degisirdi.
+CONF_CACHED_DEVICE_NAME = "cached_device_name"
+
 # Cloud API access_token cache'i (bkz. issue #77). Coordinator her
 # async_setup_entry retry'sinde SIFIRDAN oluşturuluyor, bu yüzden
 # _get_token()'ın in-memory cache'i (self.access_token) retry'lar arası

@@ -48,7 +48,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             await coordinator.get_device_model()
             _LOGGER.debug("get_device_model tamamlandı (%.1fsn)", _elapsed())
 
-            await coordinator.async_config_entry_first_refresh()
+            try:
+                await coordinator.async_config_entry_first_refresh()
+            except ConfigEntryNotReady:
+                if not getattr(coordinator, "quota_exhausted", False):
+                    raise
+                # The Tuya IoT Core quota is used up: HA used to leave the
+                # whole entry in "retry" so it could not even be opened to
+                # switch it to local mode. Load it (entities unavailable)
+                # and let regular refreshes recover once the quota is back.
+                _LOGGER.warning(
+                    "Tuya cloud quota is exhausted for %s. Loading the device "
+                    "without data; open its options to switch it to local mode, "
+                    "or renew the Tuya quota.", coordinator.device_id,
+                )
+                if coordinator.data is None:
+                    coordinator.data = {}
             _LOGGER.debug("İlk refresh tamamlandı (%.1fsn)", _elapsed())
     except asyncio.TimeoutError as err:
         # local mod için listener/heartbeat/fallback-poll görevleri
@@ -107,6 +122,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unload_ok:
         coordinator: TuyaScaleDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
         coordinator.cancel_background_tasks()
+        # The MQTT start runs in the background for several seconds;
+        # cancel_background_tasks() above set the shutdown flag so it stands
+        # down, and stopping here also stops a connection it already created
+        # (SharingMQTT remembers the stop and cleans up after itself).
         if coordinator.sharing_mqtt is not None:
             await coordinator.sharing_mqtt.async_stop()
         hass.data[DOMAIN].pop(entry.entry_id)
