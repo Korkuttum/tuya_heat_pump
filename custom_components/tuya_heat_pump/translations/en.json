@@ -2,6 +2,14 @@
     "config": {
         "step": {
             "user": {
+                "title": "Tuya Heat Pump Setup",
+                "description": "How do you want to set up this device?\n\n• Cloud / IoT Platform: uses your Tuya IoT Platform credentials (Access ID and Key). Needed for cloud mode; local mode here also reads the model from the cloud.\n• Local (manual, no cloud): you enter the device ID, IP address, local key and protocol, and pick the model yourself. Works with no Tuya account or API at all.",
+                "menu_options": {
+                    "cloud_setup": "Cloud / IoT Platform credentials",
+                    "local_manual": "Local (manual, no cloud or API needed)"
+                }
+            },
+            "cloud_setup": {
                 "data": {
                     "access_id": "Access ID",
                     "access_key": "Access Key",
@@ -15,6 +23,21 @@
                 },
                 "description": "Enter your Tuya IoT Platform credentials and select connection type\n\n• Cloud: Recommended for most users, works over the internet\n• Local: Faster response, no API limits, requires device on local network\n\nFor MQTT (instant updates, optional): find the User Code in your Tuya app under Me → Settings → Account and Security → User Code and enter it below. How well this works varies by device — some devices get everything instantly, others are limited by Tuya's own restrictions (the integration automatically falls back to regular polling in that case). Leave it blank to skip this step entirely — everything else works exactly the same either way.",
                 "title": "Tuya Heat Pump Setup"
+            },
+            "local_manual": {
+                "title": "Local Device Setup (no cloud)",
+                "description": "Enter the device details. Nothing is sent to the Tuya cloud.\n\nThe device must be on the same network as Home Assistant. You can find the device ID and local key in the Tuya IoT Platform or with the tuya-qr / tinytuya tools.\n\nPick the model that matches your device. If you are not sure, choose the default heat pump model.",
+                "data": {
+                    "device_id": "Device ID",
+                    "ip": "Device IP Address",
+                    "local_key": "Local Key",
+                    "protocol": "Protocol Version",
+                    "model": "Device model",
+                    "name": "Device name (optional)"
+                },
+                "data_description": {
+                    "name": "Used to build entity IDs. Leave empty to use \"Tuya Heat Pump (Local) <last 6 characters of the device ID>\"."
+                }
             },
             "local": {
                 "data": {
@@ -82,17 +105,22 @@
                 "description": "What would you like to configure?",
                 "menu_options": {
                     "connection_options": "Connection Settings",
-                    "climate_options": "Climate (Thermostat) Card"
+                    "climate_options": "Climate (Thermostat) Card",
+                    "switch_to_local": "Switch to Local (no cloud)"
                 },
                 "title": "Tuya Heat Pump Configuration"
             },
             "cloud_options": {
                 "data": {
                     "scan_interval": "Refresh Interval (minutes)",
-                    "offline_timeout_minutes": "Mark device offline after (minutes, 0 = automatic)"
+                    "offline_timeout_minutes": "Mark device offline after (minutes, 0 = automatic)",
+                    "mqtt_allow_chatty": "Allow MQTT even for devices that send a message every second"
                 },
                 "description": "Configure how often sensor values are refreshed from the Tuya Cloud API.\n\n{mqtt_hint}\n\nLower values = faster updates but more API calls.",
-                "title": "Cloud Device Settings"
+                "title": "Cloud Device Settings",
+                "data_description": {
+                    "mqtt_allow_chatty": "Off (recommended): devices that send a measurement about every second (such as heat pumps) are not kept on MQTT, because every message counts against the Tuya IoT Core message quota and a single device can use it up in a few days. They use regular polling instead. Turn on only if you know your quota allows it."
+                }
             },
             "local_options": {
                 "data": {
@@ -125,11 +153,22 @@
                 },
                 "description": "You picked a mode-select field above. Confirm which of its own values means Heat and which means Cool — a suggestion is pre-filled where a value obviously matches, but double-check it against your device.",
                 "title": "Climate Card: Heat/Cool Values"
+            },
+            "switch_to_local": {
+                "title": "Switch to Local",
+                "description": "Switch this device ({device_id}) to local mode. The cloud is not used at all for this: enter the device's IP address, local key and protocol version.\n\nThe entry, its entities, names and automations stay exactly as they are. If the saved model is missing you will also pick the model.",
+                "data": {
+                    "ip": "Device IP Address",
+                    "local_key": "Local Key",
+                    "protocol": "Protocol Version",
+                    "model": "Device model"
+                }
             }
         },
         "error": {
             "invalid_temp_range": "The minimum temperature must be lower than the maximum.",
-            "same_mode_values": "Heat and cool must use two different values."
+            "same_mode_values": "Heat and cool must use two different values.",
+            "cannot_connect": "Failed to connect"
         }
     },
     "entity": {

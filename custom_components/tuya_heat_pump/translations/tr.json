@@ -2,6 +2,14 @@
     "config": {
         "step": {
             "user": {
+                "title": "Tuya Isı Pompası Kurulumu",
+                "description": "Bu cihazı nasıl kurmak istiyorsunuz?\n\n• Bulut / IoT Platform: Tuya IoT Platform bilgilerinizi (Access ID ve Key) kullanır. Bulut modu için gereklidir; buradaki yerel mod da modeli buluttan okur.\n• Yerel (manuel, bulut yok): cihaz kimliğini, IP adresini, local key'i ve protokolü siz girersiniz, modeli de siz seçersiniz. Tuya hesabı ya da API olmadan çalışır.",
+                "menu_options": {
+                    "cloud_setup": "Bulut / IoT Platform bilgileri",
+                    "local_manual": "Yerel (manuel, bulut ya da API gerekmez)"
+                }
+            },
+            "cloud_setup": {
                 "data": {
                     "access_id": "Access ID",
                     "access_key": "Access Key",
@@ -15,6 +23,21 @@
                 },
                 "description": "Tuya IoT Platform bilgilerinizi girin ve bağlantı türünü seçin\n\n• Cloud: Çoğu kullanıcı için önerilir, internet üzerinden çalışır\n• Local: Daha hızlı, API limiti yok, cihaz yerel ağda olmalı\n\nMQTT (anlık güncelleme, opsiyonel) için: Tuya uygulamanızda Profil → Ayarlar → Hesap ve Güvenlik → User Code yoluyla kodu bulup aşağıya girin. Bu özelliğin faydası cihazdan cihaza değişir — bazı cihazlarda tüm veriler anlık gelir, bazılarında Tuya'nın kendi kısıtlaması yüzünden sınırlı kalır (böyle durumda entegrasyon otomatik olarak periyodik sorgulamaya devam eder). Boş bırakırsanız bu adım tamamen atlanır — geri kalan her şey aynen çalışır.",
                 "title": "Tuya Isı Pompası Kurulumu"
+            },
+            "local_manual": {
+                "title": "Yerel Cihaz Kurulumu (bulut yok)",
+                "description": "Cihaz bilgilerini girin. Tuya bulutuna hiçbir şey gönderilmez.\n\nCihaz Home Assistant ile aynı ağda olmalıdır. Cihaz kimliğini ve local key'i Tuya IoT Platform'da ya da tuya-qr / tinytuya araçlarıyla bulabilirsiniz.\n\nCihazınıza uyan modeli seçin. Emin değilseniz varsayılan ısı pompası modelini seçin.",
+                "data": {
+                    "device_id": "Cihaz Kimliği (Device ID)",
+                    "ip": "Cihaz IP Adresi",
+                    "local_key": "Local Key",
+                    "protocol": "Protokol Sürümü",
+                    "model": "Cihaz modeli",
+                    "name": "Cihaz adı (isteğe bağlı)"
+                },
+                "data_description": {
+                    "name": "Varlık kimliklerini oluşturmak için kullanılır. Boş bırakırsanız \"Tuya Heat Pump (Local) <cihaz kimliğinin son 6 karakteri>\" kullanılır."
+                }
             },
             "local": {
                 "data": {
@@ -82,17 +105,22 @@
                 "description": "Neyi yapılandırmak istiyorsunuz?",
                 "menu_options": {
                     "connection_options": "Bağlantı Ayarları",
-                    "climate_options": "Termostat (Climate) Kartı"
+                    "climate_options": "Termostat (Climate) Kartı",
+                    "switch_to_local": "Yerele geç (bulutsuz)"
                 },
                 "title": "Tuya Isı Pompası Yapılandırması"
             },
             "cloud_options": {
                 "data": {
                     "scan_interval": "Yenileme Süresi (dakika)",
-                    "offline_timeout_minutes": "Cihazı şu kadar dakika sessizlikten sonra çevrimdışı say (0 = otomatik)"
+                    "offline_timeout_minutes": "Cihazı şu kadar dakika sessizlikten sonra çevrimdışı say (0 = otomatik)",
+                    "mqtt_allow_chatty": "Saniyede bir mesaj gönderen cihazlarda da MQTT'ye izin ver"
                 },
                 "description": "Sensör değerlerinin Tuya Cloud API'sinden ne sıklıkla yenileneceğini ayarlayın.\n\n{mqtt_hint}\n\nDüşük değerler = daha hızlı güncelleme ama daha çok API çağrısı.",
-                "title": "Cloud Cihaz Ayarları"
+                "title": "Cloud Cihaz Ayarları",
+                "data_description": {
+                    "mqtt_allow_chatty": "Kapalı (önerilen): yaklaşık saniyede bir ölçüm gönderen cihazlar (ısı pompaları gibi) MQTT'de tutulmaz; çünkü her mesaj Tuya IoT Core mesaj kotasından düşer ve tek bir cihaz kotayı birkaç günde bitirebilir. Bunun yerine normal sorgulama kullanılır. Kotanızın yettiğini biliyorsanız açın."
+                }
             },
             "local_options": {
                 "data": {
@@ -125,11 +153,22 @@
                 },
                 "description": "Yukarıda bir mod-seçim alanı seçtiniz. Bu alanın kendi değerlerinden hangisinin Isıtma, hangisinin Soğutma anlamına geldiğini onaylayın — bariz bir eşleşme varsa önceden seçili geliyor, ama cihazınızla karşılaştırıp kontrol edin.",
                 "title": "Termostat Kartı: Isıtma/Soğutma Değerleri"
+            },
+            "switch_to_local": {
+                "title": "Yerele Geç",
+                "description": "Bu cihazı ({device_id}) yerel moda geçirin. Bunun için bulut hiç kullanılmaz: cihazın IP adresini, local key'ini ve protokol sürümünü girin.\n\nKayıt, varlıklar, adlar ve otomasyonlar olduğu gibi kalır. Kayıtlı model yoksa modeli de seçersiniz.",
+                "data": {
+                    "ip": "Cihaz IP Adresi",
+                    "local_key": "Local Key",
+                    "protocol": "Protokol Sürümü",
+                    "model": "Cihaz modeli"
+                }
             }
         },
         "error": {
             "invalid_temp_range": "Minimum sıcaklık maksimumdan küçük olmalı.",
-            "same_mode_values": "Isıtma ve soğutma için iki farklı değer seçilmeli."
+            "same_mode_values": "Isıtma ve soğutma için iki farklı değer seçilmeli.",
+            "cannot_connect": "Bağlanılamadı"
         }
     },
     "entity": {
