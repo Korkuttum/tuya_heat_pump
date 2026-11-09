@@ -982,6 +982,9 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
       
         return signature
 
+    def _has_cloud_credentials(self) -> bool:
+        return bool(self.access_id and self.access_key and self.api_endpoint)
+
     async def _get_token(self) -> bool:
         """Get access token from Tuya API - hem cloud hem local için kullanılır."""
         import time as _time
@@ -989,6 +992,15 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             _LOGGER.debug("Token hâlâ geçerli (%.0f sn kaldı), yeniden alınmıyor",
                           self._token_expires_at - _time.time())
             return True
+
+        # A device set up as "Local (manual)" has no cloud credentials at all.
+        # Without this check the signature code below fails with a cryptic
+        # "NoneType + str" error and logs a misleading "token" error.
+        if not self._has_cloud_credentials():
+            raise UpdateFailed(
+                "No cloud credentials (Access ID / Access Key / region) are "
+                "saved for this device, so the Tuya cloud cannot be used"
+            )
 
         try:
             t = str(int(time.time() * 1000))
@@ -1047,7 +1059,7 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         except ConfigEntryAuthFailed:
             raise
         except Exception as err:
-            _LOGGER.error("Token alma hatası: %s", str(err))
+            _LOGGER.error("Token alma hatası: %s", str(err), exc_info=True)
             raise UpdateFailed(f"{ERROR_CONN}: {str(err)}")
 
     # ============================================================================
@@ -1185,6 +1197,18 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
             self._build_dp_mapping()
             return {}
         # ────────────────────────────────────────────────────────────────────────
+
+        if not self._has_cloud_credentials():
+            _LOGGER.warning(
+                "No saved model and no cloud credentials for %s: using the "
+                "default model mapping. Re-add the device with "
+                "Local (manual) and pick its model to get the right entities.",
+                self.device_id,
+            )
+            self.model_id = "default"
+            self.model_mapping = load_model_mapping("default")
+            self._build_dp_mapping()
+            return {}
 
         try:
             # _get_token() artık expiry'yi kendi içinde kontrol ediyor,
