@@ -12,28 +12,28 @@
 
 | No | Brand | | No | Brand | | No | Brand |
 |---|---|---|---|---|---|---|---|
-| 1 | Arçelik (Beko, Grundig) | | 23 | Elterm 18CHW-RMS | | 44 | Mr. Silent FC25 (Aquara Pool Inverter) |
-| 2 | Alsavo by Zealux | | 24 | Energie Aquapura Monobloc 270ix | | 45 | MyCond BeeThermic |
-| 3 | ACIQ | | 25 | EnviroSun HP+ | | 46 | NMT MIA13 |
-| 4 | Adlar Castra | | 26 | Evoheat 40T | | 47 | Poolex Dreamline |
-| 5 | Adlar Castra Domestic | | 27 | Fairland | | 48 | Poolsana |
-| 6 | Adlar Fjord Pro | | 28 | Fairland Inverter Plus | | 49 | Power World |
-| 7 | Alps Exclusive | | 29 | GRAT | | 50 | Power World PW030 |
-| 8 | Alps Exclusive (f3w5t8 variant) | | 30 | Heative Next | | 51 | Power World R290 Full DC |
-| 9 | Aqua Clear Turbo Silence AXR13 | | 31 | Inventor Xforce | | 52 | Pure Blue Onyx |
-| 10 | AquaForte Mr. Perfect | | 32 | IPS Pool Systems | | 53 | Reclaim Eco R290 |
-| 11 | Aquark | | 33 | ITS | | 54 | Rinnai Enviroflo GR (EHPG280VM) |
-| 12 | Aquastrong | | 34 | Ivapool | | 55 | Rotenso |
-| 13 | Aquatech X6 | | 35 | Kensol | | 56 | Sannover Stelios 2 |
-| 14 | Aquatech X6 320L | | 36 | Klimalife | | 57 | SolarEast |
-| 15 | Argo Apollo 12HP | | 37 | Kushiro (Luqstoff) | | 58 | SolarEast BLN |
-| 16 | Climalution -5G | | 38 | Lunna LV LT1530 (Nordic LV LT1530) | | 59 | Swim&Fun Fjord |
-| 17 | Cordivari Vestalis | | 39 | Macon/Arctic | | 60 | U-Energy |
-| 18 | Della | | 40 | Madimack InverELITE V4 | | 61 | Water TechniX |
-| 19 | Ecologic Ecopool | | 41 | Mango | | 62 | W'eau |
-| 20 | Ecolynx | | 42 | Michl SMP0/V2 | | 63 | W'eau WFI-007 |
-| 21 | Effecta Air-IQ R290 | | 43 | Mitte Aerotermia | | 64 | Wopoltop |
-| 22 | Effecta Air-IQ V2 |
+| 1 | Arçelik (Beko, Grundig) | | 23 | Elterm 18CHW-RMS | | 45 | MyCond BeeThermic |
+| 2 | Alsavo by Zealux | | 24 | Energie Aquapura Monobloc 270ix | | 46 | NMT MIA13 |
+| 3 | ACIQ | | 25 | EnviroSun HP+ | | 47 | Poolex Dreamline |
+| 4 | Adlar Castra | | 26 | Evoheat 40T | | 48 | Poolsana |
+| 5 | Adlar Castra Domestic | | 27 | Fairland | | 49 | Power World |
+| 6 | Adlar Fjord Pro | | 28 | Fairland Inverter Plus | | 50 | Power World PW030 |
+| 7 | Alps Exclusive | | 29 | GRAT | | 51 | Power World R290 Full DC |
+| 8 | Alps Exclusive (f3w5t8 variant) | | 30 | Heative Next | | 52 | Pure Blue Onyx |
+| 9 | Aqua Clear Turbo Silence AXR13 | | 31 | Inventor Xforce | | 53 | Reclaim Eco R290 |
+| 10 | AquaForte Mr. Perfect | | 32 | IPS Pool Systems | | 54 | Rinnai Enviroflo GR (EHPG280VM) |
+| 11 | Aquark | | 33 | ITS | | 55 | Rotenso |
+| 12 | Aquastrong | | 34 | Ivapool | | 56 | Sannover Stelios 2 |
+| 13 | Aquatech X6 | | 35 | Kensol | | 57 | Smad Monobloc 12kW |
+| 14 | Aquatech X6 320L | | 36 | Klimalife | | 58 | SolarEast |
+| 15 | Argo Apollo 12HP | | 37 | Kushiro (Luqstoff) | | 59 | SolarEast BLN |
+| 16 | Climalution -5G | | 38 | Lunna LV LT1530 (Nordic LV LT1530) | | 60 | Swim&Fun Fjord |
+| 17 | Cordivari Vestalis | | 39 | Macon/Arctic | | 61 | U-Energy |
+| 18 | Della | | 40 | Madimack InverELITE V4 | | 62 | Water TechniX |
+| 19 | Ecologic Ecopool | | 41 | Mango | | 63 | W'eau |
+| 20 | Ecolynx | | 42 | Michl SMP0/V2 | | 64 | W'eau WFI-007 |
+| 21 | Effecta Air-IQ R290 | | 43 | Mitte Aerotermia | | 65 | Wopoltop |
+| 22 | Effecta Air-IQ V2 | | 44 | Mr. Silent FC25 (Aquara Pool Inverter) |
 ---
 
 This project allows you to control and monitor your Tuya heat pump device through Home Assistant — supports Cloud, Local (LAN push), and optional real-time MQTT push on top of Cloud mode.
