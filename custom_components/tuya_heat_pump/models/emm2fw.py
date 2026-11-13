@@ -4,12 +4,14 @@
 # Inverter air-to-water heat pump with enhanced vapour injection
 # (EVI), hot water tank and heating / cooling.
 #
-# Every plain DP of the cloud schema is mapped. NOT mapped:
-#   - parameter_group_1 ... parameter_group_7 (dp 118-124): raw
-#     blocks that carry the unit's settings (target temperatures,
-#     defrost and fan parameters, ...). They have to be decoded
-#     with the raw explorer before they can be used, so the
-#     target temperatures are not available yet.
+# Every plain DP of the cloud schema is mapped. The first five
+# values of parameter_group_1 (dp 118, 4-byte numbers) are the
+# unit's main settings. Their layout comes from the tuya-local
+# configuration shared by @cpiekacz, who has it working on the
+# same unit. NOT mapped:
+#   - the rest of parameter_group_1 and parameter_group_2 ... 7
+#     (dp 119-124): raw blocks with further settings (disinfection,
+#     compensation, pump and defrost parameters, ...).
 #   - fault (dp 15) is a bitmap: it only tells "any fault yes/no",
 #     the individual fault bits are not decoded yet.
 # ====================================================
@@ -181,6 +183,75 @@ SWITCH_TYPES = {
         "name": "Power",
         "icon": "mdi:power",
         "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
+    },
+}
+
+# Number Types - read-write, 4-byte values inside the raw block parameter_group_1
+NUMBER_TYPES = {
+    "return_diff_heat_cool": {
+        "dp_id": 118,
+        "code": "return_diff_heat_cool",
+        "raw_source": "parameter_group_1",
+        "field_index": 0,
+        "encoding": "int32_be",
+        "name": "Return Difference Heating / Cooling",
+        "icon": "mdi:thermometer-lines",
+        "unit": "°C",
+        "min_value": 2.0,
+        "max_value": 18.0,
+        "step": 1.0,
+    },
+    "return_diff_hot_water": {
+        "dp_id": 118,
+        "code": "return_diff_hot_water",
+        "raw_source": "parameter_group_1",
+        "field_index": 1,
+        "encoding": "int32_be",
+        "name": "Return Difference Hot Water",
+        "icon": "mdi:thermometer-lines",
+        "unit": "°C",
+        "min_value": 2.0,
+        "max_value": 18.0,
+        "step": 1.0,
+    },
+    "hot_water_target_temp": {
+        "dp_id": 118,
+        "code": "hot_water_target_temp",
+        "raw_source": "parameter_group_1",
+        "field_index": 2,
+        "encoding": "int32_be",
+        "name": "Hot Water Target Temperature",
+        "icon": "mdi:water-thermometer",
+        "unit": "°C",
+        "min_value": 28.0,
+        "max_value": 55.0,
+        "step": 1.0,
+    },
+    "cooling_target_temp": {
+        "dp_id": 118,
+        "code": "cooling_target_temp",
+        "raw_source": "parameter_group_1",
+        "field_index": 3,
+        "encoding": "int32_be",
+        "name": "Cooling Target Temperature",
+        "icon": "mdi:snowflake-thermometer",
+        "unit": "°C",
+        "min_value": 12.0,
+        "max_value": 30.0,
+        "step": 1.0,
+    },
+    "heating_target_temp": {
+        "dp_id": 118,
+        "code": "heating_target_temp",
+        "raw_source": "parameter_group_1",
+        "field_index": 4,
+        "encoding": "int32_be",
+        "name": "Heating Target Temperature",
+        "icon": "mdi:heating-coil",
+        "unit": "°C",
+        "min_value": 15.0,
+        "max_value": 55.0,
+        "step": 1.0,
     },
 }
 

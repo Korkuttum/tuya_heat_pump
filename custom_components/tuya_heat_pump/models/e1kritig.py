@@ -4,11 +4,16 @@
 # Air-to-water monobloc heat pump with two heating zones,
 # two cooling zones and a hot water function.
 #
-# NOT decoded yet (raw data points, need the raw explorer):
-#   - all_6d_data (dp 145): the full status report. The live
-#     temperatures (water in/out, outdoor, tank, ...) are most
-#     likely inside it, which is why temp_current (dp 16) reads
-#     -30 (the minimum, i.e. "no value") in the reported dump.
+# The unit reports its real state inside the raw status block
+# all_6d_data (dp 145, 220-226 bytes). Read from it so far:
+#   - byte 0, bit 0x20: set while the unit is on (matches the
+#     reporter's on/off tests on a real unit).
+#   - byte 26: hot water target temperature in degrees C.
+#   - byte 28: hot water (tank) temperature in degrees C.
+# Not decoded yet: heating on/off, the other temperatures, the
+# schedule and error tables.
+#
+# NOT decoded yet (raw data points):
 #   - error_warning (dp 146): fault / warning bits.
 #   - gr_set_vac_date, gr_zone1_schedule_ctr, gr_zone2_schedule_ctr,
 #     gr_hot_water_schedule_ctr, sterilization_time (dp 125-128, 136):
@@ -20,6 +25,11 @@
 #   - temp_current_f (dp 35): Fahrenheit twin of temp_current.
 #   - callback_sysadjust (dp 197): firmware update result code.
 #   - schedule_time_weeks (dp 151): belongs to the raw schedules.
+#
+# Known issue: the plain "switch" data point (dp 1) is not reported
+# back by the unit, so the Power switch can fall back to "off" a
+# minute after switching on. "Unit Running" below is the reliable
+# state.
 #
 # Ranges: the cloud schema only says 0-210 for every setpoint,
 # so the limits below are cautious values taken from the unit's
@@ -42,10 +52,46 @@ SENSOR_TYPES = {
         "device_class": "temperature",
         "state_class": "measurement",
     },
+    "hot_water_target_reported": {
+        "dp_id": 145,
+        "code": "hot_water_target_reported",
+        "raw_source": "all_6d_data",
+        "field_index": 26,
+        "encoding": "uint8",
+        "name": "Hot Water Target (reported)",
+        "unit": "°C",
+        "icon": "mdi:water-thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+    },
+    "hot_water_temp": {
+        "dp_id": 145,
+        "code": "hot_water_temp",
+        "raw_source": "all_6d_data",
+        "field_index": 28,
+        "encoding": "uint8",
+        "name": "Hot Water Temperature",
+        "unit": "°C",
+        "icon": "mdi:water-thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+    },
 }
 
 # Binary Sensor Types
-BINARY_SENSOR_TYPES = {}
+BINARY_SENSOR_TYPES = {
+    "unit_running": {
+        "dp_id": 145,
+        "code": "unit_running",
+        "raw_source": "all_6d_data",
+        "field_index": 0,
+        "encoding": "uint8",
+        "name": "Unit Running",
+        "icon": "mdi:heat-pump",
+        "device_class": "running",
+        "conversion": "(int(value) & 32) != 0",
+    },
+}
 
 # Switch Types - read-write booleans
 SWITCH_TYPES = {
