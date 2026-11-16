@@ -14,6 +14,10 @@
 #   - Setpoint names for dp 105 and dp 158 are inferred from the
 #     zone 2 names (auto cooling / auto heating) and are not
 #     confirmed on a unit yet.
+#   - dp 159 (zone_select) is shown as a read-only sensor: it follows the
+#     power state (0 = off, 1 = on) and is not a setting.
+#   - Setpoints are sent as whole numbers (350 for 35.0 degrees); sending
+#     350.0 made the unit jump to the maximum of the setpoint.
 # ====================================================
 """Model mapping for MyCond BeeHeat (0000043th5)."""
 
@@ -160,6 +164,16 @@ SENSOR_TYPES = {
         "state_class": "measurement",
         "conversion": "value / 10",
     },
+    "zone_select": {
+        # Not a setting: the unit sets it to 0 when it is switched off and
+        # to 1 when it is on (seen in the reporter's history), so it is the
+        # zone the unit is working with. 2 and 3 are expected for zone 2 and
+        # both zones, but have not been seen yet.
+        "dp_id": 159,
+        "code": "zone_select",
+        "name": "Active Zone",
+        "icon": "mdi:view-dashboard-outline",
+    },
     "ac_fan": {
         # close / low_spd / high_spd
         "dp_id": 124,
@@ -261,7 +275,7 @@ NUMBER_TYPES = {
         "max_value": 25.0,
         "step": 1.0,
         "conversion": "value / 10",
-        "api_conversion": "value * 10",
+        "api_conversion": "int(value * 10)",
     },
     "heat_temp_set": {
         "dp_id": 103,
@@ -273,7 +287,7 @@ NUMBER_TYPES = {
         "max_value": 55.0,
         "step": 1.0,
         "conversion": "value / 10",
-        "api_conversion": "value * 10",
+        "api_conversion": "int(value * 10)",
     },
     "hot_water_temp_set": {
         "dp_id": 104,
@@ -285,7 +299,7 @@ NUMBER_TYPES = {
         "max_value": 60.0,
         "step": 1.0,
         "conversion": "value / 10",
-        "api_conversion": "value * 10",
+        "api_conversion": "int(value * 10)",
     },
     "auto_temp_set": {
         "dp_id": 105,
@@ -297,7 +311,7 @@ NUMBER_TYPES = {
         "max_value": 25.0,
         "step": 1.0,
         "conversion": "value / 10",
-        "api_conversion": "value * 10",
+        "api_conversion": "int(value * 10)",
     },
     "auto_heat_temp_set_z1": {
         "dp_id": 158,
@@ -309,7 +323,7 @@ NUMBER_TYPES = {
         "max_value": 55.0,
         "step": 1.0,
         "conversion": "value / 10",
-        "api_conversion": "value * 10",
+        "api_conversion": "int(value * 10)",
     },
     "cool_temp_set_z2": {
         "dp_id": 160,
@@ -321,7 +335,7 @@ NUMBER_TYPES = {
         "max_value": 25.0,
         "step": 1.0,
         "conversion": "value / 10",
-        "api_conversion": "value * 10",
+        "api_conversion": "int(value * 10)",
     },
     "heat_temp_set_z2": {
         "dp_id": 161,
@@ -333,7 +347,7 @@ NUMBER_TYPES = {
         "max_value": 55.0,
         "step": 1.0,
         "conversion": "value / 10",
-        "api_conversion": "value * 10",
+        "api_conversion": "int(value * 10)",
     },
     "auto_cool_temp_set_z2": {
         "dp_id": 162,
@@ -345,7 +359,7 @@ NUMBER_TYPES = {
         "max_value": 25.0,
         "step": 1.0,
         "conversion": "value / 10",
-        "api_conversion": "value * 10",
+        "api_conversion": "int(value * 10)",
     },
     "auto_heat_temp_set_z2": {
         "dp_id": 163,
@@ -357,7 +371,7 @@ NUMBER_TYPES = {
         "max_value": 55.0,
         "step": 1.0,
         "conversion": "value / 10",
-        "api_conversion": "value * 10",
+        "api_conversion": "int(value * 10)",
     },
     "idr_temp_set": {
         "dp_id": 164,
@@ -369,7 +383,7 @@ NUMBER_TYPES = {
         "max_value": 30.0,
         "step": 1.0,
         "conversion": "value / 10",
-        "api_conversion": "value * 10",
+        "api_conversion": "int(value * 10)",
     },
 }
 
@@ -388,19 +402,6 @@ SELECT_TYPES = {
             "cool_hot_water": "Cooling + Hot Water",
             "heat_hot_water": "Heating + Hot Water",
             "auto_dhw": "Auto + Hot Water",
-        },
-    },
-    "zone_select": {
-        # Meaning of the four values is not known yet. Reads 1 on the reported unit.
-        "dp_id": 159,
-        "code": "zone_select",
-        "name": "Zone Selection",
-        "icon": "mdi:view-dashboard-outline",
-        "options": {
-            "0": "Option 0",
-            "1": "Option 1",
-            "2": "Option 2",
-            "3": "Option 3",
         },
     },
 }
