@@ -111,6 +111,26 @@ class TuyaHeatpumpSwitch(SwitchEntity):
     @property
     def is_on(self) -> bool | None:
         """Return true if switch is on."""
+        # Optional: the unit does not report the plain on/off DP reliably,
+        # so the state is read from a field inside a raw DP instead, while
+        # commands still go to the plain DP (see "state_raw" in a model).
+        if (state_raw := self._config.get("state_raw")) is not None:
+            raw_source = resolve_raw_source(self.coordinator, state_raw)
+            if raw_source and self.coordinator.data and raw_source in self.coordinator.data:
+                raw_value = decode_raw_field(
+                    self.coordinator.data[raw_source].get('value'),
+                    state_raw['field_index'],
+                    state_raw.get('encoding', 'uint8'),
+                )
+                if raw_value is not None:
+                    try:
+                        return bool(Conversion(
+                            state_raw.get('conversion', 'bool(value)')
+                        ).convert(raw_value))
+                    except Exception as err:
+                        _LOGGER.warning("State conversion failed for %s: %s", self._switch_code, err)
+            # Raw state not available (yet): fall through to the plain DP.
+
         if "field_index" in self._config:
             raw_source = resolve_raw_source(self.coordinator, self._config)
             if raw_source is None or not self.coordinator.data or raw_source not in self.coordinator.data:
