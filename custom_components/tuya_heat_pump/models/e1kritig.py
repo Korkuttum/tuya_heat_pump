@@ -26,10 +26,9 @@
 #   - callback_sysadjust (dp 197): firmware update result code.
 #   - schedule_time_weeks (dp 151): belongs to the raw schedules.
 #
-# Known issue: the plain "switch" data point (dp 1) is not reported
-# back by the unit, so the Power switch can fall back to "off" a
-# minute after switching on. "Unit Running" below is the reliable
-# state.
+# The plain "switch" data point (dp 1) is not reported back by the
+# unit, so the Power switch reads its state from the status block
+# (same bit as "Unit Running") and only sends its commands to dp 1.
 #
 # Ranges: the cloud schema only says 0-210 for every setpoint,
 # so the limits below are cautious values taken from the unit's
@@ -101,6 +100,15 @@ SWITCH_TYPES = {
         "name": "Power",
         "icon": "mdi:power",
         "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
+        # The state comes from the unit's status block (byte 0, bit 0x20);
+        # the plain dp 1 is stale in the cloud. Commands still go to dp 1.
+        "state_raw": {
+            "dp_id": 145,
+            "raw_source": "all_6d_data",
+            "field_index": 0,
+            "encoding": "uint8",
+            "conversion": "(int(value) & 32) != 0",
+        },
     },
     "heater_zone1_switch": {
         "dp_id": 101,
