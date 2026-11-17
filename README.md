@@ -30,11 +30,11 @@
 | 16 | Climalution -5G | | 39 | Lunna LV LT1530 (Nordic LV LT1530) | | 62 | SolarEast BLN |
 | 17 | Cordivari Vestalis | | 40 | Macon/Arctic | | 63 | Swim&Fun Fjord |
 | 18 | Della | | 41 | Madimack InverELITE V4 | | 64 | U-Energy |
-| 19 | Ecologic Ecopool | | 42 | Mango | | 65 | Water TechniX |
-| 20 | Ecolynx | | 43 | Michl SMP0/V2 | | 66 | W'eau |
-| 21 | Effecta Air-IQ R290 | | 44 | Mitte Aerotermia | | 67 | W'eau WFI-007 |
-| 22 | Effecta Air-IQ V2 | | 45 | Mr. Silent FC25 (Aquara Pool Inverter) | | 68 | Wopoltop |
-| 23 | Elterm 18CHW-RMS | | 46 | MyCond BeeHeat |
+| 19 | Ecologic Ecopool | | 42 | Mango | | 65 | Ultimate T-PRO 12K |
+| 20 | Ecolynx | | 43 | Michl SMP0/V2 | | 66 | Water TechniX |
+| 21 | Effecta Air-IQ R290 | | 44 | Mitte Aerotermia | | 67 | W'eau |
+| 22 | Effecta Air-IQ V2 | | 45 | Mr. Silent FC25 (Aquara Pool Inverter) | | 68 | W'eau WFI-007 |
+| 23 | Elterm 18CHW-RMS | | 46 | MyCond BeeHeat | | 69 | Wopoltop |
 ---
 
 This project allows you to control and monitor your Tuya heat pump device through Home Assistant — supports Cloud, Local (LAN push), and optional real-time MQTT push on top of Cloud mode.
