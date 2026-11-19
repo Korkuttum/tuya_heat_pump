@@ -10,8 +10,13 @@
 #     reporter's on/off tests on a real unit).
 #   - byte 26: hot water target temperature in degrees C.
 #   - byte 28: hot water (tank) temperature in degrees C.
-# Not decoded yet: heating on/off, the other temperatures, the
-# schedule and error tables.
+#   - byte 92, bit 0x10: heating function on; bit 0x08: hot water
+#     function on. Found by switching each function on and off on
+#     the unit and comparing six dumps; the same bits agree with the
+#     older dumps of the reporter. The plain switches of these
+#     functions (dp 101, 115) do not follow the unit in the cloud.
+# Not decoded yet: the other temperatures, the schedule and error
+# tables.
 #
 # NOT decoded yet (raw data points):
 #   - error_warning (dp 146): fault / warning bits.
@@ -89,6 +94,26 @@ BINARY_SENSOR_TYPES = {
         "icon": "mdi:heat-pump",
         "device_class": "running",
         "conversion": "(int(value) & 32) != 0",
+    },
+    "heating_function_on": {
+        "dp_id": 145,
+        "code": "heating_function_on",
+        "raw_source": "all_6d_data",
+        "field_index": 92,
+        "encoding": "uint8",
+        "name": "Heating Function",
+        "icon": "mdi:radiator",
+        "conversion": "(int(value) & 16) != 0",
+    },
+    "hot_water_function_on": {
+        "dp_id": 145,
+        "code": "hot_water_function_on",
+        "raw_source": "all_6d_data",
+        "field_index": 92,
+        "encoding": "uint8",
+        "name": "Hot Water Function",
+        "icon": "mdi:water-boiler",
+        "conversion": "(int(value) & 8) != 0",
     },
 }
 
