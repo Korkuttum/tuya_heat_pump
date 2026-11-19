@@ -220,3 +220,22 @@ SELECT_TYPES = {
         },
     },
 }
+
+# ====================================================
+# Optional thermostat card (Options > thermostat). The unit has no
+# data point that tells whether it is heating right now, so the card
+# shows "heating" while the unit is on. The operating modes are offered
+# as presets of the card; the temperature range of the card follows the
+# target temperature (35-70 degrees C).
+# ====================================================
+CLIMATE_HINTS = {
+    "defaults": {
+        "power": "switch",
+        "current": "temp_current",
+        "target": "temp_set",
+    },
+    "preset": {
+        "code": "mode",
+        "values": ["auto", "eco", "mix", "electric", "air"],
+    },
+}
