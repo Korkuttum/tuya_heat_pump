@@ -168,9 +168,11 @@ SENSOR_TYPES = {
         "state_class": "measurement",
     },
     "power_today": {
+        # Counts up all the time and does not reset daily; its real meaning
+        # is not known yet, so it only carries a neutral name.
         "dp_id": 18,
         "code": "power_consumption",
-        "name": "Energy Today",
+        "name": "Energy Counter 2",
         "unit": "kWh",
         "icon": "mdi:flash",
         "device_class": "energy",
@@ -181,6 +183,9 @@ SENSOR_TYPES = {
         "dp_id": 105,
         "code": "electric_total",
         "name": "Total Energy",
+        # The unit sometimes reports a much lower value for one update;
+        # such a drop is ignored (see "ignore_drops" in sensor.py).
+        "ignore_drops": True,
         "unit": "kWh",
         "icon": "mdi:flash",
         "device_class": "energy",
@@ -270,12 +275,14 @@ BINARY_SENSOR_TYPES = {
         "conversion": "value != 0",
     },
     "compressor_running": {
-        "dp_id": 27,
-        "code": "compressor_state",
+        # The status DP (dp 27) stays on all the time on this unit, so the
+        # compressor frequency decides.
+        "dp_id": 20,
+        "code": "compressor_strength",
         "name": "Compressor Running",
         "icon": "mdi:engine",
         "device_class": "running",
-        "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
+        "conversion": "float(value) > 0",
     },
     "hot_water_mode": {
         "dp_id": 31,
