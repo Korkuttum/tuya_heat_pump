@@ -14,7 +14,9 @@
 #     function on. Found by switching each function on and off on
 #     the unit and comparing six dumps; the same bits agree with the
 #     older dumps of the reporter. The plain switches of these
-#     functions (dp 101, 115) do not follow the unit in the cloud.
+#     functions (dp 101, 115) do not follow the unit in the cloud, so
+#     "Heating Zone 1" and "Hot Water Mode" read their state from
+#     these bits and send their commands to dp 101 / 115.
 # Not decoded yet: the other temperatures, the schedule and error
 # tables.
 #
@@ -141,6 +143,15 @@ SWITCH_TYPES = {
         "name": "Heating Zone 1",
         "icon": "mdi:radiator",
         "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
+        # The plain data point is not kept up to date by the unit; the state
+        # comes from the status block (byte 92), commands still go to this DP.
+        "state_raw": {
+            "dp_id": 145,
+            "raw_source": "all_6d_data",
+            "field_index": 92,
+            "encoding": "uint8",
+            "conversion": "(int(value) & 16) != 0",
+        },
     },
     "heater_zone2_switch": {
         "dp_id": 102,
@@ -169,6 +180,15 @@ SWITCH_TYPES = {
         "name": "Hot Water Mode",
         "icon": "mdi:water-boiler",
         "conversion": "value in [1, True, '1', 'true', 'on', 'yes', 'enable', 'open']",
+        # The plain data point is not kept up to date by the unit; the state
+        # comes from the status block (byte 92), commands still go to this DP.
+        "state_raw": {
+            "dp_id": 145,
+            "raw_source": "all_6d_data",
+            "field_index": 92,
+            "encoding": "uint8",
+            "conversion": "(int(value) & 8) != 0",
+        },
     },
     "zcw_single_cycle_status": {
         "dp_id": 132,
