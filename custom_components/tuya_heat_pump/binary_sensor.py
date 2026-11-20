@@ -5,6 +5,7 @@ import time
 from typing import Any
 
 from homeassistant.components.binary_sensor import BinarySensorEntity
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.config_entries import ConfigEntry
@@ -74,6 +75,7 @@ class TuyaHeatpumpOnlineSensor(BinarySensorEntity):
         
         self._attr_name = "Online Status"
         self._attr_device_class = "connectivity"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
         self._attr_has_entity_name = True
         
         # Device info

@@ -106,6 +106,10 @@ class TuyaHeatpumpSensor(SensorEntity):
         self._attr_state_class = config.get('state_class')
         self._attr_has_entity_name = True
         self._attr_device_info = coordinator.device_info
+        # Opt-in ("ignore_drops" in the model file) for counters whose
+        # device now and then reports a far too low value for one update.
+        self._last_good = None
+        self._low_streak = 0
 
     def _lookup_code(self) -> str:
         """The real Tuya DP code to use for coordinator.data lookups.
@@ -113,6 +117,22 @@ class TuyaHeatpumpSensor(SensorEntity):
         file can set an explicit "code" to decouple the two (see
         binary_sensor.py's identical helper)."""
         return self._config.get("code", self._sensor_code)
+
+    def _filter_drops(self, value):
+        """Keep the last good value while a counter briefly drops far below it.
+
+        A value below half of the last good one is held back; if it stays
+        that low for 3 updates in a row it is accepted (a real reset)."""
+        if not self._config.get("ignore_drops") or not isinstance(value, (int, float)):
+            return value
+        last = self._last_good
+        if last is not None and last > 0 and value < last * 0.5:
+            self._low_streak += 1
+            if self._low_streak < 3:
+                return last
+        self._low_streak = 0
+        self._last_good = value
+        return value
 
     @property
     def device_info(self):
@@ -185,7 +205,8 @@ class TuyaHeatpumpSensor(SensorEntity):
         conversion = Conversion(self._config.get('conversion', 'value'))
         try:
             result = conversion.convert(raw_value)
-            return float(result) if isinstance(result, (int, float)) else result
+            result = float(result) if isinstance(result, (int, float)) else result
+            return self._filter_drops(result)
         except Exception as err:
             _LOGGER.warning("Conversion failed for %s: %s", self._sensor_code, err)
             return raw_value
