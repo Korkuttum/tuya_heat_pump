@@ -399,20 +399,6 @@ SENSOR_TYPES.update({
         "device_class": "current",
         "state_class": "measurement",
     },
-    # P22 - condensation mode (parameter_group_1, field 11). 0 = fixed
-    # condensation (uses the heating setpoint), 1 = weather-compensated
-    # (floating, follows the heating curve). Confirmed as 1 on a unit set to
-    # floating condensation. @Markus8510, issue #120.
-    "p22_condensation_mode": {
-        "dp_id": 118,
-        "code": "p22_condensation_mode",
-        "raw_source": "parameter_group_1",
-        "field_index": 11,
-        "encoding": "int32_be",
-        "name": "Condensation Mode",
-        "icon": "mdi:heat-wave",
-        "value_map": {0: "Fixed", 1: "Weather-compensated"},
-    },
     "heat_sink_temperature": {
         "dp_id": 101,
         "code": "heat_sink_temperature",
@@ -1097,5 +1083,21 @@ SELECT_TYPES = {
             "c": "Celsius",
             "f": "Fahrenheit",
         },
+    },
+    # P22 - condensation mode (parameter_group_1, field 11). 0 = fixed
+    # condensation (uses the heating setpoint), 1 = weather-compensated
+    # (floating, follows the heating curve). Confirmed as 1 on a unit set to
+    # floating condensation. @Markus8510, issue #120. Changing it rewrites
+    # the whole parameter block with only this field changed; not yet
+    # tested on a real unit.
+    "p22_condensation_mode": {
+        "dp_id": 118,
+        "code": "p22_condensation_mode",
+        "raw_source": "parameter_group_1",
+        "field_index": 11,
+        "encoding": "int32_be",
+        "name": "Condensation Mode",
+        "icon": "mdi:heat-wave",
+        "options": {"0": "Fixed", "1": "Weather-compensated"},
     },
 }
