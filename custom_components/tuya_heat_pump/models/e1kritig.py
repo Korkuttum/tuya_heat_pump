@@ -8,6 +8,10 @@
 # all_6d_data (dp 145, 220-226 bytes). Read from it so far:
 #   - byte 0, bit 0x20: set while the unit is on (matches the
 #     reporter's on/off tests on a real unit).
+#   - byte 1: heating water temperature in degrees C ("Current Temp"
+#     of the app's heating tab); byte 7: heating target temperature.
+#     Matched with the app's screenshots on two dumps (48 / 50 and
+#     45 / 47 degrees).
 #   - byte 26: hot water target temperature in degrees C.
 #   - byte 28: hot water (tank) temperature in degrees C.
 #   - byte 92, bit 0x10: heating function on; bit 0x08: hot water
@@ -48,13 +52,28 @@ MODEL_NAME = "Smad Monobloc 12kW (e1kritig)"
 # Sensor Types
 SENSOR_TYPES = {
     "temp_current": {
-        # Reads -30 (the schema minimum) while the unit is off, so most
-        # likely "no value". Kept to see what it shows on a running unit.
-        "dp_id": 16,
+        # The plain data point (dp 16) stays at -30 ("no value") on this
+        # unit; the real value is byte 1 of the status block.
+        "dp_id": 145,
         "code": "temp_current",
+        "raw_source": "all_6d_data",
+        "field_index": 1,
+        "encoding": "uint8",
         "name": "Current Temperature",
         "unit": "°C",
         "icon": "mdi:thermometer",
+        "device_class": "temperature",
+        "state_class": "measurement",
+    },
+    "heating_target_reported": {
+        "dp_id": 145,
+        "code": "heating_target_reported",
+        "raw_source": "all_6d_data",
+        "field_index": 7,
+        "encoding": "uint8",
+        "name": "Heating Target (reported)",
+        "unit": "°C",
+        "icon": "mdi:thermometer-chevron-up",
         "device_class": "temperature",
         "state_class": "measurement",
     },
