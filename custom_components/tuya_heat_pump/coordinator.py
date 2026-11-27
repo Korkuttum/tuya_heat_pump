@@ -426,6 +426,19 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
         finally:
             self._local_socket_lock.release()
 
+    @staticmethod
+    def _describe_local_failure(status) -> str:
+        """Short description of a status() result that carried no 'dps'."""
+        if not status:
+            return "empty response"
+        if isinstance(status, dict):
+            err = status.get("Err")
+            msg = status.get("Error")
+            if err or msg:
+                return f"Err {err}: {msg}"
+            return "keys: " + ", ".join(sorted(str(k) for k in status))[:120]
+        return type(status).__name__
+
     def _local_receive(self):
         """Locked wrapper around local_device.receive()."""
         if self._write_pending.is_set():
@@ -1624,15 +1637,24 @@ class TuyaScaleDataUpdateCoordinator(DataUpdateCoordinator):
                 status = await self.hass.async_add_executor_job(self._local_status)
               
                 if not status or 'dps' not in status:
-                    _LOGGER.warning("No 'dps' in status response - retrying once")
+                    # tinytuya reports a failure as a dict, not an exception,
+                    # e.g. {"Error": "Network Error: Device Unreachable",
+                    # "Err": "905", ...}. Its code is the only thing that tells
+                    # a dropped connection (901/905) from a late reply (902)
+                    # or an undecodable reply (904/914), so it goes in the log.
+                    _LOGGER.warning(
+                        "No 'dps' in status response (%s) - retrying once",
+                        self._describe_local_failure(status),
+                    )
                     await asyncio.sleep(1.0)
                     status = await self.hass.async_add_executor_job(self._local_status)
                   
                     if not status or 'dps' not in status:
+                        reason = self._describe_local_failure(status)
                         self.is_online = False
-                        _LOGGER.info("Online status değişti: OFFLINE (local status başarısız)")
+                        _LOGGER.info("Online status değişti: OFFLINE (local status başarısız: %s)", reason)
                         self.async_update_listeners()
-                        raise UpdateFailed("No 'dps' in local status response after retry")
+                        raise UpdateFailed(f"No 'dps' in local status response after retry ({reason})")
               
                 self.online.note_local(time.time())
                 self.is_online = True
