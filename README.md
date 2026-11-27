@@ -28,13 +28,13 @@
 | 14 | Aquatech X6 320L | | 38 | Kushiro (Luqstoff) | | 62 | SolarEast |
 | 15 | Argo Apollo 12HP | | 39 | Lunna LV LT1530 (Nordic LV LT1530) | | 63 | SolarEast BLN |
 | 16 | Climalution -5G | | 40 | Macon/Arctic | | 64 | Swim&Fun Fjord |
-| 17 | Cordivari Vestalis | | 41 | Madimack InverELITE V4 | | 65 | U-Energy |
-| 18 | Della | | 42 | Mango | | 66 | Ultimate T-PRO 12K |
-| 19 | Ecologic Ecopool | | 43 | Michl SMP0/V2 | | 67 | Water TechniX |
-| 20 | Ecolynx | | 44 | Mitsubishi Heavy Industries TWMBS 2203 J-1 | | 68 | W'eau |
-| 21 | Effecta Air-IQ R290 | | 45 | Mitte Aerotermia | | 69 | W'eau WFI-007 |
-| 22 | Effecta Air-IQ V2 | | 46 | Mr. Silent FC25 (Aquara Pool Inverter) | | 70 | Wopoltop |
-| 23 | Elterm 18CHW-RMS | | 47 | MyCond BeeHeat |
+| 17 | Cordivari Vestalis | | 41 | Madimack InverELITE V4 | | 65 | TEC HS8/HS10 Monoblock |
+| 18 | Della | | 42 | Mango | | 66 | U-Energy |
+| 19 | Ecologic Ecopool | | 43 | Michl SMP0/V2 | | 67 | Ultimate T-PRO 12K |
+| 20 | Ecolynx | | 44 | Mitsubishi Heavy Industries TWMBS 2203 J-1 | | 68 | Water TechniX |
+| 21 | Effecta Air-IQ R290 | | 45 | Mitte Aerotermia | | 69 | W'eau |
+| 22 | Effecta Air-IQ V2 | | 46 | Mr. Silent FC25 (Aquara Pool Inverter) | | 70 | W'eau WFI-007 |
+| 23 | Elterm 18CHW-RMS | | 47 | MyCond BeeHeat | | 71 | Wopoltop |
 | 24 | Energie Aquapura Monobloc 270ix | | 48 | MyCond BeeThermic |
 ---
 
